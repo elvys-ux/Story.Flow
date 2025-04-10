@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <title>StoryFlow - Histórias da Comunidade</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Ícones do Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <!-- Ajuste o nome do arquivo CSS (sem espaço se preferir) -->
+  <link rel="stylesheet" href="css/Ver Histórias.css">
+  <script type="module" src="js/supabase.js"></script>
+</head>
+<body>
+
+
+  <!-- NAVBAR -->
+  <div class="navbar">
+    <a href="Memories.html"><i class="fas fa-home"></i>Início</a>
+    <div class="dropdown">
+      <a href="#"><i class="fas fa-pencil-alt"></i>Criar História</a>
+      <div class="dropdown-content">
+        <a href="diario.html">Escrever Diário</a>
+        <a href="historia.html">Escrever História</a>
+      </div>
+    </div>
+    <div class="dropdown">
+      <a href="#"><i class="fas fa-book"></i>Histórias</a>
+      <div class="dropdown-content">
+        <a href="Historias%20que%20eu%20escrevi.html">Minhas Histórias</a>
+        <a href="Ver%20Histórias.html">Ler Histórias</a>
+      </div>
+    </div>
+    <div id="userMenuArea"></div>
+    <div class="search-box">
+      <button id="searchBtn"><i class="fas fa-search"></i></button>
+	  <input type="text" id="searchBar" placeholder="Pesquisar...">
+
+    </div>
+  </div>
+
+  <!-- FILTROS -->
+  <div class="filter-bar">
+    <select id="category-filter">
+      <option value="">-- Categoria --</option>
+      <option value="Fantasia">Fantasia</option>
+      <option value="Terror">Terror</option>
+      <option value="Comédia">Comédia</option>
+      <option value="Ficção Científica">Ficção Científica</option>
+      <option value="Drama">Drama</option>
+    </select>
+    <select id="sort-filter">
+      <option value="date">Ordenar por Data</option>
+      <option value="popularity">Ordenar por Popularidade</option>
+    </select>
+  </div>
+
+  <!-- HISTÓRIAS -->
+  <section class="stories-section">
+    <h2>Histórias da Comunidade</h2>
+    <p class="subtitle">Explore as melhores histórias criadas pela comunidade.</p>
+    <div class="stories-container" id="storiesContainer"></div>
+    <div class="pagination">
+      <button id="loadMoreBtn">Carregar Mais</button>
+    </div>
+  </section>
+
+  <!-- MODAL PARA LEITURA DA HISTÓRIA -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-content">
+      <button class="modal-close" id="modalClose">Fechar</button>
+      <h2 id="modalTitle">Título da História</h2>
+
+      <!-- Texto completo (onde exibimos sinopse/história) -->
+      <p id="modalFullText"></p>
+	<button id="continuarBtn">Continuar</button>
+      <!-- Informações extras (data, autor, etc.) -->
+      <div class="modal-info" id="modalInfo"></div>
+
+    </div>
+  </div>
+
+  <!-- AVISO PARA CLIQUE FORA DO MODAL -->
+  <div class="warning-overlay" id="warningOverlay">
+    <div class="warning-box">
+      <p>Deseja fechar a leitura?</p>
+      <div>
+        <button id="warningYes">Sim</button>
+        <button id="warningNo">Não</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    © 2025 / StoryFlow / 𝐓𝐮𝐫𝐦𝐚-Tis7
+		    <a href="sobre.html"><i class="fas fa-info-circle"></i>Termos de Uso</a>
+
+  </footer>
+
+  <!-- JS PRINCIPAL -->
+  <script src="js/Ver Histórias.js"></script>
+
+</body>
+</html>
