@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diário - StoryFlow</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <script type="module" src="js/supabase.js"></script>
+  <style>
+    /* Estilos gerais */
+    body {
+      font-family: 'Indie Flower', cursive;
+      background-color: #e2e8f0; /* tom neutro, azul acinzentado */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .gear, .rocket {
+      position: absolute;
+      font-size: 24px;
+      animation-timing-function: linear;
+    }
+
+    .gear {
+      color: #4a5568;
+      animation: floatUp 10s infinite;
+    }
+
+    .rocket {
+      font-size: 30px;
+      animation: floatDown 10s infinite;
+    }
+
+    @keyframes floatUp {
+      0% { transform: translateY(100vh) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(-60vh) rotate(360deg); opacity: 0; }
+    }
+
+    @keyframes floatDown {
+      0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+    }
+
+    .header {
+      width: 100%;
+      background-color: #2d3748;
+      padding: 10px 0;
+      text-align: center;
+      position: fixed;
+      top: 0;
+      left: 0;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      z-index: 100;
+    }
+
+    .header a {
+      color: white;
+      text-decoration: none;
+      font-size: 18px;
+      margin: 0 15px;
+      padding: 8px 12px;
+      border-radius: 5px;
+      transition: background 0.3s;
+    }
+
+    .header a:hover {
+      background: #4a5568;
+    }
+
+    .book-icon {
+      position: absolute;
+      top: 5px;
+      left: 15px;
+      font-size: 30px;
+      color: white;
+    }
+
+    .diary-container {
+      width: 90%;
+      max-width: 600px;
+      background: #f7fafc;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      position: relative;
+      margin-top: 60px;
+      z-index: 101;
+      text-align: center;
+      box-sizing: border-box;
+    }
+
+    .diary-container h2 {
+      text-align: center;
+      color: #2d3748;
+      margin-bottom: 15px;
+      font-family: sans-serif;
+    }
+
+    textarea {
+      width: 100%;
+      height: 200px;
+      border: none;
+      outline: none;
+      padding: 15px;
+      border-radius: 10px;
+      font-family: sans-serif;
+      font-size: 16px;
+      background: #edf2f7;
+      resize: none;
+      box-shadow: inset 2px 2px 8px rgba(0, 0, 0, 0.1);
+      margin-top: 15px;
+      text-align: left;
+      box-sizing: border-box;
+    }
+
+    textarea::placeholder {
+      color: #718096;
+      font-style: italic;
+    }
+
+    .save-btn {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      margin-top: 15px;
+      border: none;
+      background: #2d3748;
+      color: white;
+      font-size: 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .save-btn:hover {
+      background: #4a5568;
+      transform: scale(1.05);
+    }
+
+    /* Estilos do modal de login */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 200;
+      flex-direction: column;
+    }
+
+    .modal input[type="password"] {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+      margin-bottom: 10px;
+    }
+
+    .modal button {
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+      background: #2d3748;
+      color: white;
+      cursor: pointer;
+    }
+
+    .modal p {
+      color: white;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Modal de login para segurança -->
+  <div id="login-modal" class="modal">
+    <p>Digite a senha para acessar o Diário:</p>
+    <input type="password" id="password-input" placeholder="Senha">
+    <button id="login-btn">Entrar</button>
+    <p id="login-error" style="color: #e53e3e; display: none;">Senha incorreta!</p>
+  </div>
+
+  <div class="header">
+    <span class="book-icon">📖</span>
+    <a href="Memories.html">Início</a>
+    <a href="historia.html">Histórias</a>
+    <a href="Sobre.html">Sobre</a>
+    <a href="diario.html">Resetar página</a>
+  </div>
+
+  <div class="diary-container">
+    <h2>Meu Diário</h2>
+    <textarea id="diary-text" placeholder="Escreva seu dia, pensamentos e memórias aqui..."></textarea>
+    <button class="save-btn" id="save-btn">Guardar</button>
+  </div>
+
+  <script>
+    // Função para carregar o conteúdo salvo do diário
+    function loadDiary() {
+      const savedText = localStorage.getItem('diaryContent');
+      if (savedText) {
+        document.getElementById('diary-text').value = savedText;
+      }
+    }
+
+    // Função para salvar o conteúdo do diário
+    function saveDiary() {
+      const text = document.getElementById('diary-text').value;
+      localStorage.setItem('diaryContent', text);
+      alert('Conteúdo salvo!');
+    }
+
+    document.getElementById('save-btn').addEventListener('click', saveDiary);
+
+    // Lógica do modal de login
+    const correctPassword = "minhaSenha123"; // Altere para a senha desejada
+    document.getElementById('login-btn').addEventListener('click', function() {
+      const inputPassword = document.getElementById('password-input').value;
+      if (inputPassword === correctPassword) {
+        document.getElementById('login-modal').style.display = 'none';
+        loadDiary();
+      } else {
+        document.getElementById('login-error').style.display = 'block';
+      }
+    });
+
+    // Função para criar elementos flutuantes (engrenagens e foguetes)
+    function createFloatingElements() {
+      for (let i = 0; i < 5; i++) {
+        const gear = document.createElement("div");
+        gear.classList.add("gear");
+        gear.innerHTML = "⚙️";
+        gear.style.left = Math.random() * 100 + "vw";
+        gear.style.animationDuration = (Math.random() * 5 + 5) + "s";
+        document.body.appendChild(gear);
+        setTimeout(() => gear.remove(), 10000);
+
+      }
+    }
+    setInterval(createFloatingElements, 300);
+  </script>
+</body>
+</html>
