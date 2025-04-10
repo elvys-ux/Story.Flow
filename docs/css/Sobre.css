@@ -1,0 +1,130 @@
+/* =================== NAVBAR =================== */
+    .navbar {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      background-color: rgba(0, 0, 0, 0.9);
+      padding: 10px;
+      z-index: 1000;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    }
+    .navbar a {
+      font-family: Arial, sans-serif;
+      color: white;
+      text-decoration: none;
+      padding: 10px;
+      transition: background-color 0.3s, transform 0.3s;
+      border-radius: 5px;
+    }
+    .navbar a:hover {
+      background-color: rgba(0,0,0,0.7);
+      transform: scale(1.1);
+    }
+    .navbar a i {
+      margin-right: 8px;
+    }
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      background-color: rgba(0,0,0,0.5);
+      min-width: 150px;
+      box-shadow: 0px 8px 16px rgba(0,0,0,0.3);
+      z-index: 1;
+    }
+    .dropdown-content a {
+      color: white;
+      padding: 12px 16px;
+      text-decoration: none;
+      display: block;
+    }
+    .dropdown-content a:hover {
+      background-color: rgba(255,255,255,0.2);
+    }
+    .dropdown:hover .dropdown-content {
+      display: block;
+    }
+    #userMenuArea {
+      font-family: Arial, sans-serif;
+      color: white;
+      cursor: pointer;
+    }
+
+    /* =================== SEARCH BOX =================== */
+    .search-box {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      padding: 5px;
+      background-color: white;
+      border-radius: 5px;
+    }
+    .search-box input[type="text"] {
+      border: none;
+      padding: 5px;
+      outline: none;
+    }
+    .search-box button {
+      background-color: black;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+
+    /* =================== RODAPÉ =================== */
+    footer {
+      background-color: rgba(0,0,0,0.9);
+      color: white;
+      text-align: center;
+      padding: 10px 0;
+      margin-top: 40px;
+    }
+    
+    /* =============== ESTILOS GERAIS DA PÁGINA =============== */
+    body {
+      margin: 0;
+      padding-top: 60px; /* espaço para a navbar fixa */
+      font-family: Arial, sans-serif;
+      background-color: white; /* fundo branco */
+      color: #333;
+      line-height: 1.6;
+    }
+
+    /* CONTAINER PRINCIPAL */
+    .main-content {
+      max-width: 800px;      /* Largura máxima do conteúdo */
+      margin: 0 auto;        /* Centraliza horizontalmente */
+      padding: 20px;         /* Espaço interno */
+    }
+
+    /* Títulos centralizados */
+    .main-content h1, 
+    .main-content h2, 
+    .main-content h3 {
+      text-align: center;
+      margin: 20px 0 10px;
+    }
+
+    /* Parágrafos e listas justificados */
+    .main-content p,
+    .main-content ul {
+      text-align: justify;
+      margin: 10px 0;
+    }
+
+    /* Ajuste de margem para listas (bullets) */
+    .main-content ul {
+      margin-left: 20px; /* pequeno recuo para bullets */
+      list-style: disc;
+    }
+    .main-content ul ul {
+      margin-left: 20px; /* recuo extra em sublistas */
+    }
