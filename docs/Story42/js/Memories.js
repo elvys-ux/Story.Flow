@@ -1,27 +1,23 @@
-// js/Memories.js
-import { supabase } from './supabase.js';
-
 /************************************************************
  * [1] LOGIN/LOGOUT
  ************************************************************/
-async function exibirUsuarioLogado() {
+function exibirUsuarioLogado() {
   const userArea = document.getElementById('userMenuArea');
   if (!userArea) return;
   userArea.innerHTML = '';
-
-  // Se você usa Supabase Auth:
-  const { data: { user } } = await supabase.auth.getUser();
-  if (user) {
-    userArea.textContent = user.email || 'Usuário';
-    userArea.onclick = async () => {
+  const userData = JSON.parse(localStorage.getItem('loggedUser'));
+  if (userData && userData.username) {
+    userArea.innerHTML = userData.username;
+    userArea.onclick = () => {
       if (confirm("Deseja fazer logout?")) {
-        await supabase.auth.signOut();
+        localStorage.removeItem('loggedUser');
         location.reload();
       }
     };
   } else {
-    // Se não há usuário, mostra link de Login
-    userArea.innerHTML = `<a href="Criacao.html" style="color:white;"><i class="fas fa-user"></i> Login</a>`;
+    userArea.innerHTML = `<a href="Criacao.html" style="color:white;">
+      <i class="fas fa-user"></i> Login
+    </a>`;
     userArea.onclick = null;
   }
 }
@@ -50,7 +46,6 @@ const initialCount = 4; // exibir 4 cartões de destaque
 const increment = 4;
 const container = document.getElementById('featuredStories');
 
-// Modal
 const modalOverlay = document.getElementById('modalOverlay');
 const modalClose = document.getElementById('modalClose');
 const modalTitle = document.getElementById('modalTitle');
@@ -64,59 +59,39 @@ let isModalOpen = false;
 let currentStoryId = null;
 let originalText = "";
 
-// Se quiser controlar curtidas localmente:
 let likedStories = JSON.parse(localStorage.getItem('likedStories') || '[]');
 
 /************************************************************
- * [4] Carregar Histórias (do Supabase)
+ * [4] Carregar Histórias
  ************************************************************/
-async function loadAllStories() {
-  // Busca 100 histórias (ou quantas quiser) para exibir
-  // ex.: da tabela "destaque"
-  const { data: rows, error } = await supabase
-    .from('destaque')
-    .select('*')
-    .order('data_criacao', { ascending: false })
-    .limit(100);
-
-  if (error) {
-    console.error("Erro ao carregar histórias:", error.message);
-    return;
-  }
-
-  if (!rows || rows.length === 0) {
-    // Caso não haja linhas, definimos uma "dummy"
-    rows.push({
-      id: 'dummy123',
+function loadAllStories() {
+  // Para aplicar o limite de 2 linhas, os dados devem vir sem a propriedade "cartao"
+  // (ou seja, usando "descricao"). Se não houver histórias salvas, usamos dummy data.
+  const raw = JSON.parse(localStorage.getItem('historias')) || [];
+  if (raw.length === 0) {
+    raw.push({
+      id: 1,
       titulo: "Exemplo de História",
-      sinopse: "Linha 1 da história\nLinha 2 da história\nLinha 3...\n",
-      autor: "",
-      bloqueio2: true,  // se define que deve truncar a 2 linhas
-      historia_completa: "Texto completo aqui.",
-      curtidas: 0
+      descricao: "Linha 1 da história\nLinha 2 da história\nLinha 3 da história\nLinha 4 da história"
     });
   }
-  // Transformamos em "cartao" com a mesma estrutura que seu código usa
-  allStories = rows.map((st) => {
-    // Monta a estrutura "cartao"
-    const cartao = {
-      tituloCartao: st.titulo || "Sem Título",
-      sinopseCartao: (st.sinopse || "").substring(0, 150),
-      historiaCompleta: st.historia_completa || "",
-      dataCartao: st.data_criacao || "",
-      autorCartao: st.autor || "",
-      categorias: [], // se quiser
-      likes: st.curtidas || 0
-    };
-    // se st.bloqueio2 for true, iremos truncar
-    return {
-      id: st.id,
-      bloqueio2: !!st.bloqueio2,
-      titulo: st.titulo,
-      descricao: st.sinopse,  // ou outra
-      cartao
-    };
+  // Para cada história que não possuir "cartao", define a flag bloqueio2 e cria um cartão padrão a partir da "descricao"
+  const transformed = raw.map(st => {
+    if (!st.cartao) {
+      st.bloqueio2 = true; // Flag para limitar a 2 linhas
+      st.cartao = {
+        tituloCartao: st.titulo || "Sem Título",
+        sinopseCartao: (st.descricao || "").substring(0, 150) || "(sem sinopse)",
+        historiaCompleta: st.descricao || "",
+        dataCartao: "",
+        autorCartao: "",
+        categorias: [],
+        likes: 0
+      };
+    }
+    return st;
   });
+  allStories = transformed;
 }
 
 /************************************************************
@@ -140,7 +115,7 @@ function formatarPor4Linhas(text) {
 }
 
 /************************************************************
- * [5.2] Formatador para leitura com marcação
+ * [5.2] Formatador para leitura completa com marcação
  ************************************************************/
 function formatarTextoParaLeitura(text) {
   const lines = text.split('\n');
@@ -148,19 +123,21 @@ function formatarTextoParaLeitura(text) {
   let buffer = [];
   let wordIndex = 0;
   for (let i = 0; i < lines.length; i++) {
-    const words = lines[i].split(' ').map(word => {
-      return `<span class="reading-word" data-index="${wordIndex}" onclick="markReadingPosition(this)">${word}</span>`;
+    let words = lines[i].split(' ').map(word => {
+      let span = `<span class="reading-word" data-index="${wordIndex}" onclick="markReadingPosition(this)">${word}</span>`;
+      wordIndex++;
+      return span;
     });
-    wordIndex += words.length;
     buffer.push(words.join(' '));
-    // A cada 4 "linhas", criamos um <p>
     if (buffer.length === 4) {
-      paragrafos.push(`<p style="text-align: justify;">${buffer.join('<br>')}</p>`);
+      let paragraph = `<p style="text-align: justify;">${buffer.join('<br>')}</p>`;
+      paragrafos.push(paragraph);
       buffer = [];
     }
   }
   if (buffer.length > 0) {
-    paragrafos.push(`<p style="text-align: justify;">${buffer.join('<br>')}</p>`);
+    let paragraph = `<p style="text-align: justify;">${buffer.join('<br>')}</p>`;
+    paragrafos.push(paragraph);
   }
   return paragrafos.join('');
 }
@@ -189,7 +166,7 @@ function destacarPalavra() {
 }
 
 /************************************************************
- * [5.5] Criar o cartão
+ * [5.5] Criar o cartão da história
  ************************************************************/
 function createStoryCard(story) {
   const div = document.createElement('div');
@@ -201,28 +178,27 @@ function createStoryCard(story) {
   titleEl.textContent = story.cartao.tituloCartao || 'Sem Título';
   div.appendChild(titleEl);
 
-  // Sinopse no cartão
+  // Sinopse (exibida no cartão)
   const sinopseEl = document.createElement('div');
   sinopseEl.className = 'sheet-sinopse';
   sinopseEl.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao || '(sem sinopse)');
   div.appendChild(sinopseEl);
 
-  // Clique => modal
+  // Ao clicar no cartão, abre o modal
   div.addEventListener('click', () => {
     isModalOpen = true;
     currentStoryId = story.id;
     modalTitle.textContent = story.cartao.tituloCartao || "Sem Título";
-    // exibe apenas a sinopse no início
     modalFullText.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao || '(sem sinopse)');
     modalInfo.innerHTML = '';
 
-    // Botão “Ler”
+    // Botão “Ler” – carrega a história completa com palavras clicáveis
     const lerBtn = document.createElement('button');
     lerBtn.textContent = 'Ler';
     lerBtn.addEventListener('click', () => {
       modalTitle.textContent = story.titulo || "História Completa";
       originalText = story.cartao.historiaCompleta || '(sem história completa)';
-      // Se "bloqueio2" for true => limita a 2 linhas
+      // Se a história não possuir cartão, limita a 2 linhas
       if (story.bloqueio2) {
         const lines = originalText.split('\n');
         if (lines.length > 2) {
@@ -233,14 +209,13 @@ function createStoryCard(story) {
     });
     modalFullText.appendChild(lerBtn);
 
-    // Botão "Continuar" => só aparece se houver position salva e !bloqueio2
+    // Botão "Continuar" – só aparece se existir uma posição salva E se existir cartão (ou seja, se não houver bloqueio)
     let continuarBtn = document.getElementById('continuarBtn');
     if (!continuarBtn) {
       continuarBtn = document.createElement('button');
       continuarBtn.id = 'continuarBtn';
       continuarBtn.textContent = 'Continuar';
       continuarBtn.addEventListener('click', () => {
-        // Recarrega a história completa e destaca
         const storyAtual = allStories.find(s => s.id == currentStoryId);
         if (storyAtual) {
           modalTitle.textContent = storyAtual.titulo || "História Completa";
@@ -257,11 +232,16 @@ function createStoryCard(story) {
       });
       modalFullText.appendChild(continuarBtn);
     }
+    // Se a história não tiver cartão (flag bloqueio2), o botão "Continuar" será escondido
     if (story.bloqueio2) {
       continuarBtn.style.display = 'none';
     } else {
       const savedPosition = localStorage.getItem('readingPosition_' + story.id);
-      continuarBtn.style.display = savedPosition ? 'inline-block' : 'none';
+      if (savedPosition !== null) {
+        continuarBtn.style.display = 'inline-block';
+      } else {
+        continuarBtn.style.display = 'none';
+      }
     }
 
     modalOverlay.style.display = 'flex';
@@ -271,7 +251,7 @@ function createStoryCard(story) {
 }
 
 /************************************************************
- * [6] Placeholder
+ * [6] Cartão Placeholder (caso falte histórias)
  ************************************************************/
 function createPlaceholderCard() {
   const div = document.createElement('div');
@@ -336,6 +316,7 @@ function getFilteredStories() {
 function showBatch(count) {
   const filtered = getFilteredStories();
   if (filtered.length === 0) {
+    // Se não houver histórias publicadas, não exibe nenhum cartão
     return;
   }
   const end = currentOffset + count;
@@ -354,9 +335,11 @@ function initialLoad() {
   currentOffset = 0;
   showBatch(initialCount);
 }
+
 function loadMore() {
   showBatch(increment);
 }
+
 function handleFilterOrSort() {
   container.innerHTML = '';
   currentOffset = 0;
@@ -364,7 +347,7 @@ function handleFilterOrSort() {
 }
 
 /************************************************************
- * [10] Modal e Aviso (Clique Fora)
+ * [10] Modal e Aviso de Clique Fora
  ************************************************************/
 if (modalClose) {
   modalClose.addEventListener('click', () => {
@@ -393,13 +376,11 @@ if (warningYes && warningNo) {
 /************************************************************
  * [11] Evento DOMContentLoaded
  ************************************************************/
-document.addEventListener('DOMContentLoaded', async () => {
-  await exibirUsuarioLogado();
-  // Em vez de loadAllStories() local, agora iremos 
-  // buscar do Supabase ou do local?
-  await loadAllStories();  // supabase
-  
-  initialLoad(); // exibe
+document.addEventListener('DOMContentLoaded', () => {
+  exibirUsuarioLogado();
+  loadAllStories();
+  initialLoad();
+
   const searchBar = document.getElementById('searchBar');
   const categoryFilter = document.getElementById('category-filter');
   const sortFilter = document.getElementById('sort-filter');
@@ -422,7 +403,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Se já existe #continuarBtn
+  // Se o botão "Continuar" já existir (no HTML), adiciona seu event listener
   const continuarBtn = document.getElementById('continuarBtn');
   if (continuarBtn) {
     continuarBtn.addEventListener('click', () => {
