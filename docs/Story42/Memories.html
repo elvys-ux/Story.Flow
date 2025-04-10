@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <title>StoryFlow - Memories</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Ícones do Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <!-- CSS principal -->
+  <link rel="stylesheet" href="css/Memories.css">
+  <script type="module" src="js/supabase.js"></script>
+</head>
+<body>
+
+  <!-- Barra de Navegação -->
+  <div class="navbar">
+    <a href="Memories.html"><i class="fas fa-home"></i>Início</a>
+    <div class="dropdown">
+      <a href="#"><i class="fas fa-pencil-alt"></i>Criar História</a>
+      <div class="dropdown-content">
+        <a href="diario.html">Escrever Diário</a>
+        <a href="historia.html">Escrever História</a>
+      </div>
+    </div>
+    <div class="dropdown">
+      <a href="#"><i class="fas fa-book"></i>Histórias</a>
+      <div class="dropdown-content">
+        <a href="Historias que eu escrevi.html">Histórias que eu escrevi</a>
+        <a href="Ver Histórias.html">Ler Histórias</a>
+      </div>
+    </div>
+    <!-- Área para mostrar usuário logado -->
+    <div id="userMenuArea"></div>
+    <!-- Barra de pesquisa -->
+    <div class="search-box">
+      <input type="text" id="searchBar" placeholder="Pesquisar...">
+      <button id="searchBtn"><i class="fas fa-search"></i></button>
+      <!-- Sugestões (dropdown) -->
+      <div id="searchResults"></div>
+    </div>
+  </div>
+
+  <main>
+    <h1>StoryFlow</h1>
+    <h2>Crie e personalize as suas histórias no StoryFlow, com recursos para guardar, editar e adicionar música às suas memórias.</h2>
+    <!-- Container para exibir 4 cartões de destaque -->
+    <div id="featuredStories" style="margin-top: 30px;"></div>
+  </main>
+
+  <!-- Modal para leitura de história -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-content">
+      <button class="modal-close" id="modalClose">Fechar</button>
+      <h2 id="modalTitle">Título da História</h2>
+      <!-- Texto completo (sinopse ou história completa) -->
+      <p id="modalFullText"></p>
+      <!-- Botão Continuar (inicialmente oculto) -->
+      <button id="continuarBtn" style="display: none;">Continuar</button>
+      <div class="modal-info" id="modalInfo"></div>
+    </div>
+  </div>
+
+  <!-- Overlay de aviso para clique fora -->
+  <div class="warning-overlay" id="warningOverlay">
+    <div class="warning-box">
+      <p>Deseja fechar a leitura?</p>
+      <div>
+        <button id="warningYes">Sim</button>
+        <button id="warningNo">Não</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overlay para avisos (ex: linha salva) -->
+  <div id="avisoOverlay" style="display: none;">
+    <div id="avisoMessage"></div>
+  </div>
+
+  <footer>
+    © 2025 / StoryFlow
+    <a href="sobre.html"><i class="fas fa-info-circle"></i>Termos de Uso</a>
+  </footer>
+
+  <!-- JavaScript principal -->
+  <script src="js/Memories.js"></script>
+</body>
+</html>
