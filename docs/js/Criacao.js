@@ -1,5 +1,5 @@
 // js/Criacao.js
-import { supabase } from "./supabase.js";
+import { supabase } from './supabase.js';
 
 document.addEventListener("DOMContentLoaded", function () {
   // Referência ao container que conterá as telas de login e registro
