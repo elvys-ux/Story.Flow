@@ -70,13 +70,13 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    // Verifica se a senha tem no mínimo 8 caracteres
+    // Validação da senha: no mínimo 8 caracteres
     if (password.length < 8) {
       errorMsg.innerText = "A senha deve ter no mínimo 8 caracteres!";
       return;
     }
 
-    // Verifica se a senha não é igual ao nome de usuário
+    // Validação: a senha não pode ser igual ao nome de usuário
     if (password === username) {
       errorMsg.innerText = "A senha não pode ser igual ao nome de usuário!";
       return;
@@ -100,7 +100,12 @@ document.addEventListener("DOMContentLoaded", function () {
       if (data.user) {
         const { error: profileError } = await supabase
           .from("profiles")
-          .insert([{ id: data.user.id, username: username, data_nascimento: birthdate }]);
+          .insert([{ 
+            id: data.user.id, 
+            username: username, 
+            email: email, // Adicionamos o email aqui para cumprir a constraint NOT NULL
+            data_nascimento: birthdate 
+          }]);
         if (profileError) {
           errorMsg.innerText = "Conta criada, mas erro ao salvar perfil: " + profileError.message;
           return;
@@ -109,7 +114,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
       alert("Conta criada com sucesso! Verifique seu e-mail para ativar sua conta, se necessário.");
       errorMsg.innerText = "";
-      // Volta para a tela de login
+      // Retorna para a tela de login
       showLoginScreen();
     } catch (err) {
       errorMsg.innerText = "Erro inesperado: " + err.message;
