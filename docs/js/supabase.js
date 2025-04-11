@@ -1,5 +1,5 @@
 // supabase.js
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+import { createClient } from '@supabase/supabase-js';
 
 // Use o URL e a Anon Key do seu projeto Supabase
 const supabaseUrl = 'https://ywiynndaowlifbqcsacc.supabase.co';
