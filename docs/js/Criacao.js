@@ -33,7 +33,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (event) event.preventDefault();
     loginContainer.innerHTML = `
       <h2>Criar Conta</h2>
-      <p>Preencha os campos abaixo para continuar</p>
+      <p>Preencha os campos abaixo para criar sua conta</p>
       <p id="error-msg" class="error"></p>
       <input type="text" id="username" placeholder="Nome de usuário">
       <input type="email" id="register-email" placeholder="E-mail">
@@ -49,7 +49,7 @@ document.addEventListener("DOMContentLoaded", function () {
     document.getElementById("register-btn").addEventListener("click", registerUser);
   }
 
-  // Função para criar o usuário
+  // Função para criar o usuário (registro)
   async function registerUser() {
     const username = document.getElementById("username").value.trim();
     const email = document.getElementById("register-email").value.trim().toLowerCase();
@@ -58,31 +58,31 @@ document.addEventListener("DOMContentLoaded", function () {
     const birthdate = document.getElementById("reg-birthdate").value; // Formato: YYYY-MM-DD
     const errorMsg = document.getElementById("error-msg");
 
-    // Valida se todos os campos estão preenchidos
+    // Verifica se todos os campos foram preenchidos
     if (!username || !email || !password || !confirmPassword || !birthdate) {
       errorMsg.innerText = "Todos os campos devem ser preenchidos!";
       return;
     }
 
-    // Valida o formato do e-mail
+    // Verifica o formato do e-mail
     if (!isValidEmail(email)) {
       errorMsg.innerText = "Por favor, insira um e-mail válido!";
       return;
     }
 
-    // Validação da senha: no mínimo 8 caracteres
+    // Verifica se a senha tem no mínimo 8 caracteres
     if (password.length < 8) {
       errorMsg.innerText = "A senha deve ter no mínimo 8 caracteres!";
       return;
     }
 
-    // Validação: a senha não pode ser igual ao nome de usuário
+    // Verifica se a senha não é igual ao nome de usuário
     if (password === username) {
       errorMsg.innerText = "A senha não pode ser igual ao nome de usuário!";
       return;
     }
 
-    // Validação: as senhas devem coincidir
+    // Verifica se a senha e a confirmação coincidem
     if (password !== confirmPassword) {
       errorMsg.innerText = "As senhas não coincidem!";
       return;
@@ -96,7 +96,7 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
       }
 
-      // Insere o perfil na tabela "profiles" com o ID do usuário, nome e data de nascimento
+      // Se a conta foi criada, insere o perfil na tabela "profiles"
       if (data.user) {
         const { error: profileError } = await supabase
           .from("profiles")
@@ -107,9 +107,9 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       }
 
-      alert("Conta criada com sucesso! Verifique seu e-mail para ativar a conta, se necessário.");
+      alert("Conta criada com sucesso! Verifique seu e-mail para ativar sua conta, se necessário.");
       errorMsg.innerText = "";
-      // Retorna para a tela de login
+      // Volta para a tela de login
       showLoginScreen();
     } catch (err) {
       errorMsg.innerText = "Erro inesperado: " + err.message;
@@ -141,5 +141,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
+  // Inicializa a tela de login ao carregar a página
   showLoginScreen();
 });
