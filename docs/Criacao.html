@@ -4,30 +4,28 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Iniciar Sessão</title>
-    <!-- Estilos CSS -->
     <link rel="stylesheet" href="css/Criação.css" />
-    <!-- Carrega primeiro o supabase.js (type module) -->
+    <!-- Primeiro carregue o supabase.js -->
     <script type="module" src="js/supabase.js"></script>
-    <!-- Depois carrega o Criacao.js, que importa supabase.js -->
+    <!-- Depois o Criacao.js -->
     <script type="module" src="js/Criacao.js"></script>
   </head>
   <body>
-    <!-- Container de Login -->
     <div class="container" id="login-container">
       <h2>Iniciar Sessão</h2>
       <p>Acesse sua conta para continuar</p>
       <p id="error-msg" class="error"></p>
-      <input type="text" id="email" placeholder="E-mail ou telefone" />
-      <input type="password" id="password" placeholder="Senha" />
+      <input type="text" id="email" placeholder="E-mail ou telefone">
+      <input type="password" id="password" placeholder="Senha">
+      
       <div class="links">
         <a href="#">Esqueceu-se do e-mail?</a>
       </div>
       <button id="next-btn">Seguinte</button>
-      
       <div class="redirect-container" id="redirect-container">
         <p>Escolha para onde deseja ir:</p>
         <select id="redirect-options">
-          <option value="index.html">Início</option>
+          <option value="Memories.html">Início</option>
           <option value="diario.html">Diário</option>
           <option value="historia.html">Histórias</option>
           <option value="Ver Histórias.html">Ver Histórias</option>
@@ -39,8 +37,6 @@
         <a href="#" id="create-account">Criar conta</a>
       </div>
     </div>
-    
-    <!-- Rodapé -->
     <div class="footer">
       <p>Ajuda • Privacidade • Termos</p>
     </div>
