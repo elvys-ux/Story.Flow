@@ -48,7 +48,7 @@ function showRegisterScreen(event) {
 
 async function registerUser() {
   const username = document.getElementById("username").value.trim();
-  const email = document.getElementById("register-email").value.trim().toLowerCase();
+
   const password = document.getElementById("register-password").value.trim();
   const confirmPassword = document.getElementById("confirm-password").value.trim();
   const birthdate = document.getElementById("reg-birthdate").value;
