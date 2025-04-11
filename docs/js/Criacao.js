@@ -1,5 +1,5 @@
 // js/Criacao.js
-import { supabase } from './supabase.js';
+import { supabase } from "./supabase.js";
 
 document.addEventListener("DOMContentLoaded", function () {
   // Referência ao container que conterá as telas de login e registro
@@ -24,6 +24,7 @@ document.addEventListener("DOMContentLoaded", function () {
         <a href="#" id="create-account">Criar conta</a>
       </div>
     `;
+
     document.getElementById("next-btn").addEventListener("click", loginUser);
     document.getElementById("create-account").addEventListener("click", showRegisterScreen);
   }
@@ -45,6 +46,7 @@ document.addEventListener("DOMContentLoaded", function () {
         <a href="#" id="back-to-login">Já tem uma conta?</a>
       </div>
     `;
+
     document.getElementById("back-to-login").addEventListener("click", showLoginScreen);
     document.getElementById("register-btn").addEventListener("click", registerUser);
   }
@@ -97,13 +99,15 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       // Se a conta foi criada, insere o perfil na tabela "profiles"
+      // OBS.: Se você deseja que o usuário seja salvo apenas na tabela profiles (sem o e-mail, por exemplo),
+      //      basta ajustar a inserção removendo o campo email.
       if (data.user) {
         const { error: profileError } = await supabase
           .from("profiles")
           .insert([{
             id: data.user.id,
             username: username,
-            email: email, // Incluímos o campo email para cumprir a constraint NOT NULL
+            email: email, // Caso você deseje remover o email, basta excluir esta linha.
             data_nascimento: birthdate
           }]);
         if (profileError) {
