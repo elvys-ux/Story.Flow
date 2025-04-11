@@ -64,7 +64,7 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    // Verifica o formato do e-mail
+    // Valida o formato do e-mail
     if (!isValidEmail(email)) {
       errorMsg.innerText = "Por favor, insira um e-mail válido!";
       return;
@@ -100,11 +100,11 @@ document.addEventListener("DOMContentLoaded", function () {
       if (data.user) {
         const { error: profileError } = await supabase
           .from("profiles")
-          .insert([{ 
-            id: data.user.id, 
-            username: username, 
-            email: email, // Adicionamos o email aqui para cumprir a constraint NOT NULL
-            data_nascimento: birthdate 
+          .insert([{
+            id: data.user.id,
+            username: username,
+            email: email, // Incluímos o campo email para cumprir a constraint NOT NULL
+            data_nascimento: birthdate
           }]);
         if (profileError) {
           errorMsg.innerText = "Conta criada, mas erro ao salvar perfil: " + profileError.message;
