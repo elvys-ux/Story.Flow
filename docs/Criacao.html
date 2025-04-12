@@ -9,7 +9,6 @@
     <script type="module" src="js/supabase.js"></script>
     <!-- Depois o Criacao.js -->
     <script type="module" src="js/Criacao.js"></script>
-
   </head>
   <body>
     <div class="container" id="login-container">
@@ -23,17 +22,16 @@
         <a href="#">Esqueceu-se do e-mail?</a>
       </div>
       <button id="next-btn">Seguinte</button>
+      
+      <!-- Se o redirecionamento ainda for necessário, deixe apenas a opção Início -->
       <div class="redirect-container" id="redirect-container">
         <p>Escolha para onde deseja ir:</p>
         <select id="redirect-options">
           <option value="index.html">Início</option>
-          <option value="diario.html">Diário</option>
-          <option value="historia.html">Histórias</option>
-          <option value="Ver Histórias.html">Ver Histórias</option>
-          <option value="Sobre.html">Sobre o Site</option>
         </select>
         <button id="redirect-btn">Ir</button>
       </div>
+      
       <div class="links">
         <a href="#" id="create-account">Criar conta</a>
       </div>
