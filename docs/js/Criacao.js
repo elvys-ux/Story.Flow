@@ -139,7 +139,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       alert("Login bem-sucedido!");
-      window.location.href = "Memories.html";
+      window.location.href = "index.html";
     } catch (err) {
       errorMsg.innerText = "Erro inesperado: " + err.message;
     }
