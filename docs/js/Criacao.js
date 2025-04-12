@@ -2,7 +2,7 @@
 import { supabase } from './supabase.js';
 
 document.addEventListener("DOMContentLoaded", function () {
-  // Exibir a tela de login por padrão
+  // Exibe a tela de login por padrão
   showLoginScreen();
 
   // Função para validar o formato de e-mail (opcional)
@@ -95,7 +95,7 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
       }
 
-      // Se o usuário foi criado, insere o perfil na tabela "profiles" sem a coluna email
+      // Se o usuário foi criado, insere o perfil na tabela "profiles"
       if (data.user) {
         const { error: profileError } = await supabase
           .from("profiles")
@@ -145,4 +145,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
+  // Inicializa a tela de login ao carregar a página
+  showLoginScreen();
 });
