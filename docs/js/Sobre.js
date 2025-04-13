@@ -9,9 +9,12 @@ async function exibirUsuarioLogado() {
   }
 
   // Obtém a sessão atual do Supabase
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
   console.log("Sessão retornada:", session, "Erro na sessão:", sessionError);
-  
+
   // Se não houver sessão, exibe um link para login
   if (!session) {
     userArea.innerHTML = `
@@ -24,41 +27,45 @@ async function exibirUsuarioLogado() {
   // Se houver sessão, usa o ID do usuário para consultar a tabela 'profiles'
   const userId = session.user.id;
   console.log("Usuário autenticado. ID:", userId);
-  
-  // Como na sua tabela de profiles o único campo com informações do usuário é o 'id',
-  // vamos selecionar ele mesmo.
+
+  // Consulta o campo 'username' na tabela 'profiles'
   const { data: profileData, error: profileError } = await supabase
     .from("profiles")
-    .select("id")
+    .select("username")
     .eq("id", userId)
     .single();
-  
+
   console.log("Dados do perfil:", profileData, "Erro no perfil:", profileError);
-  
-  // Usa o valor de 'id' do profile para exibir o nome, ou o email como fallback
+
+  // Define o nome a exibir
   let displayName = "";
-  if (profileError || !profileData) {
+  if (profileError || !profileData || !profileData.username) {
+    // Se não conseguiu recuperar o username, usa o e-mail como fallback
     displayName = session.user.email;
-    console.warn("Não foi possível recuperar o perfil. Utilizando o e-mail:", displayName);
+    console.warn(
+      "Não foi possível recuperar o nome de usuário. Usando e-mail:",
+      displayName
+    );
   } else {
-    displayName = profileData.id;
+    displayName = profileData.username;
   }
-  
-  // Atualiza a interface – exibe o "nome" do usuário e um pequeno menu para logout
+
+  // Atualiza a interface – exibe o nome do usuário e um menu de logout
   userArea.innerHTML = `
     <span id="user-name" style="cursor: pointer;">${displayName}</span>
     <div id="logout-menu" style="display: none; margin-top: 5px;">
       <button id="logout-btn">Deslogar</button>
     </div>
   `;
-  
+
   // Ao clicar no nome do usuário, alterna a visibilidade do menu de logout
   const userNameEl = document.getElementById("user-name");
   const logoutMenu = document.getElementById("logout-menu");
   userNameEl.addEventListener("click", () => {
-    logoutMenu.style.display = (logoutMenu.style.display === "none" ? "block" : "none");
+    logoutMenu.style.display =
+      logoutMenu.style.display === "none" ? "block" : "none";
   });
-  
+
   // Configura o botão de logout para chamar supabase.auth.signOut()
   const logoutBtn = document.getElementById("logout-btn");
   logoutBtn.addEventListener("click", async () => {
@@ -66,7 +73,7 @@ async function exibirUsuarioLogado() {
     if (error) {
       alert("Erro ao deslogar: " + error.message);
     } else {
-      // Opcional: Se necessário, limpe também outras informações (por exemplo, localStorage)
+      // Se quiser limpar mais coisas (ex.: localStorage), faça aqui
       location.reload();
     }
   });
