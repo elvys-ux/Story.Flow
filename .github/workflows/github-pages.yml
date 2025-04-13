@@ -1,0 +1,26 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main  # Altere se o branch principal for outro
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v2
+
+      # Se não precisar de um build, pode remover este passo.
+      # Caso precise de build, adicione os comandos apropriados.
+      #- name: Build do site
+      #  run: |
+      #    echo "Executando build..."
+      #    # Comandos para instalação e build (ex: npm install && npm run build)
+
+      - name: Deploy para GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs  # Publica os arquivos que estão na pasta docs
