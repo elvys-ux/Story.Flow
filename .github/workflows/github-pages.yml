@@ -24,4 +24,5 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs  # Publica os arquivos que estão na pasta docs
-
+          publish_branch: gh-pages
+          force_orphan: true
