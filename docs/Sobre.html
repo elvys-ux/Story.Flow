@@ -1,219 +1,142 @@
 <!DOCTYPE html>
 <html lang="pt">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Termos de Uso - StoryFlow</title>
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
-    <!-- Seu CSS -->
-    <link rel="stylesheet" href="css/Sobre.css" />
-    
-    <!-- Carrega o Supabase -->
-    <script type="module" src="js/supabase.js"></script>
-    <script type="module" src="js/userDisplay.js"></script>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Termos de Uso - StoryFlow</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
-    
-    <!-- Script para exibir o nome do usuário via Supabase -->
-    <script type="module">
-      import { supabase } from './supabase.js';
-      
-      async function exibirUsuarioLogado() {
-        const userArea = document.getElementById('userMenuArea');
-        if (!userArea) {
-          console.error("Elemento 'userMenuArea' não encontrado!");
-          return;
-        }
-        
-        // Obtém a sessão atual
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) {
-          console.error("Erro ao obter sessão:", sessionError.message);
-          userArea.innerHTML = `<a href="Criacao.html" style="color:white;">
-                                  <i class="fas fa-user"></i> Login
-                                </a>`;
-          return;
-        }
-        
-        // Se não houver sessão, exibe o link de Login
-        if (!session) {
-          userArea.innerHTML = `<a href="Criacao.html" style="color:white;">
-                                  <i class="fas fa-user"></i> Login
-                                </a>`;
-          return;
-        }
-        
-        // Consulta o perfil para obter o username
-        const userId = session.user.id;
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('username')
-          .eq('id', userId)
-          .single();
-          
-        let displayName = "";
-        if (profileError || !profileData) {
-          console.warn("Erro ao obter o perfil. Usando email como fallback:", profileError);
-          displayName = session.user.email;
-        } else {
-          displayName = profileData.username;
-        }
-        
-        // Atualiza a interface com o nome do usuário e um menu para logout
-        userArea.innerHTML = `
-          <span id="user-name" style="cursor: pointer;">${displayName}</span>
-          <div id="logout-menu" style="display: none; margin-top: 5px;">
-            <button id="logout-btn">Deslogar</button>
-          </div>
-        `;
-        
-        // Ao clicar no nome do usuário, exibe ou oculta o menu de logout
-        const userNameEl = document.getElementById("user-name");
-        const logoutMenu = document.getElementById("logout-menu");
-        userNameEl.addEventListener("click", () => {
-          logoutMenu.style.display = (logoutMenu.style.display === "none" ? "block" : "none");
-        });
-        
-        // Configura o botão de logout
-        const logoutBtn = document.getElementById("logout-btn");
-        logoutBtn.addEventListener("click", async () => {
-          const { error } = await supabase.auth.signOut();
-          if (error) {
-            alert("Erro ao deslogar: " + error.message);
-          } else {
-            window.location.href = "Criacao.html";
-          }
-        });
-      }
-      
-      document.addEventListener("DOMContentLoaded", exibirUsuarioLogado);
-    </script>
-  </head>
-  <body>
-    <!-- Barra de Navegação -->
-    <div class="navbar">
-      <a href="index.html"><i class="fas fa-home"></i> Início</a>
-      <div class="dropdown">
-        <a href="#"><i class="fas fa-pencil-alt"></i> Criar História</a>
-        <div class="dropdown-content">
-          <a href="diario.html">Escrever Diário</a>
-          <a href="historia.html">Escrever História</a>
-        </div>
+<link rel="stylesheet" href="css/Sobre.css">
+<script src="js/Sobre.js"></script>
+
+</head>
+<body>
+  <!-- Barra de Navegação -->
+  <div class="navbar">
+    <a href="Memories.html"><i class="fas fa-home"></i> Início</a>
+    <div class="dropdown">
+      <a href="#"><i class="fas fa-pencil-alt"></i> Criar História</a>
+      <div class="dropdown-content">
+        <a href="diario.html">Escrever Diário</a>
+        <a href="historia.html">Escrever História</a>
       </div>
-      <div class="dropdown">
-        <a href="#"><i class="fas fa-book"></i> Histórias</a>
-        <div class="dropdown-content">
-          <a href="Historias que eu escrevi.html">Histórias que Eu Escrevi</a>
-          <a href="Ver Histórias.html">Ler Histórias</a>
-        </div>
-      </div>
-      <!-- Área para mostrar o nome do usuário ou o link de Login -->
-      <div id="userMenuArea"></div>
     </div>
+    <div class="dropdown">
+      <a href="#"><i class="fas fa-book"></i> Histórias</a>
+      <div class="dropdown-content">
+        <a href="Historias que eu escrevi.html">Histórias que Eu Escrevi</a>
+        <a href="Ver Histórias.html">Ler Histórias</a>
+      </div>
+    </div>
+   
+    <div id="userMenuArea"></div>
+  </div>
 
-    <!-- CONTEÚDO PRINCIPAL -->
-    <div class="main-content">
-      <h1>Termos de Uso do StoryFlow</h1>
-      <p>
-        Bem-vindo ao StoryFlow! Estes Termos de Uso regem a utilização de todas as páginas e funcionalidades oferecidas pelo nosso site. Ao utilizar o StoryFlow, você concorda com as condições aqui estabelecidas.
-      </p>
+  <!-- CONTEÚDO PRINCIPAL -->
+  <div class="main-content">
+    <h1>Termos de Uso do StoryFlow</h1>
+    <p>
+      Bem-vindo ao StoryFlow! Estes Termos de Uso regem a utilização de todas as páginas e funcionalidades oferecidas pelo nosso site. Ao utilizar o StoryFlow, você concorda com as condições aqui estabelecidas.
+    </p>
 
-      <h2>Descrição Geral</h2>
-      <p>
-        O StoryFlow é uma plataforma interativa para criação, armazenamento e compartilhamento de histórias e memórias. Nosso site utiliza o armazenamento local (localStorage) para salvar dados e integra o Supabase para autenticação de usuários.
-      </p>
+    <h2>Descrição Geral</h2>
+    <p>
+      O StoryFlow é uma plataforma interativa para criação, armazenamento e compartilhamento de histórias e memórias. Nosso site utiliza o armazenamento local (localStorage) para salvar dados e integra o Supabase para autenticação de usuários.
+    </p>
   
-      <h2>Funcionalidades de Cada Página</h2>
-      
-      <h3>1. Página Início</h3>
-      <ul>
-        <li><strong>Objetivo:</strong> Apresentar os destaques do StoryFlow por meio de cartões interativos com as melhores histórias da comunidade.</li>
-        <li><strong>Funcionalidades:</strong>
-          <ul>
-            <li>Exibição dos cartões de destaque, baseados em curtidas.</li>
-            <li>Botão "Carregar Mais" para visualizar mais histórias.</li>
-            <li>Opção de pesquisa dinâmica por título e autor.</li>
-            <li>Exibição de notificações (toasts) e integração com o sistema de login.</li>
-          </ul>
-        </li>
-      </ul>
-      
-      <h3>2. Página Diário</h3>
-      <ul>
-        <li><strong>Objetivo:</strong> Permitir que os usuários registrem seus diários pessoais de forma segura.</li>
-        <li><strong>Funcionalidades:</strong>
-          <ul>
-            <li>Modal de login para acessar o conteúdo do diário.</li>
-            <li>Área para escrita e salvamento automático do conteúdo.</li>
-            <li>Animações de elementos para criar um ambiente interativo.</li>
-          </ul>
-        </li>
-      </ul>
-      
-      <h3>3. Página de Criação de Histórias</h3>
-      <ul>
-        <li><strong>Objetivo:</strong> Permitir que os usuários criem ou editem suas histórias.</li>
-        <li><strong>Funcionalidades:</strong>
-          <ul>
-            <li>Formulário para inserir título e descrição da história.</li>
-            <li>Opções para salvar, editar ou limpar o formulário.</li>
-            <li>Lista lateral para exibir todas as histórias salvas e permitir ações como editar ou excluir.</li>
-            <li>Exibição da história completa em um container dedicado.</li>
-          </ul>
-        </li>
-      </ul>
-      
-      <h3>4. Página "Histórias escritas por mim"</h3>
-      <ul>
-        <li><strong>Objetivo:</strong> Exibir todas as histórias criadas pelo usuário.</li>
-        <li><strong>Funcionalidades:</strong>
-          <ul>
-            <li>Exibição de uma lista de histórias salvas, com opções de leitura e exclusão.</li>
-            <li>Modo de leitura alternando entre exibição contínua e por parágrafos.</li>
-            <li>Pesquisa por histórias a partir do título ou do autor.</li>
-          </ul>
-        </li>
-      </ul>
-      
-      <h3>5. Página "Histórias da Comunidade"</h3>
-      <ul>
-        <li><strong>Objetivo:</strong> Permitir a visualização e interação com as histórias criadas por outros usuários.</li>
-        <li><strong>Funcionalidades:</strong>
-          <ul>
-            <li>Filtros para ordenar e categorizar as histórias (por data ou popularidade).</li>
-            <li>Modal para exibir detalhes completos da história, incluindo sinopse, autor, data, categorias e curtidas.</li>
-            <li>Sistema de curtidas para avaliar as histórias.</li>
-            <li>Função de pesquisa dinâmica por palavras-chave.</li>
-          </ul>
-        </li>
-      </ul>
-      
-      <h3>6. Página de Login/Criação de Conta (Criacao.html)</h3>
-      <ul>
-        <li><strong>Objetivo:</strong> Permitir que os usuários criem suas contas ou façam login para acessar as demais funcionalidades do site.</li>
-        <li><strong>Funcionalidades:</strong>
-          <ul>
-            <li>Formulários para login e criação de conta com validações (ex.: formato de e-mail, verificação de senha).</li>
-            <li>Integração com o Supabase para autenticação e registro de usuários.</li>
-            <li>Interface interativa com mensagens de erro e feedback visual.</li>
-          </ul>
-        </li>
-      </ul>
-      
-      <h2>Considerações Gerais</h2>
-      <p>
-        Ao utilizar o StoryFlow, você concorda em usar a plataforma de maneira responsável e a respeitar a privacidade dos demais usuários. É importante manter seus dados protegidos e não compartilhar informações sensíveis.
-      </p>
-      
-      <h2>Alterações nos Termos</h2>
-      <p>
-        Estes Termos de Uso poderão ser atualizados periodicamente para refletir novas funcionalidades ou alterações na plataforma. Recomendamos a leitura frequente para se manter informado.
-      </p>
-      
-    </div> <!-- Fim da main-content -->
+    <h2>Funcionalidades de Cada Página</h2>
     
-    <footer>
-      © 2025 / StoryFlow  <a href="Sobre.html"><i class="fas fa-info-circle"></i> Termos de Uso</a>
-    </footer>
-  </body>
+    <h3>1. Página Início</h3>
+    <ul>
+      <li><strong>Objetivo:</strong> Apresentar os destaques do StoryFlow por meio de cartões interativos com as melhores histórias da comunidade.</li>
+      <li><strong>Funcionalidades:</strong>
+        <ul>
+          <li>Exibição dos cartões de destaque, baseados em curtidas.</li>
+          <li>Botão "Carregar Mais" para visualizar mais histórias.</li>
+          <li>Opção de pesquisa dinâmica por título e autor.</li>
+          <li>Exibição de notificações (toasts) e integração com o sistema de login.</li>
+        </ul>
+      </li>
+    </ul>
+    
+    <h3>2. Página Diário</h3>
+    <ul>
+      <li><strong>Objetivo:</strong> Permitir que os usuários registrem seus diários pessoais de forma segura.</li>
+      <li><strong>Funcionalidades:</strong>
+        <ul>
+          <li>Modal de login para acessar o conteúdo do diário.</li>
+          <li>Área para escrita e salvamento automático do conteúdo.</li>
+          <li>Animações de elementos para criar um ambiente interativo.</li>
+        </ul>
+      </li>
+    </ul>
+    
+    <h3>3. Página de Criação de Histórias</h3>
+    <ul>
+      <li><strong>Objetivo:</strong> Permitir que os usuários criem ou editem suas histórias.</li>
+      <li><strong>Funcionalidades:</strong>
+        <ul>
+          <li>Formulário para inserir título e descrição da história.</li>
+          <li>Opções para salvar, editar ou limpar o formulário.</li>
+          <li>Lista lateral para exibir todas as histórias salvas e permitir ações como editar ou excluir.</li>
+          <li>Exibição da história completa em um container dedicado.</li>
+        </ul>
+      </li>
+    </ul>
+    
+    <h3>4. Página "Histórias escritas por mim"</h3>
+    <ul>
+      <li><strong>Objetivo:</strong> Exibir todas as histórias criadas pelo usuário.</li>
+      <li><strong>Funcionalidades:</strong>
+        <ul>
+          <li>Exibição de uma lista de histórias salvas, com opções de leitura e exclusão.</li>
+          <li>Modo de leitura alternando entre exibição contínua e por parágrafos.</li>
+          <li>Pesquisa por histórias a partir do título ou do autor.</li>
+        </ul>
+      </li>
+    </ul>
+    
+    <h3>5. Página "Histórias da Comunidade"</h3>
+    <ul>
+      <li><strong>Objetivo:</strong> Permitir a visualização e interação com as histórias criadas por outros usuários.</li>
+      <li><strong>Funcionalidades:</strong>
+        <ul>
+          <li>Filtros para ordenar e categorizar as histórias (por data ou popularidade).</li>
+          <li>Modal para exibir detalhes completos da história, incluindo sinopse, autor, data, categorias e curtidas.</li>
+          <li>Sistema de curtidas para avaliar as histórias.</li>
+          <li>Função de pesquisa dinâmica por palavras-chave.</li>
+        </ul>
+      </li>
+    </ul>
+    
+    <h3>6. Página de Login/Criação de Conta (Criacao.html)</h3>
+    <ul>
+      <li><strong>Objetivo:</strong> Permitir que os usuários criem suas contas ou façam login para acessar as demais funcionalidades do site.</li>
+      <li><strong>Funcionalidades:</strong>
+        <ul>
+          <li>Formulários para login e criação de conta com validações (ex.: formato de e-mail, verificação de senha).</li>
+          <li>Integração com o Supabase para autenticação e registro de usuários.</li>
+          <li>Interface interativa com mensagens de erro e feedback visual.</li>
+        </ul>
+      </li>
+    </ul>
+    
+    <h2>Considerações Gerais</h2>
+    <p>
+      Ao utilizar o StoryFlow, você concorda em usar a plataforma de maneira responsável e a respeitar a privacidade dos demais usuários. É importante manter seus dados protegidos e não compartilhar informações sensíveis.
+    </p>
+    
+    <h2>Alterações nos Termos</h2>
+    <p>
+      Estes Termos de Uso poderão ser atualizados periodicamente para refletir novas funcionalidades ou alterações na plataforma. Recomendamos a leitura frequente para se manter informado.
+    </p>
+    
+    
+  </div> <!-- Fim da main-content -->
+  
+  <footer>
+    © 2025 / StoryFlow  <a href="Sobre.html"><i class="fas fa-info-circle"></i> Termos de Uso</a>
+  </footer>
+
+</body>
 </html>
