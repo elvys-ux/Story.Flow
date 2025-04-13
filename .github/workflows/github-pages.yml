@@ -3,7 +3,7 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
-      - main  # Altere se o branch principal for outro
+      - main  # Altere se seu branch principal for diferente
 
 jobs:
   build-deploy:
@@ -12,17 +12,13 @@ jobs:
       - name: Checkout do repositório
         uses: actions/checkout@v2
 
-      # Se não precisar de um build, pode remover este passo.
-      # Caso precise de build, adicione os comandos apropriados.
-      #- name: Build do site
-      #  run: |
-      #    echo "Executando build..."
-      #    # Comandos para instalação e build (ex: npm install && npm run build)
-
       - name: Deploy para GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs  # Publica os arquivos que estão na pasta docs
-          publish_branch: gh-pages
-          force_orphan: true
+          publish_dir: ./docs      # Pasta com os arquivos estáticos do site
+          publish_branch: gh-pages # Branch de publicação
+          force_orphan: true       # Força criação do branch como órfão
+          allow_empty_commit: true # Permite commits vazios
+          user_name: "elvys-ux"     # Nome do usuário para os commits de deploy
+          user_email: "elvysgraca.lx@ita.learnstudio.com"  # Substitua pelo seu e-mail
