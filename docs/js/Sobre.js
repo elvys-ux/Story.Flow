@@ -1,4 +1,4 @@
-// Exemplo: userDisplay.js
+// userDisplay.js
 
 import { supabase } from "./supabase.js";
 
@@ -17,7 +17,7 @@ async function exibirUsuarioLogado() {
     // Se não houver sessão, exibe o link para login
     userArea.innerHTML = `<a href="Criacao.html" style="color:white;">
                               <i class="fas fa-user"></i> Login
-                          </a>`;
+                            </a>`;
     return;
   }
 
@@ -34,7 +34,7 @@ async function exibirUsuarioLogado() {
 
   console.log("Dados do perfil:", profileData, "Erro no perfil:", profileError);
 
-  // Use o username do profile ou, se der erro, use o e-mail do usuário (como fallback)
+  // Use o username do profile ou, se der erro, use o e-mail do usuário como fallback
   let displayName = "";
   if (profileError || !profileData) {
     displayName = session.user.email;
@@ -43,7 +43,7 @@ async function exibirUsuarioLogado() {
     displayName = profileData.username;
   }
 
-  // Exibe o nome do usuário e um pequeno menu para deslogar
+  // Atualiza a interface: exibe o nome do usuário e um menu simples para logout.
   userArea.innerHTML = `
     <span id="user-name" style="cursor:pointer;">${displayName}</span>
     <div id="logout-menu" style="display: none; margin-top: 5px;">
@@ -51,7 +51,7 @@ async function exibirUsuarioLogado() {
     </div>
   `;
 
-  // Ao clicar no nome, alterna a exibição do menu de logout
+  // Ao clicar no nome do usuário, alterna a visibilidade do menu de logout
   const userNameEl = document.getElementById("user-name");
   const logoutMenu = document.getElementById("logout-menu");
   userNameEl.addEventListener("click", () => {
@@ -65,7 +65,7 @@ async function exibirUsuarioLogado() {
     if (error) {
       alert("Erro ao deslogar: " + error.message);
     } else {
-      // Opcional: Limpe também o localStorage, se estiver usando para outros fins
+      // Opcional: você pode limpar o localStorage se armazenar outras informações
       location.reload();
     }
   });
