@@ -1,49 +1,69 @@
 // userDisplay.js
+
 import { supabase } from "./supabase.js";
 
 async function exibirUsuarioLogado() {
+  // 1) Pegamos o elemento que mostra o nome do usuário
   const userArea = document.getElementById("userMenuArea");
   if (!userArea) {
-    console.error("Elemento 'userMenuArea' não encontrado no HTML.");
+    console.error("Elemento #userMenuArea não encontrado no HTML.");
     return;
   }
 
-  // Tenta obter a sessão atual do Supabase
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-  console.log("Sessão retornada:", session, "Erro na sessão:", sessionError);
+  // 2) Obtemos a sessão atual do Supabase
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
 
-  // Se não houver sessão, exibe o link para login
+  if (sessionError) {
+    console.warn("Erro ao obter sessão:", sessionError.message);
+    // Sessão não pôde ser obtida => mostra link de Login
+    userArea.innerHTML = `
+      <a href="Criacao.html" style="color:white;">
+        <i class="fas fa-user"></i> Login
+      </a>`;
+    return;
+  }
+
+  // 3) Se não houver sessão, o usuário não está logado
   if (!session) {
-    userArea.innerHTML = `<a href="Criacao.html" style="color:white;">
-                            <i class="fas fa-user"></i> Login
-                          </a>`;
+    userArea.innerHTML = `
+      <a href="Criacao.html" style="color:white;">
+        <i class="fas fa-user"></i> Login
+      </a>`;
     return;
   }
 
-  // Obtém o ID do usuário (da sessão)
-  const userId = session.user.id;
-  console.log("Usuário autenticado. ID:", userId);
+  // 4) Se chegamos aqui, há uma sessão => obtemos o ID do usuário
+  const userId = session.user?.id;
+  if (!userId) {
+    console.warn("Usuário sem ID? Sessão estranha:", session);
+    userArea.innerHTML = `
+      <a href="Criacao.html" style="color:white;">
+        <i class="fas fa-user"></i> Login
+      </a>`;
+    return;
+  }
 
-  // Consulta a tabela 'profiles' – neste exemplo, selecionamos a coluna "id" (que contém o "nome" do usuário)
+  // 5) Consulta na tabela 'profiles' para buscar o 'username'
+  //    (certifique-se de que a tabela 'profiles' tenha a coluna 'id' e 'username')
   const { data: profileData, error: profileError } = await supabase
     .from("profiles")
-    .select("id")  // Alterado: seleciona a coluna "id" pois é nela que o nome do usuário foi salvo.
+    .select("username")
     .eq("id", userId)
     .single();
 
-  console.log("Dados do perfil:", profileData, "Erro no perfil:", profileError);
-
-  // Se houver erro ou não existirem dados, usamos como fallback o e-mail da sessão;
-  // caso contrário, usamos o valor retornado em profileData.id.
   let displayName = "";
   if (profileError || !profileData) {
+    // Falha ou não encontrou => fallback para e-mail do usuário
     displayName = session.user.email;
-    console.warn("Não foi possível recuperar 'id' do 'profiles'. Usando o e-mail:", displayName);
+    console.warn("Não foi possível buscar username. Usando e-mail:", displayName);
   } else {
-    displayName = profileData.id;
+    displayName = profileData.username;
   }
 
-  // Atualiza a interface: mostra o nome do usuário e cria um menu simples para logout.
+  // 6) Montamos o HTML para exibir o nome e um menu simples de logout
   userArea.innerHTML = `
     <span id="user-name" style="cursor: pointer;">${displayName}</span>
     <div id="logout-menu" style="display: none; margin-top: 5px;">
@@ -51,25 +71,25 @@ async function exibirUsuarioLogado() {
     </div>
   `;
 
-  // Ao clicar no nome do usuário, alterna a exibição do menu de logout.
+  // 7) Quando clica no nome, alternamos a exibição do menu de logout
   const userNameEl = document.getElementById("user-name");
   const logoutMenu = document.getElementById("logout-menu");
   userNameEl.addEventListener("click", () => {
-    logoutMenu.style.display = (logoutMenu.style.display === "none" ? "block" : "none");
+    logoutMenu.style.display = logoutMenu.style.display === "none" ? "block" : "none";
   });
 
-  // Configura o botão de logout – ao clicar, realiza o signOut no Supabase.
+  // 8) Configura o botão de logout
   const logoutBtn = document.getElementById("logout-btn");
   logoutBtn.addEventListener("click", async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
       alert("Erro ao deslogar: " + error.message);
     } else {
-      // Redireciona para a página de login (ou recarrega para atualizar a interface)
+      // Redireciona para a tela de login (Criacao.html), ou recarrega a página
       window.location.href = "Criacao.html";
     }
   });
 }
 
-// Chama a função quando o DOM for carregado
+// 9) Disparamos a função quando o DOM estiver carregado
 document.addEventListener("DOMContentLoaded", exibirUsuarioLogado);
