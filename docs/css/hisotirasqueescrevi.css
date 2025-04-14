@@ -71,7 +71,7 @@
     position: relative; /* Necessário para posicionar o dropdown de sugestões */
     display: inline-flex;
     align-items: center;
-    padding: 5px;
+    padding: 2px;  /* Reduzido para aproximar os elementos */
     background-color: white;
     border-radius: 5px;
 }
@@ -94,15 +94,16 @@
 /* Container para exibir sugestões de pesquisa */
 #searchResults {
     position: absolute;
-    top: 100%; /* Logo abaixo do input */
+    top: calc(100% - 3px);  /* Aproxima o dropdown do input */
     left: 0;
     width: 100%;
+    margin-top: -3px;       /* Ajuste adicional para "colar" */
     background-color: #fff;
     border: 1px solid #ccc;
     border-radius: 0 0 5px 5px;
-    display: none; /* Exibido via JavaScript quando houver sugestões */
+    display: none;  /* Exibido via JavaScript quando houver sugestões */
     z-index: 9999;
-    max-height: 200px; /* Limita a altura e permite scroll se necessário */
+    max-height: 200px;  /* Limita a altura e permite scroll se necessário */
     overflow-y: auto;
 }
 
