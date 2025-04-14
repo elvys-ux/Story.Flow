@@ -1,27 +1,62 @@
+// app.js
+import { supabase } from "./supabase.js";
+
 /************************************************************
- * [1] LOGIN/LOGOUT
+ * [1] LOGIN/LOGOUT com Supabase
  ************************************************************/
-function exibirUsuarioLogado() {
+async function exibirUsuarioLogado() {
   const userArea = document.getElementById('userMenuArea');
-  if (!userArea) return;
-
-  userArea.innerHTML = '';
-  const userData = JSON.parse(localStorage.getItem('loggedUser'));
-
-  if (userData && userData.username) {
-    userArea.innerHTML = userData.username;
-    userArea.onclick = () => {
-      if (confirm("Deseja fazer logout?")) {
-        localStorage.removeItem('loggedUser');
-        location.reload();
-      }
-    };
-  } else {
-    userArea.innerHTML = `<a href="index.html" style="color:white;">
+  if (!userArea) {
+    console.error("Elemento 'userMenuArea' não encontrado no HTML.");
+    return;
+  }
+  
+  // Obtém a sessão atual do Supabase
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) {
+    console.error("Erro ao obter a sessão:", sessionError);
+  }
+  
+  // Se não houver sessão, exibe o link para login
+  if (!session) {
+    userArea.innerHTML = `<a href="Criacao.html" style="color:white;">
       <i class="fas fa-user"></i> Login
     </a>`;
     userArea.onclick = null;
+    return;
   }
+  
+  const userId = session.user.id;
+  // Consulta a tabela profiles para obter o campo username
+  const { data: profileData, error: profileError } = await supabase
+    .from("profiles")
+    .select("username")
+    .eq("id", userId)
+    .single();
+  
+  let displayName = "";
+  if (profileError || !profileData || !profileData.username) {
+    displayName = session.user.email;
+    console.warn("Não foi possível recuperar o username. Utilizando e-mail:", displayName);
+  } else {
+    displayName = profileData.username;
+  }
+  
+  // Atualiza a área de usuário com o nome (ou email)
+  userArea.innerHTML = displayName;
+  
+  // Ao clicar no nome, pergunta se deseja fazer logout e, se confirmado, efetua o logout e redireciona para index.html
+  userArea.onclick = () => {
+    if (confirm("Deseja fazer logout?")) {
+      supabase.auth.signOut().then(({ error }) => {
+        if (error) {
+          alert("Erro ao deslogar: " + error.message);
+        } else {
+          window.location.href = "index.html";
+        }
+      });
+    }
+  };
 }
 
 /************************************************************
@@ -32,7 +67,6 @@ function showToast(message, duration = 2000) {
   toast.className = 'my-toast'; 
   toast.innerText = message;
   document.body.appendChild(toast);
-
   setTimeout(() => {
     if (toast.parentNode) {
       toast.parentNode.removeChild(toast);
@@ -77,8 +111,7 @@ let likedStories = JSON.parse(localStorage.getItem('likedStories') || '[]');
  * [4] Carregar Histórias
  ************************************************************/
 function loadAllStories() {
-  // Para aplicar o limite de 2 linhas, os dados devem vir sem a propriedade "cartao".
-  // Se não houver histórias salvas, usamos dummy data sem "cartao" (apenas com "descricao").
+  // Se não houver histórias salvas, usamos um dummy data
   const raw = JSON.parse(localStorage.getItem('historias')) || [];
   if (raw.length === 0) {
     raw.push({
@@ -87,11 +120,11 @@ function loadAllStories() {
       descricao: "A Sombra do Tirano\nIntrodução\nNa década de 1950, durante um regime marcado pela opressão e pelo medo, Eduardo era um dos principais colaboradores de um governo autoritário. O peso de suas ações, decepções e a constante vigilância moldavam um ambiente onde o horror não vinha apenas do lado externo, mas também de sua própria consciência.\n\nO Início da Dissolução\nÀ medida que os anos avançavam, Eduardo começou a ser assombrado por visões perturbadoras.\nA Descida ao Abismo\nOs sonhos de Eduardo transformaram-se em pesadelos constantes.\n\nClímax e Confronto Interno\n..."
     });
   }
-  // Para cada história que não possuir "cartao", define a flag de bloqueio (bloqueio10)
-  // e cria um cartão padrão a partir da "descricao".
+  
+  // Para cada história que não possuir "cartao", cria um cartão padrão a partir da "descricao"
   const transformed = raw.map(st => {
     if (!st.cartao) {
-      st.bloqueio10 = true; // Flag para indicar que o texto deve ser truncado e não há cartão
+      st.bloqueio10 = true; // Flag para indicar que o texto deve ser truncado (limitar linhas)
       st.cartao = {
         tituloCartao: st.titulo || "Sem Título",
         sinopseCartao: (st.descricao || "").substring(0, 150) || "(sem sinopse)",
@@ -108,7 +141,7 @@ function loadAllStories() {
 }
 
 /************************************************************
- * [5.1] Formatador para sinopse: agrupa a cada 4 linhas em parágrafos justificados
+ * [5.1] Formatador para sinopse: agrupa a cada 4 linhas
  ************************************************************/
 function formatarPor4Linhas(text) {
   const lines = text.split('\n');
@@ -121,15 +154,13 @@ function formatarPor4Linhas(text) {
       buffer = [];
     }
   }
-  if (buffer.length > 0) {
-    paragrafos.push(buffer.join('<br>'));
-  }
+  if (buffer.length > 0) paragrafos.push(buffer.join('<br>'));
   return paragrafos.map(p => `<p style="text-align: justify;">${p}</p>`).join('');
 }
 
 /************************************************************
  * [5.2] Formatador para leitura completa com marcação:
- * Envolve cada palavra em um <span> com atributo data-index e evento onclick
+ * Envolve cada palavra em um <span> com data-index
  ************************************************************/
 function formatarTextoParaLeitura(text) {
   const lines = text.split('\n');
@@ -157,7 +188,7 @@ function formatarTextoParaLeitura(text) {
 }
 
 /************************************************************
- * [5.3] Função para marcar a posição de leitura (salva no localStorage)
+ * [5.3] Marcar posição de leitura
  ************************************************************/
 function markReadingPosition(element) {
   const index = element.getAttribute('data-index');
@@ -166,7 +197,7 @@ function markReadingPosition(element) {
 }
 
 /************************************************************
- * [5.4] Função para destacar a palavra marcada ao retomar a leitura
+ * [5.4] Destacar a palavra marcada ao retomar a leitura
  ************************************************************/
 function destacarPalavra() {
   const savedIndex = localStorage.getItem('readingPosition_' + currentStoryId);
@@ -180,7 +211,7 @@ function destacarPalavra() {
 }
 
 /************************************************************
- * [5.5] Função para criar o cartão (card) da história
+ * [5.5] Criar o cartão da história
  ************************************************************/
 function createStoryCard(story) {
   const div = document.createElement('div');
@@ -192,13 +223,13 @@ function createStoryCard(story) {
   titleEl.textContent = story.cartao.tituloCartao || 'Sem Título';
   div.appendChild(titleEl);
 
-  // Sinopse: utiliza a função formatarPor4Linhas
+  // Sinopse (formatada)
   const sinopseEl = document.createElement('div');
   sinopseEl.className = 'sheet-sinopse';
   sinopseEl.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao || '(sem sinopse)');
   div.appendChild(sinopseEl);
 
-  // “mais...” – abre o modal com os detalhes da história
+  // "Mais..." – abre modal com detalhes
   const verMais = document.createElement('span');
   verMais.className = 'ver-mais';
   verMais.textContent = 'mais...';
@@ -210,13 +241,12 @@ function createStoryCard(story) {
     modalFullText.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao || '(sem sinopse)');
     modalInfo.innerHTML = '';
 
-    // Botão “Ler” – carrega a história completa com palavras clicáveis
+    // Botão "Ler" – exibe a história completa com palavras clicáveis
     const lerBtn = document.createElement('button');
     lerBtn.textContent = 'Ler';
     lerBtn.addEventListener('click', () => {
       modalTitle.textContent = story.titulo || "História Completa";
       originalText = story.cartao.historiaCompleta || '(sem história completa)';
-      // Se a história não possuir cartão, limita a 2 linhas
       if (story.bloqueio10) {
         const lines = originalText.split('\n');
         if (lines.length > 2) {
@@ -227,7 +257,7 @@ function createStoryCard(story) {
     });
     modalFullText.appendChild(lerBtn);
 
-    // Botão "Continuar" – só deve aparecer se a história possuir cartão
+    // Botão "Continuar" – somente se existir um "cartão"
     let continuarBtn = document.getElementById('continuarBtn');
     if (!continuarBtn) {
       continuarBtn = document.createElement('button');
@@ -238,28 +268,19 @@ function createStoryCard(story) {
         if (storyAtual) {
           modalTitle.textContent = storyAtual.titulo || "História Completa";
           originalText = storyAtual.cartao.historiaCompleta || '(sem história completa)';
-          if (storyAtual.bloqueio10) {
-            // Se não há cartão, o botão "Continuar" não deve funcionar
-            return;
-          }
+          if (storyAtual.bloqueio10) return;
           modalFullText.innerHTML = formatarTextoParaLeitura(originalText);
           setTimeout(destacarPalavra, 100);
         }
       });
       modalFullText.appendChild(continuarBtn);
     }
-    // Se a história não possui cartão (flag bloqueio10), o botão "Continuar" fica escondido
     if (story.bloqueio10) {
       continuarBtn.style.display = 'none';
     } else {
       const savedPosition = localStorage.getItem('readingPosition_' + story.id);
-      if (savedPosition !== null) {
-        continuarBtn.style.display = 'inline-block';
-      } else {
-        continuarBtn.style.display = 'none';
-      }
+      continuarBtn.style.display = savedPosition !== null ? 'inline-block' : 'none';
     }
-
     modalOverlay.style.display = 'flex';
   });
   div.appendChild(verMais);
@@ -328,7 +349,7 @@ function createStoryCard(story) {
 }
 
 /************************************************************
- * [6] Cartão Placeholder (caso falte histórias)
+ * [6] Cartão Placeholder (caso não haja histórias suficientes)
  ************************************************************/
 function createPlaceholderCard() {
   const div = document.createElement('div');
@@ -392,10 +413,8 @@ function getFilteredStories() {
  ************************************************************/
 function showBatch(count) {
   const filtered = getFilteredStories();
-  if (filtered.length === 0) {
-    // Se não houver histórias publicadas, não exibe nenhum cartão
-    return;
-  }
+  if (filtered.length === 0) return;
+  
   const end = currentOffset + count;
   const realSlice = filtered.slice(currentOffset, end);
   realSlice.forEach(story => {
@@ -408,9 +427,7 @@ function showBatch(count) {
     }
   }
   currentOffset += count;
-  if (loadMoreBtn) {
-    loadMoreBtn.disabled = false;
-  }
+  if (loadMoreBtn) loadMoreBtn.disabled = false;
 }
 
 /************************************************************
@@ -484,7 +501,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   
-  // Event listener para o botão "Continuar" presente no HTML
+  // Se o botão "Continuar" já existir no HTML, adiciona o listener
   const continuarBtn = document.getElementById('continuarBtn');
   if (continuarBtn) {
     continuarBtn.addEventListener('click', () => {
@@ -492,10 +509,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (story) {
         modalTitle.textContent = story.titulo || "História Completa";
         originalText = story.cartao.historiaCompleta || '(sem história completa)';
-        if (story.bloqueio10) {
-          // Se a história não possui cartão, o botão "Continuar" não deve funcionar
-          return;
-        }
+        if (story.bloqueio10) return;
         modalFullText.innerHTML = formatarTextoParaLeitura(originalText);
         setTimeout(destacarPalavra, 100);
       }
