@@ -93,32 +93,23 @@
     border-radius: 5px;
 }
 
-/* Container para exibir sugestões de pesquisa */
 #searchResults {
-    position: absolute;
-    top: 100%;
-    margin-top: -2px; /* tente -2px ou -3px */
-    /* ... demais propriedades ... */
-    left: 0;
-    width: 100%;
-    background-color: #fff;
-    border: 1px solid #ccc;
-    border-top: none;  /* Remove a borda superior para continuidade visual */
-    border-radius: 0 0 5px 5px; 
-    display: none;     /* Exibido via JavaScript quando houver sugestões */
-    z-index: 9999;
-    max-height: 200px; /* Limita a altura e permite scroll se necessário */
-    overflow-y: auto;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  display: none;
+  z-index: 9999;
 }
-
 #searchResults .suggestion-item {
-    padding: 6px;
-    border-bottom: 1px solid #ccc;
-    cursor: pointer;
+  padding: 6px;
+  border-bottom: 1px solid #ccc;
+  cursor: pointer;
 }
-
 #searchResults .suggestion-item:hover {
-    background-color: #f0f0f0;
+  background-color: #f0f0f0;
 }
 
 /* --- RESTANTE DO LAYOUT --- */
