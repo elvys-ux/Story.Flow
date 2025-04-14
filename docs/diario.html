@@ -15,7 +15,7 @@
       align-items: center;
       height: 100vh;
       margin: 0;
-      overflow: hidden;
+      overflow: auto;
       position: relative;
     }
     /* --- Navbar --- */
@@ -59,7 +59,7 @@
       border-radius: 15px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.2);
       position: relative;
-      margin-top: 80px;
+      margin-top: 80px; /* espaçamento para a navbar */
       z-index: 101;
       text-align: center;
       box-sizing: border-box;
@@ -106,40 +106,6 @@
       background: #4a5568;
       transform: scale(1.05);
     }
-    /* --- Modal de Desbloqueio --- */
-    .modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.8);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 200;
-      flex-direction: column;
-    }
-    .modal input[type="password"] {
-      padding: 10px;
-      font-size: 16px;
-      border-radius: 5px;
-      border: none;
-      margin-bottom: 10px;
-    }
-    .modal button {
-      padding: 10px 20px;
-      font-size: 16px;
-      border-radius: 5px;
-      border: none;
-      background: #2d3748;
-      color: white;
-      cursor: pointer;
-    }
-    .modal p {
-      color: white;
-      margin-bottom: 10px;
-    }
   </style>
   <!-- Importa o Supabase e o userDisplay para a navbar -->
   <script type="module" src="js/supabase.js"></script>
@@ -153,14 +119,6 @@
     <div id="userMenuArea"></div>
   </div>
 
-  <!-- Modal de Desbloqueio -->
-  <div id="login-modal" class="modal">
-    <p>Utilize a senha da sua conta para desbloquear o Diário:</p>
-    <input type="password" id="password-input" placeholder="Senha da conta">
-    <button id="login-btn">Desbloquear</button>
-    <p id="login-error" style="color: #e53e3e; display: none;">Senha incorreta!</p>
-  </div>
-
   <!-- Container do Diário -->
   <div class="diary-container">
     <h2>Meu Diário</h2>
@@ -171,7 +129,7 @@
   <script type="module">
     import { supabase } from './supabase.js';
 
-    // Exibir usuário na navbar (assumindo que userDisplay.js já faz parte desse fluxo)
+    // Exibir o usuário na navbar
     async function exibirUsuarioNavbar() {
       const userArea = document.getElementById('userMenuArea');
       if (!userArea) return;
@@ -186,10 +144,9 @@
         const userId = session.user.id;
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
-          .select("username, password") 
+          .select("username")
           .eq("id", userId)
           .single();
-        // Para teste, supondo que o campo "password" esteja presente (não recomendado para produção!)
         let displayName = profile && profile.username ? profile.username : session.user.email;
         userArea.innerHTML = displayName;
       } catch (err) {
@@ -206,21 +163,24 @@
         return;
       }
       const userId = session.user.id;
+      // Tenta buscar o registro do diário para o usuário
       const { data, error } = await supabase
         .from('diarios')
         .select('*')
         .eq('user_id', userId)
         .single();
       if (error) {
-        console.error("Erro ao carregar o diário:", error);
+        console.log("Diário ainda não existe ou erro ao buscar:", error);
         return;
       }
       if (data) {
         document.getElementById('diary-text').value = data.conteudo;
       }
     }
+    // Chama loadDiary ao carregar a página
+    loadDiary();
 
-    // Função para salvar o diário no Supabase (sem criptografia, para teste)
+    // Função para salvar o diário no Supabase
     async function saveDiary() {
       const { data: session, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !session) {
@@ -229,14 +189,14 @@
       }
       const userId = session.user.id;
       const conteudo = document.getElementById('diary-text').value;
-      
-      // Verifica se existe um registro para esse usuário
+
+      // Verifica se já existe um diário para o usuário
       let { data: diary, error } = await supabase
         .from('diarios')
         .select('*')
         .eq('user_id', userId)
         .single();
-      
+
       if (diary) {
         // Atualiza o registro existente
         const { error: updateError } = await supabase
@@ -260,32 +220,7 @@
         alert("Diário salvo com sucesso!");
       }
     }
-
     document.getElementById('save-btn').addEventListener('click', saveDiary);
-
-    // Função para desbloquear o diário usando a senha do usuário armazenada localmente
-    // ATENÇÃO: Essa implementação é para testes; em produção, a senha não deve ser armazenada em localStorage!
-    async function desbloquearDiario() {
-      const loginError = document.getElementById('login-error');
-      loginError.style.display = 'none';
-      const inputPassword = document.getElementById('password-input').value;
-      
-      // Para este teste, assumimos que ao realizar o login, o objeto "loggedUser" foi salvo no localStorage
-      // contendo um campo "password" com a senha do usuário.
-      const loggedUser = JSON.parse(localStorage.getItem('loggedUser'));
-      if (!loggedUser || !loggedUser.password) {
-        alert("Usuário não autenticado corretamente.");
-        return;
-      }
-      
-      if (inputPassword === loggedUser.password) {
-        document.getElementById('login-modal').style.display = 'none';
-        await loadDiary();
-      } else {
-        loginError.style.display = 'block';
-      }
-    }
-    document.getElementById('login-btn').addEventListener('click', desbloquearDiario);
   </script>
   <a href="Sobre.html">Termos de uso</a>
 </body>
