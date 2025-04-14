@@ -17,7 +17,7 @@ function exibirUsuarioLogado() {
       }
     };
   } else {
-    userArea.innerHTML = `<a href="Criacao.html" style="color:white;">
+    userArea.innerHTML = `<a href="index.html" style="color:white;">
       <i class="fas fa-user"></i> Login
     </a>`;
     userArea.onclick = null;
