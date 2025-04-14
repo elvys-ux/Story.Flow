@@ -395,17 +395,11 @@ function filtrarHistorias(query) {
   });
 }
 
+// Atualização: Remove a manipulação dos offsets via JS para que o CSS defina o posicionamento.
 function exibirSugestoes(lista) {
   const searchResults = document.getElementById('searchResults');
-  const searchBar = document.getElementById('searchBar');
   if (!searchResults) return;
-  // Ajusta o posicionamento do dropdown para aparecer logo abaixo do input
-  // Considerando que a div .search-box possua position: relative no CSS.
-  searchResults.style.position = 'absolute';
-  searchResults.style.top = (searchBar.offsetTop + searchBar.offsetHeight) + 'px';
-  searchResults.style.left = searchBar.offsetLeft + 'px';
-  searchResults.style.width = searchBar.offsetWidth + 'px';
-
+  
   if (!lista || lista.length === 0) {
     searchResults.innerHTML = `<div style="padding:6px;">Nenhuma história encontrada</div>`;
     searchResults.style.display = 'block';
@@ -416,8 +410,7 @@ function exibirSugestoes(lista) {
     const t = story.cartao?.tituloCartao || "(Sem Título)";
     const a = story.cartao?.autorCartao || "Desconhecido";
     html += `
-      <div class="suggestion-item" data-id="${story.id}"
-           style="padding:6px; border-bottom:1px solid #ccc; cursor:pointer;">
+      <div class="suggestion-item" data-id="${story.id}" style="padding:6px; border-bottom:1px solid #ccc; cursor:pointer;">
         <strong>${t}</strong><br>
         <em>Autor: ${a}</em>
       </div>
