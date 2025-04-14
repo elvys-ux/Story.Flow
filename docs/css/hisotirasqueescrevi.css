@@ -96,8 +96,9 @@
 /* Container para exibir sugestões de pesquisa */
 #searchResults {
     position: absolute;
-    top: 100%;        /* Encosta na base do container (.search-box) */
-    margin-top: 0;    /* Sem espaço extra entre o input e o dropdown */
+    top: 100%;
+    margin-top: -2px; /* tente -2px ou -3px */
+    /* ... demais propriedades ... */
     left: 0;
     width: 100%;
     background-color: #fff;
