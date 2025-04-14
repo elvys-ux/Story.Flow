@@ -72,7 +72,7 @@ let currentStoryId = null;  // ID da história atualmente aberta
 const wrapWidth = 80;       // número de caracteres por linha (para quebra)
 const lineHeightPx = 22;    // altura aproximada da linha (em px)
 
-// Armazenar o texto completo original, se necessário
+// Armazenar o texto completo original
 let textoCompleto = "";
 
 /*************************************************************
@@ -208,17 +208,20 @@ async function salvarHistoria(titulo, descricao) {
     } else {
         // Insere nova história com data de criação atual
         const data_criacao = new Date().toISOString();
-        const { data, error } = await supabase
+        const { data: novaHistoria, error } = await supabase
             .from('historias')
-            .insert([{ user_id, titulo, descricao, data_criacao }]);
+            .insert([{ user_id, titulo, descricao, data_criacao }])
+            .single();
         if (error) {
             console.error("Erro ao inserir a história:", error);
             alert("Erro ao salvar a história.");
             return;
         }
         alert("História salva com sucesso (nova)!");
+        // Limpa o formulário e remove exibições anteriores
         limparFormulario();
         removerExibicaoHistoria();
+        // Opcional: você pode atualizar a lista agora ou deixar o usuário escolher publicar o cartão posteriormente.
     }
     mostrarHistorias(); // Atualiza a lista lateral
 }
@@ -312,7 +315,7 @@ async function exibirHistoriaNoContainer(storyID) {
     p.textContent = found.descricao || "";
     div.appendChild(p);
 
-    // Se existir informação do cartão, exibe aviso
+    // Se existir informação do cartão (opcional, se salva via outra função), exibe aviso
     if (found.cartao) {
         const infoCartao = document.createElement('p');
         infoCartao.innerHTML = "<em>(Este texto foi publicado no Cartão)</em>";
@@ -333,7 +336,7 @@ function removerExibicaoHistoria() {
 }
 
 /*************************************************************
- * [H] CARTÃO (ABORDAGEM B)
+ * [H] CARTÃO – EXIBIR FORMULÁRIO E PUBLICAR CARTÃO
  *************************************************************/
 async function mostrarCartaoForm(storyID) {
     const storyContainer = document.getElementById('storyContainer');
@@ -343,7 +346,7 @@ async function mostrarCartaoForm(storyID) {
     storyContainer.style.display = 'none';
     cartaoContainer.style.display = 'block';
 
-    // Busca a história no Supabase
+    // Busca a história no Supabase para, se necessário, preencher os dados do cartão (se já existir)
     const { data: h, error } = await supabase
         .from('historias')
         .select('*')
@@ -354,43 +357,29 @@ async function mostrarCartaoForm(storyID) {
         return;
     }
 
-    // Se não houver informação de cartão, inicializa um objeto vazio
-    if (!h.cartao) {
-        h.cartao = {
-            tituloCartao: "",
-            sinopseCartao: "",
-            dataCartao: "",
-            autorCartao: "",
-            categorias: []
-        };
+    // Se não houver dados de cartão, inicializa um objeto vazio (para os campos do formulário)
+    // Note: A inserção no Cartões será feita na função "publicarCartao" e usará o mesmo ID (storyID)
+    let cartao = { tituloCartao: "", sinopseCartao: "", dataCartao: "", autorCartao: "", categorias: [] };
+    if (h.cartao) {
+        cartao = h.cartao;
     }
 
-    document.getElementById('cartaoTitulo').value = h.cartao.tituloCartao;
-    document.getElementById('cartaoSinopse').value = h.cartao.sinopseCartao;
-    document.getElementById('cartaoData').value = h.cartao.dataCartao || new Date().toISOString().split('T')[0];
-    document.getElementById('cartaoAutor').value = h.cartao.autorCartao || "";
+    document.getElementById('cartaoTitulo').value = cartao.tituloCartao;
+    document.getElementById('cartaoSinopse').value = cartao.sinopseCartao;
+    document.getElementById('cartaoData').value = cartao.dataCartao || new Date().toISOString().split('T')[0];
+    document.getElementById('cartaoAutor').value = cartao.autorCartao || "";
 
+    // Limpa seleção de categorias e marca as que existem
     document.querySelectorAll('input[name="categoria"]').forEach(chk => {
         chk.checked = false;
     });
-    if (h.cartao.categorias) {
+    if (cartao.categorias) {
         document.querySelectorAll('input[name="categoria"]').forEach(chk => {
-            if (h.cartao.categorias.includes(chk.value)) {
+            if (cartao.categorias.includes(chk.value)) {
                 chk.checked = true;
             }
         });
     }
-    document.querySelectorAll('.categoria').forEach(checkbox => {
-        const subDiv = document.getElementById('sub' + checkbox.value.replace(/ /g, ''));
-        if (checkbox.checked) {
-            if (subDiv) subDiv.style.display = 'block';
-        } else {
-            if (subDiv) {
-                subDiv.style.display = 'none';
-                subDiv.querySelectorAll('input').forEach(sub => sub.checked = false);
-            }
-        }
-    });
 
     document.getElementById('btnPublicarCartao').onclick = function() {
         publicarCartao(storyID);
@@ -415,7 +404,6 @@ async function publicarCartao(storyID) {
     const cartaoSinopse = document.getElementById('cartaoSinopse').value.trim();
     const cartaoData = document.getElementById('cartaoData').value.trim();
     const autor = document.getElementById('cartaoAutor').value.trim();
-
     const categoriasSelecionadas = Array.from(document.querySelectorAll('input[name="categoria"]:checked'))
       .map(chk => chk.value);
 
@@ -432,24 +420,37 @@ async function publicarCartao(storyID) {
         return;
     }
 
+    // Monta o objeto do cartão com os dados do formulário
     const cartao = {
         tituloCartao: cartaoTitulo,
         sinopseCartao: cartaoSinopse,
         dataCartao: cartaoData,
         autorCartao: autor,
-        categorias: categoriasSelecionadas
+        categorias: categoriasSelecionadas,
+        // Aqui você pode definir outros campos se desejar (ex: likes permanece 0)
+        likes: 0
     };
 
-    // Atualiza o registro da história adicionando o objeto do cartão
-    const { data, error } = await supabase
-        .from('historias')
-        .update({ cartao: cartao })
+    // Insere ou atualiza o registro na tabela 'cartoes' utilizando o mesmo ID da história
+    // Se o registro ainda não existir, insere; se existir, atualiza
+    // Primeiro tenta atualizar (caso já exista)
+    let { data, error } = await supabase
+        .from('cartoes')
+        .update(cartao)
         .eq('id', storyID);
-    if (error) {
-        console.error("Erro ao publicar o cartão:", error);
-        alert("Erro ao publicar o cartão.");
-        return;
+
+    if (error || !data || data.length === 0) {
+        // Se não existir, insere um novo registro usando o mesmo ID
+        const { error: errInsert } = await supabase
+            .from('cartoes')
+            .insert([{ id: storyID, ...cartao }]);
+        if (errInsert) {
+            console.error("Erro ao inserir o cartão:", errInsert);
+            alert("Erro ao publicar o cartão.");
+            return;
+        }
     }
+
     alert("Cartão publicado com sucesso!");
 }
 
@@ -528,7 +529,7 @@ function highlightLine(lineNumber) {
     container.scrollTo({ top: scrollTarget, behavior: 'smooth' });
 }
 
-// Clique no container de leitura para salvar a linha
+// Clique no container de leitura para salvar a linha (marcador)
 const containerLeitura = document.getElementById('historia-conteudo');
 if (containerLeitura) {
     containerLeitura.addEventListener('click', function(e) {
@@ -565,10 +566,23 @@ async function filtrarHistorias(query) {
         console.error("Erro ao buscar histórias para pesquisa:", error);
         return [];
     }
-    return todas.filter(story => {
-        let t = story.cartao ? (story.cartao.tituloCartao || "") : (story.titulo || "(Sem Título)");
-        let a = story.cartao ? (story.cartao.autorCartao || "") : "Desconhecido";
-        return t.toLowerCase().includes(query) || a.toLowerCase().includes(query);
+    // Para cada história, traz os dados do cartão se existirem
+    const resultados = [];
+    for (let story of todas) {
+        // Tenta usar o campo "cartao" (se tiver sido salvo através de update) ou define a partir do título
+        const cartao = story.cartao || { 
+            tituloCartao: story.titulo || "(Sem Título)", 
+            autorCartao: "Desconhecido" 
+        };
+        resultados.push({
+            ...story,
+            cartao: cartao
+        });
+    }
+    return resultados.filter(story => {
+        const t = (story.cartao.tituloCartao || "").toLowerCase();
+        const a = (story.cartao.autorCartao || "").toLowerCase();
+        return t.includes(query) || a.includes(query);
     });
 }
 
@@ -610,7 +624,7 @@ async function abrirHistoriaPorId(storyId) {
 }
 
 /*************************************************************
- * [N] EVENTO DOMContentLoaded FINAL
+ * [N] EVENTO DOMContentLoaded: CONFIGURAR TUDO
  *************************************************************/
 document.addEventListener('DOMContentLoaded', function() {
     // Inicializa a lista lateral
@@ -660,4 +674,51 @@ document.addEventListener('DOMContentLoaded', function() {
             toggleTitleList(false);
         }
     });
+
+    // Configura a pesquisa
+    const searchBar = document.getElementById('searchBar');
+    const searchBtn = document.getElementById('searchBtn');
+    const searchResults = document.getElementById('searchResults');
+    if (searchBar && searchBtn && searchResults) {
+        searchBtn.addEventListener('click', async function() {
+            const query = searchBar.value.trim();
+            if (!query) {
+                searchResults.style.display = 'none';
+                return;
+            }
+            const resultados = await filtrarHistorias(query);
+            exibirSugestoes(resultados);
+        });
+        searchBar.addEventListener('input', async function() {
+            const query = searchBar.value.trim();
+            if (!query) {
+                searchResults.style.display = 'none';
+                return;
+            }
+            const resultados = await filtrarHistorias(query);
+            exibirSugestoes(resultados);
+        });
+        searchBar.addEventListener('keydown', async function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const query = searchBar.value.trim();
+                const resultados = await filtrarHistorias(query);
+                exibirSugestoes(resultados);
+            }
+        });
+    }
+
+    // Configura os botões do modo de leitura e marcador
+    const btnVoltar = document.getElementById('btn-voltar');
+    const btnContinuar = document.getElementById('btn-continuar');
+    if (btnVoltar) btnVoltar.addEventListener('click', voltarPagina);
+    if (btnContinuar) btnContinuar.addEventListener('click', continuarHistoria);
+    const toggleBtn = document.getElementById('toggleMode');
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', toggleReadingMode);
+    }
+    const btnMarcador = document.getElementById('btnMarcador');
+    if (btnMarcador) {
+        btnMarcador.addEventListener('click', continuarMarcador);
+    }
 });
