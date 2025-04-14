@@ -18,8 +18,7 @@
       overflow: hidden;
       position: relative;
     }
-
-    /* --- Navbar (incluindo área de login) --- */
+    /* --- Navbar --- */
     .navbar {
       position: fixed;
       top: 0;
@@ -27,13 +26,12 @@
       background-color: #2d3748;
       padding: 10px 0;
       text-align: center;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
       z-index: 100;
       display: flex;
       justify-content: space-around;
       align-items: center;
     }
-
     .navbar a {
       color: white;
       text-decoration: none;
@@ -43,39 +41,34 @@
       border-radius: 5px;
       transition: background 0.3s;
     }
-
     .navbar a:hover {
       background: #4a5568;
     }
-
     /* Área do usuário na navbar */
     #userMenuArea {
       font-family: Arial, sans-serif;
       color: white;
       cursor: pointer;
     }
-
-    /* --- Estilos para o Diário --- */
+    /* --- Diário --- */
     .diary-container {
       width: 90%;
       max-width: 600px;
       background: #f7fafc;
       padding: 20px;
       border-radius: 15px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
       position: relative;
-      margin-top: 80px;  /* deixa espaço para a navbar */
+      margin-top: 80px;
       z-index: 101;
       text-align: center;
       box-sizing: border-box;
     }
-
     .diary-container h2 {
       color: #2d3748;
       margin-bottom: 15px;
       font-family: sans-serif;
     }
-
     textarea {
       width: 100%;
       height: 200px;
@@ -87,17 +80,15 @@
       font-size: 16px;
       background: #edf2f7;
       resize: none;
-      box-shadow: inset 2px 2px 8px rgba(0, 0, 0, 0.1);
+      box-shadow: inset 2px 2px 8px rgba(0,0,0,0.1);
       margin-top: 15px;
       text-align: left;
       box-sizing: border-box;
     }
-
     textarea::placeholder {
       color: #718096;
       font-style: italic;
     }
-
     .save-btn {
       display: block;
       width: 100%;
@@ -111,13 +102,11 @@
       cursor: pointer;
       transition: 0.3s;
     }
-
     .save-btn:hover {
       background: #4a5568;
       transform: scale(1.05);
     }
-
-    /* --- Estilos do Modal de Desbloqueio --- */
+    /* --- Modal de Desbloqueio --- */
     .modal {
       position: fixed;
       top: 0;
@@ -131,7 +120,6 @@
       z-index: 200;
       flex-direction: column;
     }
-
     .modal input[type="password"] {
       padding: 10px;
       font-size: 16px;
@@ -139,7 +127,6 @@
       border: none;
       margin-bottom: 10px;
     }
-
     .modal button {
       padding: 10px 20px;
       font-size: 16px;
@@ -149,7 +136,6 @@
       color: white;
       cursor: pointer;
     }
-
     .modal p {
       color: white;
       margin-bottom: 10px;
@@ -160,14 +146,14 @@
   <script type="module" src="js/userDisplay.js"></script>
 </head>
 <body>
-  <!-- Navbar com links e área de usuário -->
+  <!-- Navbar -->
   <div class="navbar">
     <a href="index.html"><i class="fas fa-home"></i>Início</a>
     <a href="historia.html"><i class="fas fa-book"></i>Histórias</a>
     <div id="userMenuArea"></div>
   </div>
 
-  <!-- Modal de desbloqueio do Diário -->
+  <!-- Modal de Desbloqueio -->
   <div id="login-modal" class="modal">
     <p>Utilize a senha da sua conta para desbloquear o Diário:</p>
     <input type="password" id="password-input" placeholder="Senha da conta">
@@ -182,10 +168,10 @@
     <button class="save-btn" id="save-btn">Guardar</button>
   </div>
 
-  <script>
-    // EXEMPLO DE FUNÇÃO DE LOGIN PARA A NAVBAR (utilizando o userDisplay, se implementado com Supabase)
-    // Certifique-se de que o arquivo js/userDisplay.js possua a função exibirUsuarioLogado() para atualizar o #userMenuArea.
+  <script type="module">
     import { supabase } from './supabase.js';
+
+    // Exibir usuário na navbar (assumindo que userDisplay.js já faz parte desse fluxo)
     async function exibirUsuarioNavbar() {
       const userArea = document.getElementById('userMenuArea');
       if (!userArea) return;
@@ -198,18 +184,13 @@
           return;
         }
         const userId = session.user.id;
-        // Consulta a tabela profiles para obter o campo username
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
-          .select("username")
+          .select("username, password") 
           .eq("id", userId)
           .single();
-        let displayName = "";
-        if (profileError || !profile || !profile.username) {
-          displayName = session.user.email;
-        } else {
-          displayName = profile.username;
-        }
+        // Para teste, supondo que o campo "password" esteja presente (não recomendado para produção!)
+        let displayName = profile && profile.username ? profile.username : session.user.email;
         userArea.innerHTML = displayName;
       } catch (err) {
         console.error("Erro ao exibir usuário na navbar:", err);
@@ -217,42 +198,94 @@
     }
     exibirUsuarioNavbar();
 
-    // Função para carregar o conteúdo do diário (aqui, usando localStorage para simplificar)
-    function loadDiary() {
-      const savedText = localStorage.getItem('diaryContent');
-      if (savedText) {
-        document.getElementById('diary-text').value = savedText;
+    // Função para carregar o diário do Supabase
+    async function loadDiary() {
+      const { data: session, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        console.error("Sessão não encontrada:", sessionError);
+        return;
+      }
+      const userId = session.user.id;
+      const { data, error } = await supabase
+        .from('diarios')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+      if (error) {
+        console.error("Erro ao carregar o diário:", error);
+        return;
+      }
+      if (data) {
+        document.getElementById('diary-text').value = data.conteudo;
       }
     }
 
-    // Função para salvar o diário
-    function saveDiary() {
-      const text = document.getElementById('diary-text').value;
-      localStorage.setItem('diaryContent', text);
-      alert('Conteúdo salvo!');
+    // Função para salvar o diário no Supabase (sem criptografia, para teste)
+    async function saveDiary() {
+      const { data: session, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        console.error("Sessão não encontrada:", sessionError);
+        return;
+      }
+      const userId = session.user.id;
+      const conteudo = document.getElementById('diary-text').value;
+      
+      // Verifica se existe um registro para esse usuário
+      let { data: diary, error } = await supabase
+        .from('diarios')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+      
+      if (diary) {
+        // Atualiza o registro existente
+        const { error: updateError } = await supabase
+          .from('diarios')
+          .update({ conteudo })
+          .eq('user_id', userId);
+        if (updateError) {
+          console.error("Erro ao atualizar o diário:", updateError);
+          return;
+        }
+        alert("Diário atualizado com sucesso!");
+      } else {
+        // Insere um novo registro
+        const { error: insertError } = await supabase
+          .from('diarios')
+          .insert([{ user_id: userId, titulo: "Meu Diário", conteudo }]);
+        if (insertError) {
+          console.error("Erro ao salvar o diário:", insertError);
+          return;
+        }
+        alert("Diário salvo com sucesso!");
+      }
     }
+
     document.getElementById('save-btn').addEventListener('click', saveDiary);
 
-    // Lógica do modal de desbloqueio
-    // Para efeito de exemplo, simulamos que a "senha da conta" é comparada com uma variável armazenada no perfil
-    // Em um sistema real, você pode querer usar uma rotina de reautenticação
+    // Função para desbloquear o diário usando a senha do usuário armazenada localmente
+    // ATENÇÃO: Essa implementação é para testes; em produção, a senha não deve ser armazenada em localStorage!
     async function desbloquearDiario() {
-      // Neste exemplo, usamos uma senha hardcoded para simulação:
-      // Em seu sistema, a senha correta não ficará disponível em texto plano, então você pode, por exemplo,
-      // solicitar reautenticação ou comparar com um hash armazenado.
-      const correctPassword = "minhaSenha123";  
+      const loginError = document.getElementById('login-error');
+      loginError.style.display = 'none';
       const inputPassword = document.getElementById('password-input').value;
-      if (inputPassword === correctPassword) {
+      
+      // Para este teste, assumimos que ao realizar o login, o objeto "loggedUser" foi salvo no localStorage
+      // contendo um campo "password" com a senha do usuário.
+      const loggedUser = JSON.parse(localStorage.getItem('loggedUser'));
+      if (!loggedUser || !loggedUser.password) {
+        alert("Usuário não autenticado corretamente.");
+        return;
+      }
+      
+      if (inputPassword === loggedUser.password) {
         document.getElementById('login-modal').style.display = 'none';
-        loadDiary();
+        await loadDiary();
       } else {
-        document.getElementById('login-error').style.display = 'block';
+        loginError.style.display = 'block';
       }
     }
     document.getElementById('login-btn').addEventListener('click', desbloquearDiario);
-
-    // Se desejar, ao carregar a página, você pode verificar se o usuário está logado e, se estiver, 
-    // ocultar automaticamente o modal de desbloqueio ou reutilizar essa senha para decriptação.
   </script>
   <a href="Sobre.html">Termos de uso</a>
 </body>
