@@ -1,39 +1,57 @@
-/************************************************************
- * HistoriasQueEuEscrevi.js
- * - Lista Lateral
- * - Salvar história (se não tiver cartao, cria)
- * - Ler, Excluir
- * - Modo de Leitura
- * - Formatação a cada 5 pontos
- * - Marcador de linha
- * - Pesquisa por cartao.autorCartao ou cartao.tituloCartao
- ************************************************************/
+import { supabase } from "./supabase.js";
 
 /************************************************************
- * [A] LOGIN/LOGOUT
+ * [A] LOGIN/LOGOUT (usando Supabase)
  ************************************************************/
-function exibirUsuarioLogado() {
+async function exibirUsuarioLogado() {
   const userArea = document.getElementById('userMenuArea');
   if (!userArea) return;
 
-  userArea.innerHTML = '';
-  const userData = JSON.parse(localStorage.getItem('loggedUser'));
-
-  if (userData && userData.username) {
-    userArea.innerHTML = userData.username;
-    userArea.onclick = () => {
-      if (confirm("Deseja fazer logout?")) {
-        localStorage.removeItem('loggedUser');
-        location.reload();
-      }
-    };
-  } else {
-    userArea.innerHTML = `
-      <a href="Criacao.html" style="color:white;">
-        <i class="fas fa-user"></i> Login
-      </a>`;
-    userArea.onclick = null;
+  // Obtém a sessão atual do Supabase
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) {
+    console.error("Erro ao obter a sessão:", sessionError);
   }
+  
+  // Se não houver sessão, exibe o link para login
+  if (!session) {
+    userArea.innerHTML = `<a href="Criacao.html" style="color:white;">
+      <i class="fas fa-user"></i> Login
+    </a>`;
+    userArea.onclick = null;
+    return;
+  }
+  
+  const userId = session.user.id;
+  // Consulta a tabela profiles para obter o campo username
+  const { data: profileData, error: profileError } = await supabase
+    .from("profiles")
+    .select("username")
+    .eq("id", userId)
+    .single();
+  
+  let displayName = "";
+  if (profileError || !profileData || !profileData.username) {
+    displayName = session.user.email;
+    console.warn("Não foi possível recuperar o username. Utilizando e-mail:", displayName);
+  } else {
+    displayName = profileData.username;
+  }
+  
+  userArea.innerHTML = displayName;
+  
+  // Ao clicar, pergunta se deseja fazer logout e redireciona para index.html
+  userArea.onclick = () => {
+    if (confirm("Deseja fazer logout?")) {
+      supabase.auth.signOut().then(({ error }) => {
+        if (error) {
+          alert("Erro ao deslogar: " + error.message);
+        } else {
+          window.location.href = "index.html";
+        }
+      });
+    }
+  };
 }
 
 /************************************************************
@@ -193,7 +211,7 @@ function abrirHistoriaPorIndex(index) {
 }
 
 /************************************************************
- * [I] FORMATAÇÃO: A CADA 5 PONTOS FINAIS => \n\n
+ * [I] FORMATAÇÃO: A CADA 5 PONTOS => \n\n
  ************************************************************/
 function formatarTexto(str) {
   let contador = 0;
@@ -238,20 +256,19 @@ function exibirHistoriaNoContainer(hist) {
 
 /************************************************************
  * [K] MODO DE LEITURA (CORRIDO VS PARÁGRAFOS)
- * Pagina o texto em blocos de 5 linhas, preservando a ordem.
+ * Paga o texto em blocos de 5 linhas
  ************************************************************/
 function toggleReadingMode() {
   const container = document.getElementById("historia-conteudo");
   const btnVoltar = document.getElementById("btn-voltar");
   const btnContinuar = document.getElementById("btn-continuar");
 
-  // Usa a variável global "textoCompleto" que contém o texto original
   let fullText = textoCompleto;
   container.setAttribute("data-full-text", fullText);
 
   if (modoCorrido) {
-    const lines = fullText.split(/\r?\n/); // Divide preservando todas as linhas
-    const linesPerPage = 5; // Define 5 linhas por página
+    const lines = fullText.split(/\r?\n/);
+    const linesPerPage = 5;
     partesHistoria = [];
     for (let i = 0; i < lines.length; i += linesPerPage) {
       partesHistoria.push(lines.slice(i, i + linesPerPage).join('\n'));
@@ -290,7 +307,7 @@ function continuarHistoria() {
   }
 }
 
-// Setas do teclado para navegar o modo de leitura
+// Atalho de teclado para navegação no modo de leitura
 document.addEventListener('keydown', function(e) {
   const key = e.key.toLowerCase();
   if (key === "arrowleft" || key === "arrowup" || key === "a" || key === "w") {
@@ -320,7 +337,6 @@ function highlightLine(lineNumber) {
     alert("Nenhum texto para destacar!");
     return;
   }
-
   const lines = wrapText(fullText, wrapWidth);
   if (lineNumber < 1 || lineNumber > lines.length) {
     alert("Linha fora do intervalo!");
@@ -328,12 +344,11 @@ function highlightLine(lineNumber) {
   }
   lines[lineNumber - 1] = `<span style="background:yellow">${lines[lineNumber - 1]}</span>`;
   container.innerHTML = lines.join('<br>');
-
   const scrollTarget = (lineNumber - 1) * lineHeightPx;
   container.scrollTo({ top: scrollTarget, behavior: 'smooth' });
 }
 
-// Clique no texto => salva a linha para o marcador
+// Clique no texto para salvar a linha (marcador)
 const containerLeitura = document.getElementById('historia-conteudo');
 if (containerLeitura) {
   containerLeitura.addEventListener('click', function(e) {
@@ -342,7 +357,6 @@ if (containerLeitura) {
     const clickY = e.clientY - rect.top;
     const scrollOffset = containerLeitura.scrollTop;
     const totalY = clickY + scrollOffset;
-
     const lineNumber = Math.floor(totalY / lineHeightPx) + 1;
     localStorage.setItem(`lineNumber_${currentStoryId}`, lineNumber);
     console.log("Linha salva:", lineNumber);
@@ -366,9 +380,7 @@ function continuarMarcador() {
 function filtrarHistorias(query) {
   const todas = JSON.parse(localStorage.getItem('historias')) || [];
   query = query.toLowerCase();
-
   return todas.filter(story => {
-    // Se não tiver cartao, criamos no voo
     if (!story.cartao) {
       story.cartao = {
         tituloCartao: story.titulo || "(Sem Título)",
@@ -386,7 +398,6 @@ function filtrarHistorias(query) {
 function exibirSugestoes(lista) {
   const searchResults = document.getElementById('searchResults');
   if (!searchResults) return;
-
   if (!lista || lista.length === 0) {
     searchResults.innerHTML = `<div style="padding:6px;">Nenhuma história encontrada</div>`;
     searchResults.style.display = 'block';
@@ -406,7 +417,6 @@ function exibirSugestoes(lista) {
   });
   searchResults.innerHTML = html;
   searchResults.style.display = 'block';
-
   const items = searchResults.querySelectorAll('.suggestion-item');
   items.forEach(item => {
     item.addEventListener('click', function() {
@@ -433,7 +443,6 @@ function abrirHistoriaPorId(storyId) {
 document.addEventListener('DOMContentLoaded', function() {
   exibirUsuarioLogado();
   mostrarHistorias();
-
   const form = document.getElementById('formPrincipal');
   if (form) {
     form.addEventListener('submit', function(e) {
@@ -442,7 +451,6 @@ document.addEventListener('DOMContentLoaded', function() {
       const descricao = document.getElementById('descricao').value.trim();
       const autorEl = document.getElementById('autor');
       const autor = autorEl ? autorEl.value.trim() : '';
-
       if (!titulo || !descricao) {
         alert("Preencha título e descrição!");
         return;
@@ -451,11 +459,9 @@ document.addEventListener('DOMContentLoaded', function() {
       limparFormulario();
     });
   }
-
   const searchBar = document.getElementById('searchBar');
   const searchBtn = document.getElementById('searchBtn');
   const searchResults = document.getElementById('searchResults');
-
   if (searchBar && searchBtn && searchResults) {
     searchBtn.addEventListener('click', function() {
       const query = searchBar.value.trim();
@@ -466,7 +472,6 @@ document.addEventListener('DOMContentLoaded', function() {
       const resultados = filtrarHistorias(query);
       exibirSugestoes(resultados);
     });
-
     searchBar.addEventListener('input', function() {
       const query = searchBar.value.trim();
       if (!query) {
@@ -476,7 +481,6 @@ document.addEventListener('DOMContentLoaded', function() {
       const resultados = filtrarHistorias(query);
       exibirSugestoes(resultados);
     });
-
     searchBar.addEventListener('keydown', function(e) {
       if (e.key === 'Enter') {
         e.preventDefault();
@@ -486,17 +490,14 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
-
   const btnVoltar = document.getElementById('btn-voltar');
   const btnContinuar = document.getElementById('btn-continuar');
   if (btnVoltar) btnVoltar.addEventListener('click', voltarPagina);
   if (btnContinuar) btnContinuar.addEventListener('click', continuarHistoria);
-
   const toggleBtn = document.getElementById('toggleMode');
   if (toggleBtn) {
     toggleBtn.addEventListener('click', toggleReadingMode);
   }
-
   const btnMarcador = document.getElementById('btnMarcador');
   if (btnMarcador) {
     btnMarcador.addEventListener('click', continuarMarcador);
