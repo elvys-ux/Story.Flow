@@ -1,24 +1,63 @@
+import { supabase } from './supabase.js';
+
 /************************************************************
- * [1] LOGIN/LOGOUT
+ * [1] LOGIN/LOGOUT com Supabase
  ************************************************************/
-function exibirUsuarioLogado() {
+async function exibirUsuarioLogado() {
   const userArea = document.getElementById('userMenuArea');
   if (!userArea) return;
-  userArea.innerHTML = '';
-  const userData = JSON.parse(localStorage.getItem('loggedUser'));
-  if (userData && userData.username) {
-    userArea.innerHTML = userData.username;
+  try {
+    // Obtém a sessão atual do Supabase.
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+      console.error("Erro ao obter a sessão:", sessionError);
+      userArea.innerHTML = `<a href="Criacao.html" style="color:white;">
+        <i class="fas fa-user"></i> Login
+      </a>`;
+      return;
+    }
+    // Se não houver sessão ativa, exibe o link para login.
+    if (!session) {
+      userArea.innerHTML = `<a href="Criacao.html" style="color:white;">
+        <i class="fas fa-user"></i> Login
+      </a>`;
+      userArea.onclick = null;
+      return;
+    }
+    
+    const userId = session.user.id;
+    // Consulta a tabela "profiles" para obter o campo "username".
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", userId)
+      .single();
+
+    let username = "";
+    if (profileError || !profile || !profile.username) {
+      // Se não encontrar o username, utiliza o email do usuário.
+      username = session.user.email;
+      console.warn("Não foi possível recuperar o username; utilizando email:", username);
+    } else {
+      username = profile.username;
+    }
+    
+    // Exibe o username na área destinada.
+    userArea.innerHTML = username;
+    // Ao clicar no nome do usuário, oferece a opção para logout.
     userArea.onclick = () => {
       if (confirm("Deseja fazer logout?")) {
-        localStorage.removeItem('loggedUser');
-        location.reload();
+        supabase.auth.signOut().then(({ error }) => {
+          if (error) {
+            alert("Erro ao deslogar: " + error.message);
+          } else {
+            location.reload();
+          }
+        });
       }
     };
-  } else {
-    userArea.innerHTML = `<a href="Criacao.html" style="color:white;">
-      <i class="fas fa-user"></i> Login
-    </a>`;
-    userArea.onclick = null;
+  } catch (ex) {
+    console.error("Exceção em exibirUsuarioLogado:", ex);
   }
 }
 
@@ -42,7 +81,7 @@ function showToast(message, duration = 2000) {
  ************************************************************/
 let allStories = [];
 let currentOffset = 0;
-const initialCount = 4; // exibir 4 cartões de destaque
+const initialCount = 4; // exibir 4 cartões de destaque inicialmente
 const increment = 4;
 const container = document.getElementById('featuredStories');
 
@@ -65,8 +104,7 @@ let likedStories = JSON.parse(localStorage.getItem('likedStories') || '[]');
  * [4] Carregar Histórias
  ************************************************************/
 function loadAllStories() {
-  // Para aplicar o limite de 2 linhas, os dados devem vir sem a propriedade "cartao"
-  // (ou seja, usando "descricao"). Se não houver histórias salvas, usamos dummy data.
+  // Caso não haja histórias salvas, utiliza dados dummy.
   const raw = JSON.parse(localStorage.getItem('historias')) || [];
   if (raw.length === 0) {
     raw.push({
@@ -75,10 +113,10 @@ function loadAllStories() {
       descricao: "Linha 1 da história\nLinha 2 da história\nLinha 3 da história\nLinha 4 da história"
     });
   }
-  // Para cada história que não possuir "cartao", define a flag bloqueio2 e cria um cartão padrão a partir da "descricao"
+  // Para cada história que não possuir "cartao", define uma flag e cria um cartão padrão.
   const transformed = raw.map(st => {
     if (!st.cartao) {
-      st.bloqueio2 = true; // Flag para limitar a 2 linhas
+      st.bloqueio2 = true; // Flag para limitar a 2 linhas (quando aplicável)
       st.cartao = {
         tituloCartao: st.titulo || "Sem Título",
         sinopseCartao: (st.descricao || "").substring(0, 150) || "(sem sinopse)",
@@ -198,7 +236,7 @@ function createStoryCard(story) {
     lerBtn.addEventListener('click', () => {
       modalTitle.textContent = story.titulo || "História Completa";
       originalText = story.cartao.historiaCompleta || '(sem história completa)';
-      // Se a história não possuir cartão, limita a 2 linhas
+      // Se a história possuir a flag bloqueio2, limita a exibição a 2 linhas
       if (story.bloqueio2) {
         const lines = originalText.split('\n');
         if (lines.length > 2) {
@@ -209,7 +247,7 @@ function createStoryCard(story) {
     });
     modalFullText.appendChild(lerBtn);
 
-    // Botão "Continuar" – só aparece se existir uma posição salva E se existir cartão (ou seja, se não houver bloqueio)
+    // Botão "Continuar" – aparece conforme houver uma posição salva (quando aplicável)
     let continuarBtn = document.getElementById('continuarBtn');
     if (!continuarBtn) {
       continuarBtn = document.createElement('button');
@@ -232,16 +270,11 @@ function createStoryCard(story) {
       });
       modalFullText.appendChild(continuarBtn);
     }
-    // Se a história não tiver cartão (flag bloqueio2), o botão "Continuar" será escondido
     if (story.bloqueio2) {
       continuarBtn.style.display = 'none';
     } else {
       const savedPosition = localStorage.getItem('readingPosition_' + story.id);
-      if (savedPosition !== null) {
-        continuarBtn.style.display = 'inline-block';
-      } else {
-        continuarBtn.style.display = 'none';
-      }
+      continuarBtn.style.display = savedPosition !== null ? 'inline-block' : 'none';
     }
 
     modalOverlay.style.display = 'flex';
@@ -315,10 +348,7 @@ function getFilteredStories() {
  ************************************************************/
 function showBatch(count) {
   const filtered = getFilteredStories();
-  if (filtered.length === 0) {
-    // Se não houver histórias publicadas, não exibe nenhum cartão
-    return;
-  }
+  if (filtered.length === 0) return;
   const end = currentOffset + count;
   const realSlice = filtered.slice(currentOffset, end);
   realSlice.forEach(story => {
@@ -403,7 +433,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Se o botão "Continuar" já existir (no HTML), adiciona seu event listener
+  // Se o botão "Continuar" já existir, adiciona seu event listener.
   const continuarBtn = document.getElementById('continuarBtn');
   if (continuarBtn) {
     continuarBtn.addEventListener('click', () => {
