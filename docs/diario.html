@@ -3,36 +3,59 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Diário - StoryFlow</title>
+  <title>Diário - StoryFlow (Masculino)</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
-    /* --- Estilos Gerais --- */
+    /* Estilos Gerais (Tema Neutro/Masculino) */
     body {
       font-family: 'Indie Flower', cursive;
-      background-color: #e2e8f0;
+      background-color: #e2e8f0; /* tom azul acinzentado */
       display: flex;
-      flex-direction: column;
+      justify-content: center;
       align-items: center;
       height: 100vh;
       margin: 0;
-      overflow: auto;
+      flex-direction: column;
+      overflow: hidden;
       position: relative;
     }
-    /* --- Navbar --- */
-    .navbar {
-      position: fixed;
-      top: 0;
+
+    /* Elementos flutuantes: substituímos flores/cordeiros por engrenagens e foguetes */
+    .gear, .rocket {
+      position: absolute;
+      font-size: 24px;
+      animation-timing-function: linear;
+    }
+    .gear {
+      color: #4a5568; /* cinza escuro */
+      animation: floatUp 10s infinite;
+    }
+    .rocket {
+      font-size: 30px;
+      color: #2d3748; /* tom mais escuro, quase preto */
+      animation: floatDown 10s infinite;
+    }
+    @keyframes floatUp {
+      0% { transform: translateY(100vh) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(-60vh) rotate(360deg); opacity: 0; }
+    }
+    @keyframes floatDown {
+      0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+    }
+
+    .header {
       width: 100%;
-      background-color: #2d3748;
+      background-color: #2d3748; /* cor escura, neutra */
       padding: 10px 0;
       text-align: center;
+      position: fixed;
+      top: 0;
+      left: 0;
       box-shadow: 0 4px 10px rgba(0,0,0,0.2);
       z-index: 100;
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
     }
-    .navbar a {
+    .header a {
       color: white;
       text-decoration: none;
       font-size: 18px;
@@ -41,16 +64,16 @@
       border-radius: 5px;
       transition: background 0.3s;
     }
-    .navbar a:hover {
+    .header a:hover {
       background: #4a5568;
     }
-    /* Área do usuário na navbar */
-    #userMenuArea {
-      font-family: Arial, sans-serif;
+    .book-icon {
+      position: absolute;
+      top: 5px;
+      left: 15px;
+      font-size: 30px;
       color: white;
-      cursor: pointer;
     }
-    /* --- Diário --- */
     .diary-container {
       width: 90%;
       max-width: 600px;
@@ -59,12 +82,13 @@
       border-radius: 15px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.2);
       position: relative;
-      margin-top: 80px;  /* deixa espaço para a navbar */
+      margin-top: 60px;
       z-index: 101;
       text-align: center;
       box-sizing: border-box;
     }
     .diary-container h2 {
+      text-align: center;
       color: #2d3748;
       margin-bottom: 15px;
       font-family: sans-serif;
@@ -106,7 +130,7 @@
       background: #4a5568;
       transform: scale(1.05);
     }
-    /* --- Modal de Desbloqueio --- */
+    /* Estilos do modal de login */
     .modal {
       position: fixed;
       top: 0;
@@ -141,156 +165,85 @@
       margin-bottom: 10px;
     }
   </style>
-  <!-- Importa o Supabase e o userDisplay -->
-  <script type="module" src="js/supabase.js"></script>
-  <script type="module" src="js/userDisplay.js"></script>
 </head>
 <body>
-  <!-- Navbar -->
-  <div class="navbar">
-    <a href="index.html"><i class="fas fa-home"></i>Início</a>
-    <a href="historia.html"><i class="fas fa-book"></i>Histórias</a>
-    <div id="userMenuArea"></div>
-  </div>
-
-  <!-- Modal de Desbloqueio -->
+  <!-- Modal de login para segurança -->
   <div id="login-modal" class="modal">
-    <p>Utilize a senha da sua conta para desbloquear o Diário:</p>
-    <input type="password" id="password-input" placeholder="Senha da conta">
-    <button id="login-btn">Desbloquear</button>
+    <p>Digite a senha da sua conta para acessar o Diário:</p>
+    <input type="password" id="password-input" placeholder="Senha">
+    <button id="login-btn">Entrar</button>
     <p id="login-error" style="color: #e53e3e; display: none;">Senha incorreta!</p>
   </div>
 
-  <!-- Container do Diário -->
+  <div class="header">
+    <span class="book-icon">📖</span>
+    <a href="Memories.html">Início</a>
+    <a href="historia.html">Histórias</a>
+    <a href="Sobre.html">Sobre</a>
+    <a href="diario.html">Resetar página</a>
+  </div>
+
   <div class="diary-container">
     <h2>Meu Diário</h2>
     <textarea id="diary-text" placeholder="Escreva seu dia, pensamentos e memórias aqui..."></textarea>
     <button class="save-btn" id="save-btn">Guardar</button>
   </div>
 
-  <script type="module">
-    import { supabase } from './supabase.js';
-
-    // Exibir o usuário na navbar
-    async function exibirUsuarioNavbar() {
-      const userArea = document.getElementById('userMenuArea');
-      if (!userArea) return;
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error || !session) {
-          userArea.innerHTML = `<a href="Criacao.html" style="color:white;">
-            <i class="fas fa-user"></i> Login
-          </a>`;
-          return;
-        }
-        const userId = session.user.id;
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("username")
-          .eq("id", userId)
-          .single();
-        let displayName = profile && profile.username ? profile.username : session.user.email;
-        userArea.innerHTML = displayName;
-      } catch (err) {
-        console.error("Erro ao exibir usuário na navbar:", err);
+  <script>
+    // Função para carregar o conteúdo salvo do diário
+    function loadDiary() {
+      const savedText = localStorage.getItem('diaryContent');
+      if (savedText) {
+        document.getElementById('diary-text').value = savedText;
       }
     }
-    exibirUsuarioNavbar();
-
-    // Função para carregar o diário do Supabase
-    async function loadDiary() {
-      const { data: session, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session) {
-        console.error("Sessão não encontrada:", sessionError);
-        return;
-      }
-      const userId = session.user.id;
-      const { data, error } = await supabase
-        .from('diarios')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-      if (error) {
-        console.log("Diário não encontrado ou erro ao buscar:", error);
-        return;
-      }
-      if (data) {
-        document.getElementById('diary-text').value = data.conteudo;
-      }
-    }
-    // Carrega o diário ao abrir a página (após desbloqueio, o modal será ocultado)
-    // loadDiary() é chamado ao desbloquear o diário
-
-    // Função para salvar o diário no Supabase (sem criptografia para teste)
-    async function saveDiary() {
-      const { data: session, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session) {
-        console.error("Sessão não encontrada:", sessionError);
-        return;
-      }
-      const userId = session.user.id;
-      const conteudo = document.getElementById('diary-text').value;
-      
-      // Valores dummy para salt e iv (já que não vamos criptografar para testes)
-      const salt = "";
-      const iv = "";
-      
-      // Verifica se já existe um diário para o usuário
-      let { data: diary, error } = await supabase
-        .from('diarios')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-      
-      if (diary) {
-        // Atualiza o registro existente
-        const { error: updateError } = await supabase
-          .from('diarios')
-          .update({ conteudo, salt, iv })
-          .eq('user_id', userId);
-        if (updateError) {
-          console.error("Erro ao atualizar o diário:", updateError);
-          return;
-        }
-        alert("Diário atualizado com sucesso!");
-      } else {
-        // Insere um novo registro
-        const { error: insertError } = await supabase
-          .from('diarios')
-          .insert([{ user_id: userId, titulo: "Meu Diário", conteudo, salt, iv }]);
-        if (insertError) {
-          console.error("Erro ao salvar o diário:", insertError);
-          return;
-        }
-        alert("Diário salvo com sucesso!");
-      }
+    // Função para salvar o conteúdo do diário
+    function saveDiary() {
+      const text = document.getElementById('diary-text').value;
+      localStorage.setItem('diaryContent', text);
+      alert('Conteúdo salvo!');
     }
     document.getElementById('save-btn').addEventListener('click', saveDiary);
 
-    // Função para desbloquear o diário usando a senha do usuário
-    // Para teste, usamos a senha armazenada no objeto loggedUser no localStorage
-    async function desbloquearDiario() {
-      const loginError = document.getElementById('login-error');
-      loginError.style.display = 'none';
+    // Lógica do modal de login utilizando a senha da conta.
+    // Tenta obter a senha da conta do localStorage; se não existir, define um valor padrão.
+    let accountPassword = localStorage.getItem('accountPassword');
+    if (!accountPassword) {
+      accountPassword = "minhaSenha123"; // Valor padrão
+      localStorage.setItem('accountPassword', accountPassword);
+    }
+    document.getElementById('login-btn').addEventListener('click', function() {
       const inputPassword = document.getElementById('password-input').value;
-      
-      // Para teste, o objeto loggedUser é armazenado manualmente (incluindo o campo "password")
-      const loggedUser = JSON.parse(localStorage.getItem('loggedUser'));
-      if (!loggedUser || !loggedUser.password) {
-        alert("Usuário não autenticado corretamente.");
-        return;
-      }
-      
-      // Compara a senha inserida com a senha armazenada para o teste
-      if (inputPassword === loggedUser.password) {
+      if (inputPassword === accountPassword) {
         document.getElementById('login-modal').style.display = 'none';
-        await loadDiary();
+        loadDiary();
       } else {
-        loginError.style.display = 'block';
+        document.getElementById('login-error').style.display = 'block';
+      }
+    });
+
+    // Função para criar elementos flutuantes (engrenagens e foguetes)
+    function createFloatingElements() {
+      for (let i = 0; i < 5; i++) {
+        const gear = document.createElement("div");
+        gear.classList.add("gear");
+        gear.innerHTML = "⚙️";
+        gear.style.left = Math.random() * 100 + "vw";
+        gear.style.animationDuration = (Math.random() * 5 + 5) + "s";
+        document.body.appendChild(gear);
+        setTimeout(() => gear.remove(), 10000);
+
+        const rocket = document.createElement("div");
+        rocket.classList.add("rocket");
+        rocket.innerHTML = "🚀";
+        rocket.style.left = Math.random() * 100 + "vw";
+        rocket.style.top = "50px";
+        rocket.style.animationDuration = (Math.random() * 5 + 5) + "s";
+        document.body.appendChild(rocket);
+        setTimeout(() => rocket.remove(), 10000);
       }
     }
-    document.getElementById('login-btn').addEventListener('click', desbloquearDiario);
+    setInterval(createFloatingElements, 300);
   </script>
-  <a href="Sobre.html">Termos de uso</a>
 </body>
 </html>
