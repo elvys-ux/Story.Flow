@@ -59,7 +59,7 @@
     display: block;
 }
 
-/* userMenuArea => Nome do usuário ou "Login" */
+/* Área para mostrar o usuário (nome ou "Login") */
 #userMenuArea {
     font-family: Arial, sans-serif;
     color: white;
@@ -68,7 +68,7 @@
 
 /* --- BARRA DE PESQUISA COM DROPDOWN --- */
 .search-box {
-    position: relative; /* Permite posicionar o #searchResults abaixo */
+    position: relative; /* Necessário para posicionar o dropdown de sugestões */
     display: inline-flex;
     align-items: center;
     padding: 5px;
@@ -91,16 +91,19 @@
     border-radius: 5px;
 }
 
-/* Div para exibir sugestões de pesquisa */
+/* Container para exibir sugestões de pesquisa */
 #searchResults {
     position: absolute;
-    top: 100%;    /* fica logo abaixo do input */
+    top: 100%; /* Logo abaixo do input */
     left: 0;
     width: 100%;
     background-color: #fff;
     border: 1px solid #ccc;
-    display: none;  /* começa oculto; o JS exibe quando houver sugestões */
-    z-index: 9999;  /* acima de outros elementos */
+    border-radius: 0 0 5px 5px;
+    display: none; /* Exibido via JavaScript quando houver sugestões */
+    z-index: 9999;
+    max-height: 200px; /* Limita a altura e permite scroll se necessário */
+    overflow-y: auto;
 }
 
 #searchResults .suggestion-item {
@@ -108,6 +111,7 @@
     border-bottom: 1px solid #ccc;
     cursor: pointer;
 }
+
 #searchResults .suggestion-item:hover {
     background-color: #f0f0f0;
 }
@@ -142,7 +146,6 @@ h2 {
     margin-bottom: 40px;
     max-width: 80%;
 }
-
 
 @media (max-width: 600px) {
     .navbar {
@@ -224,7 +227,7 @@ h2 {
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     font-family: 'Arial', sans-serif;
-    position: relative; /* para o botão "toggleMode" */
+    position: relative;
 }
 
 .historia-container h1 {
@@ -244,47 +247,46 @@ h2 {
 
 /* Botão para alternar entre os modos - canto superior direito */
 .historia-container #toggleMode {
-    position: absolute; /* Permite posicionar o botão de forma precisa */
-    top: 10px; /* Distância do topo do container */
-    right: 10px; /* Fixação no lado direito */
-    background-color: black; /* Cor de fundo preta */
-    color: white; /* Cor do texto branca */
-    border: none; /* Remove bordas */
-    padding: 10px 20px; /* Espaçamento interno */
-    cursor: pointer; /* Mostra o cursor de clique */
-    font-size: 16px; /* Tamanho do texto */
-    border-radius: 4px; /* Borda ligeiramente arredondada */
-    transition: background-color 0.3s ease; /* Efeito suave ao passar o rato */
-    z-index: 1000; /* Garante que o botão fica acima de outros elementos */
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: black;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-size: 16px;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+    z-index: 1000;
 }
 
 .historia-container #toggleMode:hover {
-    background-color: #555; /* Cor ao passar o rato */
+    background-color: #555;
 }
 
-/* Estilo para os botões na parte inferior */
+/* Estilo para os botões na parte inferior do container da história */
 .historia-container .buttons {
-    display: flex; /* Organiza os botões em linha */
-    justify-content: space-between; /* Coloca um botão à esquerda e outro à direita */
-    margin-top: 20px; /* Distância do conteúdo principal */
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
 }
 
 .historia-container .buttons button {
-    background-color: rgba(0, 0, 0, 0.9); /* Cor de fundo */
-    color: white; /* Cor do texto */
+    background-color: rgba(0, 0, 0, 0.9);
+    color: white;
     border: none;
-    padding: 10px 20px; /* Espaçamento interno */
-    cursor: pointer; /* Mostra o cursor de clique */
-    border-radius: 4px; /* Borda arredondada */
-    transition: background-color 0.3s ease; /* Efeito suave ao passar o rato */
+    padding: 10px 20px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
 }
 
 .historia-container .buttons button:hover {
-    background-color: #555; /* Cor ao passar o rato */
+    background-color: #555;
 }
 
-/* função setas */
+/* Exibição dos botões de navegação para o modo de leitura */
 #btn-voltar, #btn-continuar {
     display: none;
 }
-
