@@ -6,59 +6,35 @@
   <title>Diário - StoryFlow</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
-    /* Estilos gerais */
+    /* --- Estilos Gerais --- */
     body {
       font-family: 'Indie Flower', cursive;
-      background-color: #e2e8f0; /* tom neutro, azul acinzentado */
+      background-color: #e2e8f0;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
       align-items: center;
       height: 100vh;
       margin: 0;
-      flex-direction: column;
       overflow: hidden;
       position: relative;
     }
 
-    .gear, .rocket {
-      position: absolute;
-      font-size: 24px;
-      animation-timing-function: linear;
-    }
-
-    .gear {
-      color: #4a5568;
-      animation: floatUp 10s infinite;
-    }
-
-    .rocket {
-      font-size: 30px;
-      animation: floatDown 10s infinite;
-    }
-
-    @keyframes floatUp {
-      0% { transform: translateY(100vh) rotate(0deg); opacity: 1; }
-      100% { transform: translateY(-60vh) rotate(360deg); opacity: 0; }
-    }
-
-    @keyframes floatDown {
-      0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
-      100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
-    }
-
-    .header {
+    /* --- Navbar (incluindo área de login) --- */
+    .navbar {
+      position: fixed;
+      top: 0;
       width: 100%;
       background-color: #2d3748;
       padding: 10px 0;
       text-align: center;
-      position: fixed;
-      top: 0;
-      left: 0;
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
       z-index: 100;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
     }
 
-    .header a {
+    .navbar a {
       color: white;
       text-decoration: none;
       font-size: 18px;
@@ -68,18 +44,18 @@
       transition: background 0.3s;
     }
 
-    .header a:hover {
+    .navbar a:hover {
       background: #4a5568;
     }
 
-    .book-icon {
-      position: absolute;
-      top: 5px;
-      left: 15px;
-      font-size: 30px;
+    /* Área do usuário na navbar */
+    #userMenuArea {
+      font-family: Arial, sans-serif;
       color: white;
+      cursor: pointer;
     }
 
+    /* --- Estilos para o Diário --- */
     .diary-container {
       width: 90%;
       max-width: 600px;
@@ -88,14 +64,13 @@
       border-radius: 15px;
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
       position: relative;
-      margin-top: 60px;
+      margin-top: 80px;  /* deixa espaço para a navbar */
       z-index: 101;
       text-align: center;
       box-sizing: border-box;
     }
 
     .diary-container h2 {
-      text-align: center;
       color: #2d3748;
       margin-bottom: 15px;
       font-family: sans-serif;
@@ -142,7 +117,7 @@
       transform: scale(1.05);
     }
 
-    /* Estilos do modal de login */
+    /* --- Estilos do Modal de Desbloqueio --- */
     .modal {
       position: fixed;
       top: 0;
@@ -180,26 +155,27 @@
       margin-bottom: 10px;
     }
   </style>
-   <script type="module" src="js/supabase.js"></script>
- <script type="module" src="js/userDisplay.js"></script>
-
+  <!-- Importa o Supabase e o userDisplay para a navbar -->
+  <script type="module" src="js/supabase.js"></script>
+  <script type="module" src="js/userDisplay.js"></script>
 </head>
 <body>
-  <!-- Modal de login para segurança -->
+  <!-- Navbar com links e área de usuário -->
+  <div class="navbar">
+    <a href="index.html"><i class="fas fa-home"></i>Início</a>
+    <a href="historia.html"><i class="fas fa-book"></i>Histórias</a>
+    <div id="userMenuArea"></div>
+  </div>
+
+  <!-- Modal de desbloqueio do Diário -->
   <div id="login-modal" class="modal">
-    <p>Digite a senha para acessar o Diário:</p>
-    <input type="password" id="password-input" placeholder="Senha">
-    <button id="login-btn">Entrar</button>
+    <p>Utilize a senha da sua conta para desbloquear o Diário:</p>
+    <input type="password" id="password-input" placeholder="Senha da conta">
+    <button id="login-btn">Desbloquear</button>
     <p id="login-error" style="color: #e53e3e; display: none;">Senha incorreta!</p>
   </div>
 
-  <div class="header">
-    <span class="book-icon">📖</span>
-    <a href="index.html"><i class="fas fa-home"></i>Início</a>
-    <a href="historia.html">Histórias</a>
-    <a href="diario.html">Resetar página</a>
-  </div>
-
+  <!-- Container do Diário -->
   <div class="diary-container">
     <h2>Meu Diário</h2>
     <textarea id="diary-text" placeholder="Escreva seu dia, pensamentos e memórias aqui..."></textarea>
@@ -207,7 +183,41 @@
   </div>
 
   <script>
-    // Função para carregar o conteúdo salvo do diário
+    // EXEMPLO DE FUNÇÃO DE LOGIN PARA A NAVBAR (utilizando o userDisplay, se implementado com Supabase)
+    // Certifique-se de que o arquivo js/userDisplay.js possua a função exibirUsuarioLogado() para atualizar o #userMenuArea.
+    import { supabase } from './supabase.js';
+    async function exibirUsuarioNavbar() {
+      const userArea = document.getElementById('userMenuArea');
+      if (!userArea) return;
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error || !session) {
+          userArea.innerHTML = `<a href="Criacao.html" style="color:white;">
+            <i class="fas fa-user"></i> Login
+          </a>`;
+          return;
+        }
+        const userId = session.user.id;
+        // Consulta a tabela profiles para obter o campo username
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("username")
+          .eq("id", userId)
+          .single();
+        let displayName = "";
+        if (profileError || !profile || !profile.username) {
+          displayName = session.user.email;
+        } else {
+          displayName = profile.username;
+        }
+        userArea.innerHTML = displayName;
+      } catch (err) {
+        console.error("Erro ao exibir usuário na navbar:", err);
+      }
+    }
+    exibirUsuarioNavbar();
+
+    // Função para carregar o conteúdo do diário (aqui, usando localStorage para simplificar)
     function loadDiary() {
       const savedText = localStorage.getItem('diaryContent');
       if (savedText) {
@@ -215,18 +225,22 @@
       }
     }
 
-    // Função para salvar o conteúdo do diário
+    // Função para salvar o diário
     function saveDiary() {
       const text = document.getElementById('diary-text').value;
       localStorage.setItem('diaryContent', text);
       alert('Conteúdo salvo!');
     }
-
     document.getElementById('save-btn').addEventListener('click', saveDiary);
 
-    // Lógica do modal de login
-    const correctPassword = "minhaSenha123"; // Altere para a senha desejada
-    document.getElementById('login-btn').addEventListener('click', function() {
+    // Lógica do modal de desbloqueio
+    // Para efeito de exemplo, simulamos que a "senha da conta" é comparada com uma variável armazenada no perfil
+    // Em um sistema real, você pode querer usar uma rotina de reautenticação
+    async function desbloquearDiario() {
+      // Neste exemplo, usamos uma senha hardcoded para simulação:
+      // Em seu sistema, a senha correta não ficará disponível em texto plano, então você pode, por exemplo,
+      // solicitar reautenticação ou comparar com um hash armazenado.
+      const correctPassword = "minhaSenha123";  
       const inputPassword = document.getElementById('password-input').value;
       if (inputPassword === correctPassword) {
         document.getElementById('login-modal').style.display = 'none';
@@ -234,22 +248,11 @@
       } else {
         document.getElementById('login-error').style.display = 'block';
       }
-    });
-
-    // Função para criar elementos flutuantes (engrenagens e foguetes)
-    function createFloatingElements() {
-      for (let i = 0; i < 5; i++) {
-        const gear = document.createElement("div");
-        gear.classList.add("gear");
-        gear.innerHTML = "⚙️";
-        gear.style.left = Math.random() * 100 + "vw";
-        gear.style.animationDuration = (Math.random() * 5 + 5) + "s";
-        document.body.appendChild(gear);
-        setTimeout(() => gear.remove(), 10000);
-
-      }
     }
-    setInterval(createFloatingElements, 300);
+    document.getElementById('login-btn').addEventListener('click', desbloquearDiario);
+
+    // Se desejar, ao carregar a página, você pode verificar se o usuário está logado e, se estiver, 
+    // ocultar automaticamente o modal de desbloqueio ou reutilizar essa senha para decriptação.
   </script>
   <a href="Sobre.html">Termos de uso</a>
 </body>
