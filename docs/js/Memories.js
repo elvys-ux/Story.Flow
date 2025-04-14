@@ -236,7 +236,6 @@ function createStoryCard(story) {
     lerBtn.addEventListener('click', () => {
       modalTitle.textContent = story.titulo || "História Completa";
       originalText = story.cartao.historiaCompleta || '(sem história completa)';
-      // Se a história possuir a flag bloqueio2, limita a exibição a 2 linhas
       if (story.bloqueio2) {
         const lines = originalText.split('\n');
         if (lines.length > 2) {
@@ -247,7 +246,7 @@ function createStoryCard(story) {
     });
     modalFullText.appendChild(lerBtn);
 
-    // Botão "Continuar" – aparece conforme houver uma posição salva (quando aplicável)
+    // Botão "Continuar" – aparece conforme houver uma posição salva
     let continuarBtn = document.getElementById('continuarBtn');
     if (!continuarBtn) {
       continuarBtn = document.createElement('button');
@@ -301,7 +300,7 @@ function createPlaceholderCard() {
 }
 
 /************************************************************
- * [7] Filtro, Ordenar, Pesquisa
+ * [7] Filtro, Ordenar, Pesquisa e Exibição de Sugestões
  ************************************************************/
 function matchesSearch(story, searchInput) {
   const text = searchInput.trim().toLowerCase();
@@ -341,6 +340,54 @@ function getFilteredStories() {
     });
   }
   return arr;
+}
+
+function exibirSugestoes(lista) {
+  const searchResults = document.getElementById('searchResults');
+  if (!searchResults) return;
+  if (!lista || lista.length === 0) {
+    searchResults.innerHTML = `<div style="padding:6px;">Nenhuma história encontrada</div>`;
+    searchResults.style.display = 'block';
+    return;
+  }
+  let html = '';
+  lista.forEach(story => {
+    const t = story.cartao.tituloCartao || "(Sem Título)";
+    const a = story.cartao.autorCartao || "Desconhecido";
+    html += `
+      <div class="suggestion-item" data-id="${story.id}" style="padding:6px; border-bottom:1px solid #ccc; cursor:pointer;">
+        <strong>${t}</strong><br>
+        <em>Autor: ${a}</em>
+      </div>
+    `;
+  });
+  searchResults.innerHTML = html;
+  searchResults.style.display = 'block';
+  
+  // Evento para capturar o clique na sugestão e carregar a história
+  const items = searchResults.querySelectorAll('.suggestion-item');
+  items.forEach(item => {
+    item.addEventListener('click', function() {
+      const storyId = this.getAttribute('data-id');
+      abrirHistoriaPorId(storyId);
+      searchResults.style.display = 'none';
+    });
+  });
+}
+
+function abrirHistoriaPorId(storyId) {
+  const story = allStories.find(s => s.id == storyId);
+  if (!story) {
+    showToast("História não encontrada!");
+    return;
+  }
+  // Abre o modal com os dados da história encontrada.
+  isModalOpen = true;
+  currentStoryId = story.id;
+  modalTitle.textContent = story.cartao.tituloCartao || "Sem Título";
+  modalFullText.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao || '(sem sinopse)');
+  modalInfo.innerHTML = '';
+  modalOverlay.style.display = 'flex';
 }
 
 /************************************************************
@@ -427,9 +474,20 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   if (searchBar) {
     searchBar.addEventListener('input', () => {
-      container.innerHTML = '';
-      currentOffset = 0;
-      showBatch(initialCount);
+      const valor = searchBar.value;
+      const searchResults = document.getElementById('searchResults');
+      if (valor.trim() === '') {
+        // Se o campo de pesquisa estiver vazio, esconde as sugestões e recarrega os cartões normais.
+        if (searchResults) {
+          searchResults.style.display = 'none';
+        }
+        container.innerHTML = '';
+        currentOffset = 0;
+        showBatch(initialCount);
+      } else {
+        const filtered = getFilteredStories();
+        exibirSugestoes(filtered);
+      }
     });
   }
 
