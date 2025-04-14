@@ -1,27 +1,63 @@
+// userDisplay.js (arquivo principal, por exemplo, app.js)
+// Importa a instância do Supabase.
+import { supabase } from "./supabase.js";
+
 /************************************************************
- * [1] LOGIN/LOGOUT
+ * [1] LOGIN/LOGOUT usando Supabase
  ************************************************************/
-function exibirUsuarioLogado() {
+async function exibirUsuarioLogado() {
   const userArea = document.getElementById('userMenuArea');
-  if (!userArea) return;
-
-  userArea.innerHTML = '';
-  const userData = JSON.parse(localStorage.getItem('loggedUser'));
-
-  if (userData && userData.username) {
-    userArea.innerHTML = userData.username;
-    userArea.onclick = () => {
-      if (confirm("Deseja fazer logout?")) {
-        localStorage.removeItem('loggedUser');
-        location.reload();
-      }
-    };
-  } else {
+  if (!userArea) {
+    console.error("Elemento 'userMenuArea' não encontrado no HTML.");
+    return;
+  }
+  
+  // Obtém a sessão atual do Supabase
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) {
+    console.error("Erro ao obter a sessão:", sessionError);
+  }
+  // Se não houver sessão, exibe o link para login
+  if (!session) {
     userArea.innerHTML = `<a href="Criacao.html" style="color:white;">
       <i class="fas fa-user"></i> Login
     </a>`;
     userArea.onclick = null;
+    return;
   }
+  
+  const userId = session.user.id;
+  // Consulta a tabela profiles para obter o campo username
+  const { data: profileData, error: profileError } = await supabase
+    .from("profiles")
+    .select("username")
+    .eq("id", userId)
+    .single();
+  
+  let displayName = "";
+  if (profileError || !profileData || !profileData.username) {
+    // Se não conseguir recuperar o username, utiliza o email como fallback
+    displayName = session.user.email;
+    console.warn("Não foi possível recuperar o username. Utilizando e-mail:", displayName);
+  } else {
+    displayName = profileData.username;
+  }
+  
+  // Atualiza a área de usuário com o nome ou email
+  userArea.innerHTML = displayName;
+  
+  // Ao clicar, pergunta se deseja sair e, se confirmado, realiza o logout e redireciona para index.html
+  userArea.onclick = () => {
+    if (confirm("Deseja fazer logout?")) {
+      supabase.auth.signOut().then(({ error }) => {
+        if (error) {
+          alert("Erro ao deslogar: " + error.message);
+        } else {
+          window.location.href = "index.html";
+        }
+      });
+    }
+  };
 }
 
 /************************************************************
@@ -29,10 +65,9 @@ function exibirUsuarioLogado() {
  ************************************************************/
 function showToast(message, duration = 2000) {
   const toast = document.createElement('div');
-  toast.className = 'my-toast'; 
+  toast.className = 'my-toast';
   toast.innerText = message;
   document.body.appendChild(toast);
-
   setTimeout(() => {
     if (toast.parentNode) {
       toast.parentNode.removeChild(toast);
@@ -45,17 +80,10 @@ function showToast(message, duration = 2000) {
  ************************************************************/
 let allStories = [];
 let currentOffset = 0;
-const initialCount = 20;
-const increment = 5;
+const initialCount = 4; // exibir 4 cartões de destaque
+const increment = 4;
+const container = document.getElementById('featuredStories');
 
-// Seletores de interface
-const container = document.getElementById('storiesContainer');
-const categoryFilter = document.getElementById('category-filter');
-const sortFilter = document.getElementById('sort-filter');
-const searchBar = document.getElementById('searchBar');
-const loadMoreBtn = document.getElementById('loadMoreBtn');
-
-// Modal e aviso
 const modalOverlay = document.getElementById('modalOverlay');
 const modalClose = document.getElementById('modalClose');
 const modalTitle = document.getElementById('modalTitle');
@@ -65,33 +93,27 @@ const warningOverlay = document.getElementById('warningOverlay');
 const warningYes = document.getElementById('warningYes');
 const warningNo = document.getElementById('warningNo');
 
-// Controle do modal e leitura
 let isModalOpen = false;
 let currentStoryId = null;
 let originalText = "";
 
-// Curtidas
 let likedStories = JSON.parse(localStorage.getItem('likedStories') || '[]');
 
 /************************************************************
  * [4] Carregar Histórias
  ************************************************************/
 function loadAllStories() {
-  // Para aplicar o limite de 2 linhas, os dados devem vir sem a propriedade "cartao".
-  // Se não houver histórias salvas, usamos dummy data sem "cartao" (apenas com "descricao").
   const raw = JSON.parse(localStorage.getItem('historias')) || [];
   if (raw.length === 0) {
     raw.push({
       id: 1,
       titulo: "Exemplo de História",
-      descricao: "A Sombra do Tirano\nIntrodução\nNa década de 1950, durante um regime marcado pela opressão e pelo medo, Eduardo era um dos principais colaboradores de um governo autoritário. O peso de suas ações, decepções e a constante vigilância moldavam um ambiente onde o horror não vinha apenas do lado externo, mas também de sua própria consciência.\n\nO Início da Dissolução\nÀ medida que os anos avançavam, Eduardo começou a ser assombrado por visões perturbadoras.\nA Descida ao Abismo\nOs sonhos de Eduardo transformaram-se em pesadelos constantes.\n\nClímax e Confronto Interno\n..."
+      descricao: "Linha 1 da história\nLinha 2 da história\nLinha 3 da história\nLinha 4 da história"
     });
   }
-  // Para cada história que não possuir "cartao", define a flag de bloqueio (bloqueio10)
-  // e cria um cartão padrão a partir da "descricao".
   const transformed = raw.map(st => {
     if (!st.cartao) {
-      st.bloqueio10 = true; // Flag para indicar que o texto deve ser truncado e não há cartão
+      st.bloqueio2 = true; // Flag para limitar a 2 linhas
       st.cartao = {
         tituloCartao: st.titulo || "Sem Título",
         sinopseCartao: (st.descricao || "").substring(0, 150) || "(sem sinopse)",
@@ -108,7 +130,7 @@ function loadAllStories() {
 }
 
 /************************************************************
- * [5.1] Formatador para sinopse: agrupa a cada 4 linhas em parágrafos justificados
+ * [5.1] Formatador para sinopse (4 linhas por parágrafo)
  ************************************************************/
 function formatarPor4Linhas(text) {
   const lines = text.split('\n');
@@ -128,8 +150,7 @@ function formatarPor4Linhas(text) {
 }
 
 /************************************************************
- * [5.2] Formatador para leitura completa com marcação:
- * Envolve cada palavra em um <span> com atributo data-index e evento onclick
+ * [5.2] Formatador para leitura completa com marcação
  ************************************************************/
 function formatarTextoParaLeitura(text) {
   const lines = text.split('\n');
@@ -157,7 +178,7 @@ function formatarTextoParaLeitura(text) {
 }
 
 /************************************************************
- * [5.3] Função para marcar a posição de leitura (salva no localStorage)
+ * [5.3] Marcar posição de leitura
  ************************************************************/
 function markReadingPosition(element) {
   const index = element.getAttribute('data-index');
@@ -166,7 +187,7 @@ function markReadingPosition(element) {
 }
 
 /************************************************************
- * [5.4] Função para destacar a palavra marcada ao retomar a leitura
+ * [5.4] Destacar a palavra marcada
  ************************************************************/
 function destacarPalavra() {
   const savedIndex = localStorage.getItem('readingPosition_' + currentStoryId);
@@ -180,11 +201,11 @@ function destacarPalavra() {
 }
 
 /************************************************************
- * [5.5] Função para criar o cartão (card) da história
+ * [5.5] Criar o cartão da história
  ************************************************************/
 function createStoryCard(story) {
   const div = document.createElement('div');
-  div.className = 'sheet';
+  div.className = 'featured-sheet';
 
   // Título
   const titleEl = document.createElement('div');
@@ -192,18 +213,14 @@ function createStoryCard(story) {
   titleEl.textContent = story.cartao.tituloCartao || 'Sem Título';
   div.appendChild(titleEl);
 
-  // Sinopse: utiliza a função formatarPor4Linhas
+  // Sinopse (exibida no cartão)
   const sinopseEl = document.createElement('div');
   sinopseEl.className = 'sheet-sinopse';
   sinopseEl.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao || '(sem sinopse)');
   div.appendChild(sinopseEl);
 
-  // “mais...” – abre o modal com os detalhes da história
-  const verMais = document.createElement('span');
-  verMais.className = 'ver-mais';
-  verMais.textContent = 'mais...';
-  verMais.style.cursor = 'pointer';
-  verMais.addEventListener('click', () => {
+  // Ao clicar no cartão, abre o modal
+  div.addEventListener('click', () => {
     isModalOpen = true;
     currentStoryId = story.id;
     modalTitle.textContent = story.cartao.tituloCartao || "Sem Título";
@@ -216,8 +233,7 @@ function createStoryCard(story) {
     lerBtn.addEventListener('click', () => {
       modalTitle.textContent = story.titulo || "História Completa";
       originalText = story.cartao.historiaCompleta || '(sem história completa)';
-      // Se a história não possuir cartão, limita a 2 linhas
-      if (story.bloqueio10) {
+      if (story.bloqueio2) {
         const lines = originalText.split('\n');
         if (lines.length > 2) {
           originalText = lines.slice(0, 2).join('\n') + '\n...';
@@ -227,7 +243,7 @@ function createStoryCard(story) {
     });
     modalFullText.appendChild(lerBtn);
 
-    // Botão "Continuar" – só deve aparecer se a história possuir cartão
+    // Botão "Continuar" – só aparece se existir uma posição salva e se não houver bloqueio
     let continuarBtn = document.getElementById('continuarBtn');
     if (!continuarBtn) {
       continuarBtn = document.createElement('button');
@@ -238,9 +254,11 @@ function createStoryCard(story) {
         if (storyAtual) {
           modalTitle.textContent = storyAtual.titulo || "História Completa";
           originalText = storyAtual.cartao.historiaCompleta || '(sem história completa)';
-          if (storyAtual.bloqueio10) {
-            // Se não há cartão, o botão "Continuar" não deve funcionar
-            return;
+          if (storyAtual.bloqueio2) {
+            const lines = originalText.split('\n');
+            if (lines.length > 2) {
+              originalText = lines.slice(0, 2).join('\n') + '\n...';
+            }
           }
           modalFullText.innerHTML = formatarTextoParaLeitura(originalText);
           setTimeout(destacarPalavra, 100);
@@ -248,81 +266,15 @@ function createStoryCard(story) {
       });
       modalFullText.appendChild(continuarBtn);
     }
-    // Se a história não possui cartão (flag bloqueio10), o botão "Continuar" fica escondido
-    if (story.bloqueio10) {
+    if (story.bloqueio2) {
       continuarBtn.style.display = 'none';
     } else {
       const savedPosition = localStorage.getItem('readingPosition_' + story.id);
-      if (savedPosition !== null) {
-        continuarBtn.style.display = 'inline-block';
-      } else {
-        continuarBtn.style.display = 'none';
-      }
+      continuarBtn.style.display = savedPosition !== null ? 'inline-block' : 'none';
     }
 
     modalOverlay.style.display = 'flex';
   });
-  div.appendChild(verMais);
-
-  // Botão Curtir
-  const likeContainer = document.createElement('div');
-  likeContainer.style.marginTop = '10px';
-  const likeBtn = document.createElement('button');
-  likeBtn.style.fontSize = '24px';
-  likeBtn.style.border = 'none';
-  likeBtn.style.background = 'none';
-  likeBtn.style.cursor = 'pointer';
-  const likeCount = document.createElement('span');
-  likeCount.style.marginLeft = '8px';
-  if (typeof story.cartao.likes !== 'number') {
-    story.cartao.likes = 0;
-  }
-  let userLiked = likedStories.includes(story.id);
-  function updateLikeUI() {
-    likeBtn.textContent = userLiked ? '❤️' : '🤍';
-    likeCount.textContent = `${story.cartao.likes} curtidas`;
-  }
-  updateLikeUI();
-  likeBtn.addEventListener('click', () => {
-    if (userLiked) {
-      story.cartao.likes = Math.max(story.cartao.likes - 1, 0);
-      userLiked = false;
-      likedStories = likedStories.filter(id => id !== story.id);
-    } else {
-      story.cartao.likes++;
-      userLiked = true;
-      likedStories.push(story.id);
-    }
-    localStorage.setItem('likedStories', JSON.stringify(likedStories));
-    const all = JSON.parse(localStorage.getItem('historias')) || [];
-    const foundIndex = all.findIndex(h => h.id === story.id);
-    if (foundIndex >= 0) {
-      all[foundIndex] = story;
-      localStorage.setItem('historias', JSON.stringify(all));
-    }
-    updateLikeUI();
-  });
-  likeContainer.appendChild(likeBtn);
-  likeContainer.appendChild(likeCount);
-  div.appendChild(likeContainer);
-
-  // Categorias
-  const catContainer = document.createElement('div');
-  catContainer.className = 'sheet-categorias';
-  if (story.cartao.categorias && story.cartao.categorias.length) {
-    story.cartao.categorias.forEach(cat => {
-      const badge = document.createElement('span');
-      badge.className = 'badge';
-      badge.textContent = cat;
-      catContainer.appendChild(badge);
-    });
-  } else {
-    const noCat = document.createElement('span');
-    noCat.className = 'badge';
-    noCat.textContent = 'Sem Categoria';
-    catContainer.appendChild(noCat);
-  }
-  div.appendChild(catContainer);
 
   return div;
 }
@@ -332,7 +284,7 @@ function createStoryCard(story) {
  ************************************************************/
 function createPlaceholderCard() {
   const div = document.createElement('div');
-  div.className = 'sheet sheet-placeholder';
+  div.className = 'featured-sheet';
   const titleEl = document.createElement('div');
   titleEl.className = 'sheet-title';
   titleEl.textContent = 'Placeholder';
@@ -345,7 +297,7 @@ function createPlaceholderCard() {
 }
 
 /************************************************************
- * [7] FILTRO / ORDENAR / PESQUISA
+ * [7] Filtro, Ordenar, Pesquisa
  ************************************************************/
 function matchesSearch(story, searchInput) {
   const text = searchInput.trim().toLowerCase();
@@ -370,14 +322,14 @@ function getFilteredStories() {
   if (cat) {
     arr = arr.filter(h => h.cartao.categorias && h.cartao.categorias.includes(cat));
   }
-  const sortMode = document.getElementById('sort-filter') ? document.getElementById('sort-filter').value : '';
-  if (sortMode === 'date') {
+  const sortFilter = document.getElementById('sort-filter') ? document.getElementById('sort-filter').value : '';
+  if (sortFilter === 'date') {
     arr.sort((a, b) => {
       const dataA = a.cartao.dataCartao || '1900-01-01';
       const dataB = b.cartao.dataCartao || '1900-01-01';
       return dataA.localeCompare(dataB);
     });
-  } else if (sortMode === 'popularity') {
+  } else if (sortFilter === 'popularity') {
     arr.sort((a, b) => {
       const popA = a.cartao.likes || 0;
       const popB = b.cartao.likes || 0;
@@ -393,7 +345,6 @@ function getFilteredStories() {
 function showBatch(count) {
   const filtered = getFilteredStories();
   if (filtered.length === 0) {
-    // Se não houver histórias publicadas, não exibe nenhum cartão
     return;
   }
   const end = currentOffset + count;
@@ -401,16 +352,7 @@ function showBatch(count) {
   realSlice.forEach(story => {
     container.appendChild(createStoryCard(story));
   });
-  const needed = count - realSlice.length;
-  if (needed > 0 && (currentOffset + needed) > filtered.length) {
-    for (let i = 0; i < needed; i++) {
-      container.appendChild(createPlaceholderCard());
-    }
-  }
   currentOffset += count;
-  if (loadMoreBtn) {
-    loadMoreBtn.disabled = false;
-  }
 }
 
 /************************************************************
@@ -466,7 +408,12 @@ document.addEventListener('DOMContentLoaded', () => {
   exibirUsuarioLogado();
   loadAllStories();
   initialLoad();
-  
+
+  const searchBar = document.getElementById('searchBar');
+  const categoryFilter = document.getElementById('category-filter');
+  const sortFilter = document.getElementById('sort-filter');
+  const loadMoreBtn = document.getElementById('loadMoreBtn');
+
   if (categoryFilter) {
     categoryFilter.addEventListener('change', handleFilterOrSort);
   }
@@ -483,8 +430,8 @@ document.addEventListener('DOMContentLoaded', () => {
       showBatch(initialCount);
     });
   }
-  
-  // Event listener para o botão "Continuar" presente no HTML
+
+  // Se o botão "Continuar" já existir (no HTML), adiciona o event listener
   const continuarBtn = document.getElementById('continuarBtn');
   if (continuarBtn) {
     continuarBtn.addEventListener('click', () => {
@@ -492,9 +439,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (story) {
         modalTitle.textContent = story.titulo || "História Completa";
         originalText = story.cartao.historiaCompleta || '(sem história completa)';
-        if (story.bloqueio10) {
-          // Se a história não possui cartão, o botão "Continuar" não deve funcionar
-          return;
+        if (story.bloqueio2) {
+          const lines = originalText.split('\n');
+          if (lines.length > 2) {
+            originalText = lines.slice(0, 2).join('\n') + '\n...';
+          }
         }
         modalFullText.innerHTML = formatarTextoParaLeitura(originalText);
         setTimeout(destacarPalavra, 100);
