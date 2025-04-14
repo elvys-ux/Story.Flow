@@ -1,4 +1,4 @@
-/* Barra de navegação fixa */
+/* Estilo para a barra de navegação fixa */
 .navbar {
     position: fixed;
     top: 0;
@@ -30,7 +30,6 @@
     margin-right: 8px;
 }
 
-/* Dropdown genérico */
 .dropdown {
     position: relative;
     display: inline-block;
@@ -60,7 +59,7 @@
     display: block;
 }
 
-/* Exibição do usuário (nome ou "Login") */
+/* Área para mostrar o usuário (nome ou "Login") */
 #userMenuArea {
     font-family: Arial, sans-serif;
     color: white;
@@ -69,18 +68,19 @@
 
 /* --- BARRA DE PESQUISA COM DROPDOWN --- */
 .search-box {
-    position: relative;   /* para posicionar o #searchResults */
+    position: relative; /* Necessário para posicionar o dropdown de sugestões */
     display: inline-flex;
     align-items: center;
     background-color: white;
+    border: 1px solid #ccc;
     border-radius: 5px;
-    /* Remove ou reduza bastante o padding para "colar" o dropdown */
-    padding: 2px;
+    padding: 0;  /* Remove padding para evitar espaço extra */
 }
 
 .search-box input[type="text"] {
     border: none;
-    padding: 5px;
+    padding: 5px 8px; /* Ajuste conforme necessário */
+    margin: 0;
     outline: none;
 }
 
@@ -96,17 +96,17 @@
 /* Container para exibir sugestões de pesquisa */
 #searchResults {
     position: absolute;
-    top: 100%;        /* Encosta na base do input */
-    margin-top: -1px; /* Sobe 1px para remover qualquer linha extra */
+    top: 100%;        /* Encosta na base do container (.search-box) */
+    margin-top: 0;    /* Sem espaço extra entre o input e o dropdown */
     left: 0;
     width: 100%;
     background-color: #fff;
     border: 1px solid #ccc;
-    border-top: none;           /* para parecer extensão do input */
+    border-top: none;  /* Remove a borda superior para continuidade visual */
     border-radius: 0 0 5px 5px; 
-    display: none;              /* exibido via JS quando houver sugestões */
+    display: none;     /* Exibido via JavaScript quando houver sugestões */
     z-index: 9999;
-    max-height: 200px;          /* limita a altura */
+    max-height: 200px; /* Limita a altura e permite scroll se necessário */
     overflow-y: auto;
 }
 
@@ -222,7 +222,7 @@ h2 {
     margin-left: 5px;
 }
 
-/* Container da história */
+/* Estilo para o container da história */
 .historia-container {
     background-color: #fff;
     padding: 20px;
@@ -269,7 +269,7 @@ h2 {
     background-color: #555;
 }
 
-/* Botões na parte inferior do container da história */
+/* Estilo para os botões na parte inferior do container da história */
 .historia-container .buttons {
     display: flex;
     justify-content: space-between;
@@ -291,7 +291,6 @@ h2 {
 }
 
 /* Exibição dos botões de navegação para o modo de leitura */
-#btn-voltar,
-#btn-continuar {
+#btn-voltar, #btn-continuar {
     display: none;
 }
