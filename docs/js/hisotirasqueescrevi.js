@@ -55,23 +55,20 @@ async function exibirUsuarioLogado() {
 }
 
 /************************************************************
- * [B] VARIÁVEIS GLOBAIS (modo de leitura, etc.)
+ * [B] VARIÁVEIS GLOBAIS E CONFIGURAÇÕES
  ************************************************************/
 let modoCorrido = true;
 let partesHistoria = [];
 let parteAtual = 0;
 let isTitleListVisible = false;
+let currentStoryId = null;   // Para o marcador e exibição
 
-// Para o marcador
-let currentStoryId = null;   // Qual história está aberta
-const wrapWidth = 80;        // nº de caracteres por linha
-const lineHeightPx = 22;     // line-height aproximada (px)
-
-// Variável para guardar o texto completo original
-let textoCompleto = "";
+const wrapWidth = 80;        // Nº de caracteres por linha
+const lineHeightPx = 22;     // Valor aproximado do line-height (px)
+let textoCompleto = "";      // Para armazenamento do texto completo
 
 /************************************************************
- * [C] LISTA LATERAL => MOSTRAR/ESCONDER
+ * [C] LISTA LATERAL: MOSTRAR/ESCONDER
  ************************************************************/
 function toggleTitleList(show) {
   const titleList = document.getElementById('titleListLeft');
@@ -84,17 +81,13 @@ function toggleTitleList(show) {
     isTitleListVisible = false;
   }
 }
-document.body.addEventListener('mousemove', function(e) {
-  if (e.clientX < 50 && !isTitleListVisible) {
-    toggleTitleList(true);
-  }
+document.body.addEventListener('mousemove', e => {
+  if (e.clientX < 50 && !isTitleListVisible) toggleTitleList(true);
 });
-document.body.addEventListener('mouseleave', function() {
-  if (isTitleListVisible) {
-    toggleTitleList(false);
-  }
+document.body.addEventListener('mouseleave', () => {
+  if (isTitleListVisible) toggleTitleList(false);
 });
-document.body.addEventListener('click', function(e) {
+document.body.addEventListener('click', e => {
   const titleList = document.getElementById('titleListLeft');
   if (isTitleListVisible && titleList && !titleList.contains(e.target)) {
     toggleTitleList(false);
@@ -102,65 +95,122 @@ document.body.addEventListener('click', function(e) {
 });
 
 /************************************************************
- * [D] MOSTRAR HISTÓRIAS NA LISTA LATERAL
+ * [D] FUNÇÃO AUXILIAR: BUSCAR CARTÃO POR HISTÓRIA
  ************************************************************/
-function mostrarHistorias() {
+// Considera que o ID do cartão é o mesmo da história ou que haja um relacionamento.
+async function buscarCartaoPorHistoria(storyId) {
+  const { data: cartao, error } = await supabase
+    .from('cartoes')
+    .select('*')
+    .eq('id', storyId)
+    .single();
+  if (error) {
+    // Se não encontrar, retorna um objeto vazio com dados padrão
+    return {
+      sinopse_cartao: "",
+      historia_completa: "",
+      data_criacao: "",
+      autor_cartao: "Desconhecido",
+      categorias: [],
+      likes: 0
+    };
+  }
+  return cartao;
+}
+
+/************************************************************
+ * [E] MOSTRAR HISTÓRIAS NA LISTA LATERAL
+ * – A consulta busca os registros da tabela **historias** e, para cada
+ * história, busca o respectivo cartão na tabela **cartoes**.
+ ************************************************************/
+async function mostrarHistorias() {
   const ul = document.getElementById('titleListUl');
   if (!ul) return;
-
   ul.innerHTML = '';
-  const historias = JSON.parse(localStorage.getItem('historias')) || [];
 
-  historias.forEach((h, index) => {
-    // Se não tiver cartao, cria
-    if (!h.cartao) {
-      h.cartao = {
+  // Busca todas as histórias (pode ordenar por data)
+  const { data: historias, error } = await supabase
+    .from('historias')
+    .select('*')
+    .order('data_criacao', { ascending: false });
+  if (error) {
+    console.error("Erro ao buscar histórias:", error);
+    return;
+  }
+
+  // Para cada história, busca o cartão correspondente
+  for (let h of historias) {
+    const cartao = await buscarCartaoPorHistoria(h.id);
+    // Cria um objeto auxiliar com os dados a exibir
+    const exibir = {
+      id: h.id,
+      titulo: h.titulo,
+      descricao: h.descricao,
+      cartao: {
         tituloCartao: h.titulo || "(Sem Título)",
-        autorCartao: "Desconhecido",
-        sinopseCartao: (h.descricao || "").slice(0, 100),
-        historiaCompleta: h.descricao || "",
-        likes: 0,
-        categorias: []
-      };
-    }
+        autorCartao: cartao.autor_cartao || "Desconhecido",
+        sinopseCartao: (cartao.sinopse_cartao || "").substring(0, 100),
+        historiaCompleta: cartao.historia_completa || h.descricao || "",
+        likes: cartao.likes || 0,
+        categorias: cartao.categorias || []
+      }
+    };
 
     const li = document.createElement('li');
-    li.textContent = h.cartao.tituloCartao || '(Sem Título)';
+    li.textContent = exibir.cartao.tituloCartao;
 
+    // Cria botões “Ler” e “Excluir”
     const buttons = document.createElement('span');
     buttons.classList.add('buttons');
 
-    // Botão "Ler"
     const lerBtn = document.createElement('button');
     lerBtn.textContent = 'Ler';
-    lerBtn.onclick = () => abrirHistoriaPorIndex(index);
+    lerBtn.onclick = () => abrirHistoriaPorId(exibir.id);
 
-    // Botão "Excluir"
     const delBtn = document.createElement('button');
     delBtn.textContent = 'Excluir';
-    delBtn.onclick = () => excluirHistoria(index);
+    delBtn.onclick = () => excluirHistoria(exibir.id);
 
     buttons.appendChild(lerBtn);
     buttons.appendChild(delBtn);
     li.appendChild(buttons);
-
     ul.appendChild(li);
-  });
+  }
 }
 
 /************************************************************
- * [E] EXCLUIR HISTÓRIA
+ * [F] EXCLUIR HISTÓRIA
+ * – Remove o registro da tabela **historias** e também o registro
+ * correspondente na tabela **cartoes**.
  ************************************************************/
-function excluirHistoria(index) {
-  if (!confirm("Deseja mesmo excluir a história?")) return;
-  const historias = JSON.parse(localStorage.getItem('historias')) || [];
-  historias.splice(index, 1);
-  localStorage.setItem('historias', JSON.stringify(historias));
+async function excluirHistoria(storyId) {
+  if (!confirm("Deseja realmente excluir a história?")) return;
+
+  // Exclui da tabela histórias
+  const { error: errHist } = await supabase
+    .from('historias')
+    .delete()
+    .eq('id', storyId);
+  if (errHist) {
+    console.error("Erro ao excluir história:", errHist);
+    alert("Erro ao excluir a história.");
+    return;
+  }
+
+  // Exclui da tabela cartoes
+  const { error: errCartao } = await supabase
+    .from('cartoes')
+    .delete()
+    .eq('id', storyId);
+  if (errCartao) {
+    console.error("Erro ao excluir cartão:", errCartao);
+  }
+  alert("História excluída com sucesso!");
   mostrarHistorias();
 }
 
 /************************************************************
- * [F] LIMPAR FORMULÁRIO
+ * [G] LIMPAR FORMULÁRIO
  ************************************************************/
 function limparFormulario() {
   document.getElementById('titulo').value = '';
@@ -170,48 +220,92 @@ function limparFormulario() {
 }
 
 /************************************************************
- * [G] SALVAR HISTÓRIA
+ * [H] SALVAR HISTÓRIA
+ * – Insere um registro na tabela **historias** e, em seguida, cria
+ * um registro mínimo na tabela **cartoes** (com informações iniciais e 0 likes).
  ************************************************************/
-function salvarHistoria(titulo, descricao, autor) {
-  let historias = JSON.parse(localStorage.getItem('historias')) || [];
-  const newID = Date.now().toString();
+async function salvarHistoria(titulo, descricao, autor) {
+  // Obtém o usuário logado para associar o registro
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    alert("Usuário não autenticado.");
+    return;
+  }
+  const user_id = session.user.id;
+  const data_criacao = new Date().toISOString();
 
-  // Monta cartao
+  // Insere na tabela histórias
+  const { data: novaHistoria, error: errHist } = await supabase
+    .from('historias')
+    .insert([{ titulo, descricao, user_id, data_criacao }])
+    .single();
+  if (errHist) {
+    console.error("Erro ao salvar história:", errHist);
+    alert("Erro ao salvar a história.");
+    return;
+  }
+
+  // Insere um registro mínimo na tabela cartoes utilizando o id da história
   const cartaoMinimo = {
-    tituloCartao: titulo || "(Sem Título)",
-    autorCartao: autor || "Desconhecido",
-    sinopseCartao: (descricao || "").substring(0, 100),
-    historiaCompleta: descricao || "",
-    likes: 0,
-    categorias: []
+    id: novaHistoria.id,  // assume que o ID será compartilhado
+    sinopse_cartao: (descricao || "").substring(0, 100),
+    historia_completa: descricao,
+    data_criacao,
+    autor_cartao: autor || "Desconhecido",
+    categorias: [],
+    likes: 0
   };
 
-  const nova = {
-    id: newID,
-    titulo,
-    descricao,
-    autor,
-    cartao: cartaoMinimo
-  };
-  historias.push(nova);
-  localStorage.setItem('historias', JSON.stringify(historias));
+  const { error: errCartao } = await supabase
+    .from('cartoes')
+    .insert([cartaoMinimo]);
+  if (errCartao) {
+    console.error("Erro ao criar cartão:", errCartao);
+    alert("Erro ao criar o cartão.");
+    return;
+  }
+
+  alert("História salva com sucesso!");
   mostrarHistorias();
 }
 
 /************************************************************
- * [H] ABRIR HISTÓRIA PELO ÍNDICE
+ * [I] ABRIR HISTÓRIA (detalhada) PELO ID
  ************************************************************/
-function abrirHistoriaPorIndex(index) {
-  const historias = JSON.parse(localStorage.getItem('historias')) || [];
-  if (!historias[index]) {
-    alert("História não encontrada!");
+async function abrirHistoriaPorId(storyId) {
+  // Busca a história e o cartão correspondente
+  const { data: hist, error: errHist } = await supabase
+    .from('historias')
+    .select('*')
+    .eq('id', storyId)
+    .single();
+  if (errHist) {
+    console.error("Erro ao buscar a história:", errHist);
+    alert("História não encontrada.");
     return;
   }
-  exibirHistoriaNoContainer(historias[index]);
+  const cartao = await buscarCartaoPorHistoria(storyId);
+
+  // Define o texto a exibir (priorizando a história completa do cartão, se existir)
+  const textoBase = cartao.historia_completa || hist.descricao || "(Sem descrição)";
+  const textoFormatado = formatarTexto(textoBase);
+  textoCompleto = textoFormatado;
+  currentStoryId = hist.id;
+
+  document.getElementById('historia-titulo').textContent = hist.titulo || "(Sem título)";
+  const container = document.getElementById('historia-conteudo');
+  container.innerText = textoCompleto;
+  container.setAttribute("data-full-text", textoCompleto);
+  
+  // Reseta o modo de leitura
+  modoCorrido = true;
+  partesHistoria = [];
+  parteAtual = 0;
 }
 
 /************************************************************
- * [I] FORMATAÇÃO: A CADA 5 PONTOS => \n\n
+ * [J] FUNÇÃO AUXILIAR: FORMATAÇÃO DO TEXTO
+ * Insere quebras de linha a cada 5 pontos (exemplo)
  ************************************************************/
 function formatarTexto(str) {
   let contador = 0;
@@ -230,42 +324,14 @@ function formatarTexto(str) {
 }
 
 /************************************************************
- * [J] EXIBIR HISTÓRIA NO CONTEINER
- ************************************************************/
-function exibirHistoriaNoContainer(hist) {
-  currentStoryId = hist.id; // para o marcador
-
-  // Usa cartao.historiaCompleta
-  const textoBase = hist.cartao?.historiaCompleta || hist.descricao || "(Sem descrição)";
-  const textoFormatado = formatarTexto(textoBase);
-
-  // Armazena o texto completo original para o modo de leitura
-  textoCompleto = textoFormatado;
-
-  document.getElementById('historia-titulo').textContent = hist.cartao?.tituloCartao || "(Sem título)";
-
-  const container = document.getElementById('historia-conteudo');
-  container.innerText = textoCompleto;
-  container.setAttribute("data-full-text", textoCompleto);
-
-  // Reseta modo de leitura
-  modoCorrido = true;
-  partesHistoria = [];
-  parteAtual = 0;
-}
-
-/************************************************************
  * [K] MODO DE LEITURA (CORRIDO VS PARÁGRAFOS)
- * Pega o texto em blocos de 5 linhas
  ************************************************************/
 function toggleReadingMode() {
   const container = document.getElementById("historia-conteudo");
   const btnVoltar = document.getElementById("btn-voltar");
   const btnContinuar = document.getElementById("btn-continuar");
-
   let fullText = textoCompleto;
   container.setAttribute("data-full-text", fullText);
-
   if (modoCorrido) {
     const lines = fullText.split(/\r?\n/);
     const linesPerPage = 5;
@@ -275,13 +341,8 @@ function toggleReadingMode() {
     }
     parteAtual = 0;
     exibirParteAtual();
-    if (partesHistoria.length > 1) {
-      btnVoltar.style.display = 'inline-block';
-      btnContinuar.style.display = 'inline-block';
-    } else {
-      btnVoltar.style.display = 'none';
-      btnContinuar.style.display = 'none';
-    }
+    btnVoltar.style.display = (partesHistoria.length > 1) ? 'inline-block' : 'none';
+    btnContinuar.style.display = (partesHistoria.length > 1) ? 'inline-block' : 'none';
     modoCorrido = false;
   } else {
     container.innerText = fullText;
@@ -306,19 +367,17 @@ function continuarHistoria() {
     exibirParteAtual();
   }
 }
-
-// Atalho de teclado para navegação no modo de leitura
 document.addEventListener('keydown', function(e) {
   const key = e.key.toLowerCase();
-  if (key === "arrowleft" || key === "arrowup" || key === "a" || key === "w") {
+  if (["arrowleft", "arrowup", "a", "w"].includes(key)) {
     voltarPagina();
-  } else if (key === "arrowright" || key === "arrowdown" || key === "d" || key === "s") {
+  } else if (["arrowright", "arrowdown", "d", "s"].includes(key)) {
     continuarHistoria();
   }
 });
 
 /************************************************************
- * [L] MARCADOR DE LINHA: CLIQUE E "CONTINUAR"
+ * [L] MARCADOR DE LINHA: CLIQUE PARA SALVAR POSIÇÃO
  ************************************************************/
 function wrapText(str, width) {
   const result = [];
@@ -329,7 +388,6 @@ function wrapText(str, width) {
   }
   return result;
 }
-
 function highlightLine(lineNumber) {
   const container = document.getElementById("historia-conteudo");
   const fullText = container.getAttribute("data-full-text") || container.innerText;
@@ -347,8 +405,6 @@ function highlightLine(lineNumber) {
   const scrollTarget = (lineNumber - 1) * lineHeightPx;
   container.scrollTo({ top: scrollTarget, behavior: 'smooth' });
 }
-
-// Clique no texto para salvar a linha (marcador)
 const containerLeitura = document.getElementById('historia-conteudo');
 if (containerLeitura) {
   containerLeitura.addEventListener('click', function(e) {
@@ -362,8 +418,6 @@ if (containerLeitura) {
     console.log("Linha salva:", lineNumber);
   });
 }
-
-// Botão "Continuar Marcador"
 function continuarMarcador() {
   if (!currentStoryId) return;
   const saved = localStorage.getItem(`lineNumber_${currentStoryId}`);
@@ -375,27 +429,42 @@ function continuarMarcador() {
 }
 
 /************************************************************
- * [M] PESQUISA (POR cartao.tituloCartao OU cartao.autorCartao)
+ * [M] PESQUISA: BUSCAR HISTÓRIAS DA TABELA "historias"
  ************************************************************/
-function filtrarHistorias(query) {
-  const todas = JSON.parse(localStorage.getItem('historias')) || [];
+async function filtrarHistorias(query) {
   query = query.toLowerCase();
-  return todas.filter(story => {
-    if (!story.cartao) {
-      story.cartao = {
-        tituloCartao: story.titulo || "(Sem Título)",
-        autorCartao: story.autor || "Desconhecido",
-        historiaCompleta: story.descricao || "",
-        likes: 0
-      };
-    }
+  // Busca os registros da tabela histórias (pode filtrar por título)
+  const { data: resultados, error } = await supabase
+    .from('historias')
+    .select('*')
+    .ilike('titulo', `%${query}%`);
+  if (error) {
+    console.error("Erro na pesquisa:", error);
+    return [];
+  }
+  
+  // Para cada história, buscarmos o cartão para poder filtrar também por autor do cartão se necessário
+  const resultadosComCartao = [];
+  for (let h of resultados) {
+    const cartao = await buscarCartaoPorHistoria(h.id);
+    resultadosComCartao.push({
+      ...h,
+      cartao: {
+        tituloCartao: h.titulo || "(Sem Título)",
+        autorCartao: cartao.autor_cartao || "Desconhecido",
+        historiaCompleta: cartao.historia_completa || h.descricao || "",
+        likes: cartao.likes || 0
+      }
+    });
+  }
+  
+  // Filtra também pelo autor do cartão, se necessário
+  return resultadosComCartao.filter(story => {
     const t = (story.cartao.tituloCartao || "").toLowerCase();
     const a = (story.cartao.autorCartao || "").toLowerCase();
     return t.includes(query) || a.includes(query);
   });
 }
-
-// Atualização: Remove a manipulação dos offsets via JS para que o CSS defina o posicionamento.
 function exibirSugestoes(lista) {
   const searchResults = document.getElementById('searchResults');
   if (!searchResults) return;
@@ -428,25 +497,48 @@ function exibirSugestoes(lista) {
   });
 }
 
-function abrirHistoriaPorId(storyId) {
-  const todas = JSON.parse(localStorage.getItem('historias')) || [];
-  const h = todas.find(x => x.id === storyId);
-  if (!h) {
-    alert("História não encontrada!");
-    return;
+/************************************************************
+ * [N] FUNÇÃO: BUSCAR A HISTÓRIA COM MAIS CURTIDAS
+ * – Consulta a tabela cartoes e retorna o cartão (e a história associada)
+ *   com o maior número de likes.
+ ************************************************************/
+async function buscarHistoriaMaisCurtida() {
+  const { data: cartaoMaisCurtido, error } = await supabase
+    .from('cartoes')
+    .select('*')
+    .order('likes', { ascending: false })
+    .limit(1)
+    .single();
+  if (error) {
+    console.error("Erro ao buscar a história com mais curtidas:", error);
+    return null;
   }
-  exibirHistoriaNoContainer(h);
+  
+  // Agora buscamos a história correspondente na tabela histórias
+  const { data: historia, error: errHistoria } = await supabase
+    .from('historias')
+    .select('*')
+    .eq('id', cartaoMaisCurtido.id)
+    .single();
+  if (errHistoria) {
+    console.error("Erro ao buscar a história correspondente:", errHistoria);
+    return null;
+  }
+  
+  return { historia, cartao: cartaoMaisCurtido };
 }
 
 /************************************************************
- * [N] DOMContentLoaded => CONFIGURAR TUDO
+ * [O] DOMContentLoaded: INICIALIZAÇÃO
  ************************************************************/
 document.addEventListener('DOMContentLoaded', function() {
   exibirUsuarioLogado();
   mostrarHistorias();
+  
+  // Configura o formulário de nova história
   const form = document.getElementById('formPrincipal');
   if (form) {
-    form.addEventListener('submit', function(e) {
+    form.addEventListener('submit', async function(e) {
       e.preventDefault();
       const titulo = document.getElementById('titulo').value.trim();
       const descricao = document.getElementById('descricao').value.trim();
@@ -456,41 +548,45 @@ document.addEventListener('DOMContentLoaded', function() {
         alert("Preencha título e descrição!");
         return;
       }
-      salvarHistoria(titulo, descricao, autor);
+      await salvarHistoria(titulo, descricao, autor);
       limparFormulario();
     });
   }
+  
+  // Configura a pesquisa
   const searchBar = document.getElementById('searchBar');
   const searchBtn = document.getElementById('searchBtn');
   const searchResults = document.getElementById('searchResults');
   if (searchBar && searchBtn && searchResults) {
-    searchBtn.addEventListener('click', function() {
+    searchBtn.addEventListener('click', async function() {
       const query = searchBar.value.trim();
       if (!query) {
         searchResults.style.display = 'none';
         return;
       }
-      const resultados = filtrarHistorias(query);
+      const resultados = await filtrarHistorias(query);
       exibirSugestoes(resultados);
     });
-    searchBar.addEventListener('input', function() {
+    searchBar.addEventListener('input', async function() {
       const query = searchBar.value.trim();
       if (!query) {
         searchResults.style.display = 'none';
         return;
       }
-      const resultados = filtrarHistorias(query);
+      const resultados = await filtrarHistorias(query);
       exibirSugestoes(resultados);
     });
-    searchBar.addEventListener('keydown', function(e) {
+    searchBar.addEventListener('keydown', async function(e) {
       if (e.key === 'Enter') {
         e.preventDefault();
         const query = searchBar.value.trim();
-        const resultados = filtrarHistorias(query);
+        const resultados = await filtrarHistorias(query);
         exibirSugestoes(resultados);
       }
     });
   }
+  
+  // Configura os botões do modo de leitura e do marcador
   const btnVoltar = document.getElementById('btn-voltar');
   const btnContinuar = document.getElementById('btn-continuar');
   if (btnVoltar) btnVoltar.addEventListener('click', voltarPagina);
@@ -502,5 +598,19 @@ document.addEventListener('DOMContentLoaded', function() {
   const btnMarcador = document.getElementById('btnMarcador');
   if (btnMarcador) {
     btnMarcador.addEventListener('click', continuarMarcador);
+  }
+  
+  // Exemplo: Buscar e exibir a história com mais curtidas em um elemento específico
+  const destaque = document.getElementById('historia-destaque');
+  if (destaque) {
+    buscarHistoriaMaisCurtida().then(result => {
+      if (result) {
+        const { historia, cartao } = result;
+        // Exibe título e sinopse (ou qualquer outra informação)
+        destaque.innerHTML = `<h2>${historia.titulo}</h2>
+          <p>${cartao.sinopse_cartao}</p>
+          <p><strong>Likes:</strong> ${cartao.likes}</p>`;
+      }
+    });
   }
 });
