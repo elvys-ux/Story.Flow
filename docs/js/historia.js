@@ -1,8 +1,3 @@
-// HISTORIA.JS
-// - A história permanece no container após “Atualizar”.
-// - Só aparece ao clicar em “Editar”. Se é “nova” não exibe nada.
-// - Exibe o nome do usuário utilizando Supabase para login/logout.
-
 import { supabase } from "./supabase.js";
 
 /*************************************************************
@@ -47,7 +42,7 @@ async function exibirUsuarioLogado() {
 
         userArea.innerHTML = displayName;
 
-        // Ao clicar, pergunta se deseja fazer logout; se confirmado, efetua o logout e recarrega a página
+        // Ao clicar, pergunta se deseja fazer logout e, se confirmado, efetua o logout e recarrega a página.
         userArea.onclick = () => {
             if (confirm("Deseja fazer logout?")) {
                 supabase.auth.signOut().then(({ error }) => {
@@ -65,19 +60,19 @@ async function exibirUsuarioLogado() {
 }
 
 /*************************************************************
- * [B] VARIÁVEIS GLOBAIS (Modo de Leitura, Marcador, etc.)
+ * [B] VARIÁVEIS GLOBAIS
  *************************************************************/
 let modoCorrido = true;
 let partesHistoria = [];
 let parteAtual = 0;
 let isTitleListVisible = false;
+let currentStoryId = null;  // ID da história atualmente aberta
 
-// Variáveis para o marcador de linha
-let currentStoryId = null;   // ID da história atualmente aberta
-const wrapWidth = 80;        // número de caracteres por linha (para quebra)
-const lineHeightPx = 22;     // altura aproximada da linha (em px)
+// Parâmetros para formatação de leitura
+const wrapWidth = 80;       // número de caracteres por linha (para quebra)
+const lineHeightPx = 22;    // altura aproximada da linha (em px)
 
-// Armazenar o texto completo original
+// Armazenar o texto completo original, se necessário
 let textoCompleto = "";
 
 /*************************************************************
@@ -114,12 +109,20 @@ document.body.addEventListener('click', function(e) {
 /*************************************************************
  * [D] MOSTRAR HISTÓRIAS NA LISTA LATERAL
  *************************************************************/
-function mostrarHistorias() {
+async function mostrarHistorias() {
     const ul = document.getElementById('titleListUl');
     if (!ul) return;
-
     ul.innerHTML = '';
-    let historias = JSON.parse(localStorage.getItem('historias')) || [];
+
+    // Busca as histórias do Supabase, ordenando pela data de criação (mais recentes primeiro)
+    const { data: historias, error } = await supabase
+        .from('historias')
+        .select('*')
+        .order('data_criacao', { ascending: false });
+    if (error) {
+        console.error("Erro ao buscar histórias:", error);
+        return;
+    }
 
     historias.forEach((h) => {
         const li = document.createElement('li');
@@ -177,36 +180,60 @@ function toggleMenuOpcoes(li, storyID) {
 /*************************************************************
  * [E] SALVAR/EDITAR HISTÓRIA
  *************************************************************/
-function salvarHistoria(titulo, descricao) {
-    let historias = JSON.parse(localStorage.getItem('historias')) || [];
-    const editID = document.getElementById('storyForm').dataset.editId;
+async function salvarHistoria(titulo, descricao) {
+    const storyForm = document.getElementById('storyForm');
+    const editID = storyForm.dataset.editId;
+
+    // Obtém o usuário autenticado via Supabase
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError || !userData?.user) {
+        alert("Usuário não autenticado.");
+        return;
+    }
+    const user_id = userData.user.id;
 
     if (editID) {
-        // Editando história existente
-        const idx = historias.findIndex(h => h.id === editID);
-        if (idx !== -1) {
-            historias[idx].titulo = titulo;
-            historias[idx].descricao = descricao;
+        // Atualiza a história existente
+        const { data, error } = await supabase
+            .from('historias')
+            .update({ titulo, descricao })
+            .eq('id', editID);
+        if (error) {
+            console.error("Erro ao atualizar a história:", error);
+            alert("Erro ao atualizar a história.");
+            return;
         }
-        localStorage.setItem('historias', JSON.stringify(historias));
         alert("História atualizada com sucesso!");
         exibirHistoriaNoContainer(editID);
     } else {
-        // Nova história
-        const newID = Date.now().toString();
-        historias.push({ id: newID, titulo, descricao });
-        localStorage.setItem('historias', JSON.stringify(historias));
+        // Insere nova história com data de criação atual
+        const data_criacao = new Date().toISOString();
+        const { data, error } = await supabase
+            .from('historias')
+            .insert([{ user_id, titulo, descricao, data_criacao }]);
+        if (error) {
+            console.error("Erro ao inserir a história:", error);
+            alert("Erro ao salvar a história.");
+            return;
+        }
         alert("História salva com sucesso (nova)!");
         limparFormulario();
-        removerExibicaoHistoria(); 
+        removerExibicaoHistoria();
     }
     mostrarHistorias(); // Atualiza a lista lateral
 }
 
-function editarHistoria(storyID) {
-    let historias = JSON.parse(localStorage.getItem('historias')) || [];
-    const found = historias.find(h => h.id === storyID);
-    if (!found) return;
+async function editarHistoria(storyID) {
+    // Busca a história pelo ID no Supabase
+    const { data: found, error } = await supabase
+        .from('historias')
+        .select('*')
+        .eq('id', storyID)
+        .single();
+    if (error) {
+        console.error("Erro ao buscar a história:", error);
+        return;
+    }
 
     // Preenche o formulário com os dados da história
     document.getElementById('titulo').value = found.titulo;
@@ -218,17 +245,23 @@ function editarHistoria(storyID) {
     exibirHistoriaNoContainer(storyID);
 }
 
-function excluirHistoria(storyID) {
+async function excluirHistoria(storyID) {
     if (!confirm("Deseja excluir a história?")) return;
-    let historias = JSON.parse(localStorage.getItem('historias')) || [];
-    historias = historias.filter(h => h.id !== storyID);
-    localStorage.setItem('historias', JSON.stringify(historias));
+    const { data, error } = await supabase
+        .from('historias')
+        .delete()
+        .eq('id', storyID);
+    if (error) {
+        console.error("Erro ao excluir a história:", error);
+        alert("Erro ao excluir a história.");
+        return;
+    }
     alert("História excluída.");
     mostrarHistorias();
     const editID = document.getElementById('storyForm').dataset.editId;
     if (editID === storyID) {
-      limparFormulario();
-      removerExibicaoHistoria();
+        limparFormulario();
+        removerExibicaoHistoria();
     }
 }
 
@@ -242,11 +275,7 @@ function limparFormulario() {
 /*************************************************************
  * [F] EXIBIR UMA HISTÓRIA (ABAIXO DO FORMULÁRIO)
  *************************************************************/
-function exibirHistoriaNoContainer(storyID) {
-    let historias = JSON.parse(localStorage.getItem('historias')) || [];
-    const found = historias.find(h => h.id === storyID);
-    if (!found) return;
-
+async function exibirHistoriaNoContainer(storyID) {
     const container = document.getElementById('storyContainer');
     if (!container) return;
 
@@ -254,7 +283,19 @@ function exibirHistoriaNoContainer(storyID) {
     const oldDiv = container.querySelector('.exibicao-historia');
     if (oldDiv) oldDiv.remove();
 
-    // Cria um novo div para exibir a história
+    // Busca a história no Supabase
+    const { data: found, error } = await supabase
+        .from('historias')
+        .select('*')
+        .eq('id', storyID)
+        .single();
+    if (error) {
+        console.error("Erro ao buscar a história:", error);
+        return;
+    }
+
+    currentStoryId = storyID; // Define a história atual para marcador de leitura
+
     const div = document.createElement('div');
     div.classList.add('exibicao-historia');
     div.style.border = '1px solid #ccc';
@@ -271,7 +312,7 @@ function exibirHistoriaNoContainer(storyID) {
     p.textContent = found.descricao || "";
     div.appendChild(p);
 
-    // Se já tiver cartao, exibe aviso
+    // Se existir informação do cartão, exibe aviso
     if (found.cartao) {
         const infoCartao = document.createElement('p');
         infoCartao.innerHTML = "<em>(Este texto foi publicado no Cartão)</em>";
@@ -294,7 +335,7 @@ function removerExibicaoHistoria() {
 /*************************************************************
  * [H] CARTÃO (ABORDAGEM B)
  *************************************************************/
-function mostrarCartaoForm(storyID) {
+async function mostrarCartaoForm(storyID) {
     const storyContainer = document.getElementById('storyContainer');
     const cartaoContainer = document.getElementById('cartaoContainer');
     if (!storyContainer || !cartaoContainer) return;
@@ -302,10 +343,18 @@ function mostrarCartaoForm(storyID) {
     storyContainer.style.display = 'none';
     cartaoContainer.style.display = 'block';
 
-    let historias = JSON.parse(localStorage.getItem('historias')) || [];
-    const h = historias.find(st => st.id === storyID);
-    if (!h) return;
+    // Busca a história no Supabase
+    const { data: h, error } = await supabase
+        .from('historias')
+        .select('*')
+        .eq('id', storyID)
+        .single();
+    if (error) {
+        console.error("Erro ao buscar a história:", error);
+        return;
+    }
 
+    // Se não houver informação de cartão, inicializa um objeto vazio
     if (!h.cartao) {
         h.cartao = {
             tituloCartao: "",
@@ -355,16 +404,12 @@ function mostrarCartaoForm(storyID) {
     };
 }
 
-function publicarCartao(storyID) {
+async function publicarCartao(storyID) {
     const msg = "Aviso: Ao publicar o cartão, o conteúdo fica definitivo.\nEdições futuras não serão refletidas no cartão.\n\nContinuar?";
     if (!confirm(msg)) {
         alert("Publicação cancelada.");
         return;
     }
-
-    let historias = JSON.parse(localStorage.getItem('historias')) || [];
-    const h = historias.find(st => st.id === storyID);
-    if (!h) return;
 
     const cartaoTitulo = document.getElementById('cartaoTitulo').value.trim();
     const cartaoSinopse = document.getElementById('cartaoSinopse').value.trim();
@@ -387,31 +432,41 @@ function publicarCartao(storyID) {
         return;
     }
 
-    h.cartao = {
+    const cartao = {
         tituloCartao: cartaoTitulo,
         sinopseCartao: cartaoSinopse,
         dataCartao: cartaoData,
         autorCartao: autor,
-        categorias: categoriasSelecionadas,
-        historiaCompleta: h.descricao || "",
-        likes: (h.cartao && h.cartao.likes) ? h.cartao.likes : 0
+        categorias: categoriasSelecionadas
     };
 
-    const idx = historias.findIndex(st => st.id === storyID);
-    if (idx >= 0) {
-        historias[idx] = h;
-        localStorage.setItem('historias', JSON.stringify(historias));
+    // Atualiza o registro da história adicionando o objeto do cartão
+    const { data, error } = await supabase
+        .from('historias')
+        .update({ cartao: cartao })
+        .eq('id', storyID);
+    if (error) {
+        console.error("Erro ao publicar o cartão:", error);
+        alert("Erro ao publicar o cartão.");
+        return;
     }
     alert("Cartão publicado com sucesso!");
 }
 
-function lerMais(storyID) {
+async function lerMais(storyID) {
     const modalOverlay = document.getElementById('modalOverlay');
     if (!modalOverlay) return;
 
-    let historias = JSON.parse(localStorage.getItem('historias')) || [];
-    const h = historias.find(st => st.id === storyID);
-    if (!h) return;
+    // Busca a história no Supabase
+    const { data: h, error } = await supabase
+        .from('historias')
+        .select('*')
+        .eq('id', storyID)
+        .single();
+    if (error) {
+        console.error("Erro ao buscar a história:", error);
+        return;
+    }
 
     document.getElementById('modalTitulo').textContent = h.titulo || "";
     document.getElementById('modalDescricao').textContent = h.descricao || "";
@@ -437,90 +492,7 @@ function lerMais(storyID) {
 }
 
 /*************************************************************
- * [J] ATIVAR EVENTO DOMContentLoaded
- *************************************************************/
-document.addEventListener('DOMContentLoaded', function() {
-    mostrarHistorias(); // Carrega a lista lateral
-
-    // Lida com submit do form
-    const storyForm = document.getElementById('storyForm');
-    storyForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const titulo = document.getElementById('titulo').value.trim();
-        const descricao = document.getElementById('descricao').value.trim();
-        if (!titulo || !descricao) {
-            alert("Preencha o título e a descrição!");
-            return;
-        }
-        salvarHistoria(titulo, descricao);
-    });
-
-    // Botão Nova História
-    const novaHistoriaBtn = document.getElementById('novaHistoriaBtn');
-    if (novaHistoriaBtn) {
-        novaHistoriaBtn.addEventListener('click', function () {
-            if (confirm("Tem certeza de que deseja começar uma nova história?")) {
-                limparFormulario();
-                removerExibicaoHistoria();
-            }
-        });
-    }
-
-    // Exibe usuário logado (usando Supabase)
-    exibirUsuarioLogado();
-});
-
-/*************************************************************
- * [K] ATIVAR HOVER NA LISTA LATERAL
- *************************************************************/
-document.body.addEventListener('mousemove', function(e) {
-    if (e.clientX < 50 && !isTitleListVisible) {
-        toggleTitleList(true);
-    }
-});
-document.body.addEventListener('mouseleave', function() {
-    if (isTitleListVisible) {
-        toggleTitleList(false);
-    }
-});
-document.body.addEventListener('click', function(e) {
-    const titleList = document.getElementById('titleListLeft');
-    if (isTitleListVisible && titleList && !titleList.contains(e.target)) {
-        toggleTitleList(false);
-    }
-});
-
-/*************************************************************
- * [L] CARTÃO DE LEITURA: Formatação do texto para leitura
- * Envolve cada palavra em <span> com atributo data-index
- *************************************************************/
-function formatarTextoParaLeitura(text) {
-    const lines = text.split('\n');
-    let paragrafos = [];
-    let buffer = [];
-    let wordIndex = 0;
-    for (let i = 0; i < lines.length; i++) {
-        let words = lines[i].split(' ').map(word => {
-            let span = `<span class="reading-word" data-index="${wordIndex}" onclick="markReadingPosition(this)">${word}</span>`;
-            wordIndex++;
-            return span;
-        });
-        buffer.push(words.join(' '));
-        if (buffer.length === 4) {
-            let paragraph = `<p style="text-align: justify;">${buffer.join('<br>')}</p>`;
-            paragrafos.push(paragraph);
-            buffer = [];
-        }
-    }
-    if (buffer.length > 0) {
-        let paragraph = `<p style="text-align: justify;">${buffer.join('<br>')}</p>`;
-        paragrafos.push(paragraph);
-    }
-    return paragrafos.join('');
-}
-
-/*************************************************************
- * [M] MARCADOR DE LINHA: Salvar posição de leitura
+ * [L] MARCADOR DE LINHA: Salvar posição de leitura
  *************************************************************/
 function markReadingPosition(element) {
     const index = element.getAttribute('data-index');
@@ -582,23 +554,21 @@ function continuarMarcador() {
 }
 
 /*************************************************************
- * [N] PESQUISA: Filtrar histórias por título ou autor
+ * [M] PESQUISA: Filtrar histórias por título ou autor
  *************************************************************/
-function filtrarHistorias(query) {
-    const todas = JSON.parse(localStorage.getItem('historias')) || [];
+async function filtrarHistorias(query) {
     query = query.toLowerCase();
+    const { data: todas, error } = await supabase
+        .from('historias')
+        .select('*');
+    if (error) {
+        console.error("Erro ao buscar histórias para pesquisa:", error);
+        return [];
+    }
     return todas.filter(story => {
-        if (!story.cartao) {
-            story.cartao = {
-                tituloCartao: story.titulo || "(Sem Título)",
-                autorCartao: story.autor || "Desconhecido",
-                historiaCompleta: story.descricao || "",
-                likes: 0
-            };
-        }
-        const t = (story.cartao.tituloCartao || "").toLowerCase();
-        const a = (story.cartao.autorCartao || "").toLowerCase();
-        return t.includes(query) || a.includes(query);
+        let t = story.cartao ? (story.cartao.tituloCartao || "") : (story.titulo || "(Sem Título)");
+        let a = story.cartao ? (story.cartao.autorCartao || "") : "Desconhecido";
+        return t.toLowerCase().includes(query) || a.toLowerCase().includes(query);
     });
 }
 
@@ -635,23 +605,18 @@ function exibirSugestoes(lista) {
     });
 }
 
-function abrirHistoriaPorId(storyId) {
-    const todas = JSON.parse(localStorage.getItem('historias')) || [];
-    const h = todas.find(x => x.id === storyId);
-    if (!h) {
-        alert("História não encontrada!");
-        return;
-    }
-    exibirHistoriaNoContainer(h.id);
+async function abrirHistoriaPorId(storyId) {
+    await exibirHistoriaNoContainer(storyId);
 }
 
 /*************************************************************
- * [O] EVENTO DOMContentLoaded FINAL
+ * [N] EVENTO DOMContentLoaded FINAL
  *************************************************************/
 document.addEventListener('DOMContentLoaded', function() {
-    mostrarHistorias(); // Carrega a lista lateral
+    // Inicializa a lista lateral
+    mostrarHistorias();
 
-    // Lida com submit do form
+    // Lida com o submit do formulário para salvar/editar a história
     const storyForm = document.getElementById('storyForm');
     storyForm.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -677,24 +642,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Exibe usuário logado (usando Supabase)
     exibirUsuarioLogado();
-});
 
-/*************************************************************
- * [P] ATIVAR HOVER NA LISTA LATERAL (Repetido para garantir)
- *************************************************************/
-document.body.addEventListener('mousemove', function(e) {
-    if (e.clientX < 50 && !isTitleListVisible) {
-        toggleTitleList(true);
-    }
-});
-document.body.addEventListener('mouseleave', function() {
-    if (isTitleListVisible) {
-        toggleTitleList(false);
-    }
-});
-document.body.addEventListener('click', function(e) {
-    const titleList = document.getElementById('titleListLeft');
-    if (isTitleListVisible && titleList && !titleList.contains(e.target)) {
-        toggleTitleList(false);
-    }
+    // Ativa o hover na lista lateral (duplicado para garantir)
+    document.body.addEventListener('mousemove', function(e) {
+        if (e.clientX < 50 && !isTitleListVisible) {
+            toggleTitleList(true);
+        }
+    });
+    document.body.addEventListener('mouseleave', function() {
+        if (isTitleListVisible) {
+            toggleTitleList(false);
+        }
+    });
+    document.body.addEventListener('click', function(e) {
+        const titleList = document.getElementById('titleListLeft');
+        if (isTitleListVisible && titleList && !titleList.contains(e.target)) {
+            toggleTitleList(false);
+        }
+    });
 });
