@@ -5,13 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Diário - StoryFlow</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <!-- Inclusão da biblioteca Supabase -->
+  <!-- Biblioteca do Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/supabase.min.js"></script>
+
   <style>
     /* Estilos gerais */
     body {
       font-family: 'Indie Flower', cursive;
-      background-color: #e2e8f0;
+      background-color: #e2e8f0; /* tom neutro, azul acinzentado */
       display: flex;
       justify-content: center;
       align-items: center;
@@ -22,46 +23,28 @@
       position: relative;
     }
 
-    .gear, .rocket {
+    .gear {
       position: absolute;
       font-size: 24px;
-      animation-timing-function: linear;
-    }
-
-    .gear {
       color: #4a5568;
-      animation: floatUp 10s infinite;
+      animation: floatUp 10s infinite linear;
     }
-
-    .rocket {
-      font-size: 30px;
-      animation: floatDown 10s infinite;
-    }
-
     @keyframes floatUp {
       0% { transform: translateY(100vh) rotate(0deg); opacity: 1; }
       100% { transform: translateY(-60vh) rotate(360deg); opacity: 0; }
-    }
-
-    @keyframes floatDown {
-      0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
-      100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
     }
 
     .header {
       width: 100%;
       background-color: #2d3748;
       padding: 10px 0;
+      text-align: center;
       position: fixed;
       top: 0;
       left: 0;
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
       z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
     }
-
     .header a {
       color: white;
       text-decoration: none;
@@ -71,23 +54,23 @@
       border-radius: 5px;
       transition: background 0.3s;
     }
-
     .header a:hover {
       background: #4a5568;
     }
-
     .book-icon {
+      position: absolute;
+      top: 5px;
+      left: 15px;
       font-size: 30px;
       color: white;
-      margin-left: 15px;
     }
 
-    /* Exibição do nome do usuário */
-    #user-info {
-      cursor: pointer;
-      margin-right: 15px;
+    /* Elemento para exibir nome do usuário ou "Login" */
+    #nav-user {
       color: white;
       font-size: 18px;
+      margin-left: 15px;
+      cursor: pointer;
     }
 
     .diary-container {
@@ -103,14 +86,12 @@
       text-align: center;
       box-sizing: border-box;
     }
-
     .diary-container h2 {
       text-align: center;
       color: #2d3748;
       margin-bottom: 15px;
       font-family: sans-serif;
     }
-
     textarea {
       width: 100%;
       height: 200px;
@@ -127,12 +108,10 @@
       text-align: left;
       box-sizing: border-box;
     }
-
     textarea::placeholder {
       color: #718096;
       font-style: italic;
     }
-
     .save-btn {
       display: block;
       width: 100%;
@@ -146,19 +125,16 @@
       cursor: pointer;
       transition: 0.3s;
     }
-
     .save-btn:hover {
       background: #4a5568;
       transform: scale(1.05);
     }
 
-    /* Estilos do modal de login */
+    /* Estilos do modal de login do diário */
     .modal {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
       background: rgba(0,0,0,0.8);
       display: flex;
       justify-content: center;
@@ -166,8 +142,6 @@
       z-index: 200;
       flex-direction: column;
     }
-
-    .modal input[type="email"],
     .modal input[type="password"] {
       padding: 10px;
       font-size: 16px;
@@ -175,7 +149,6 @@
       border: none;
       margin-bottom: 10px;
     }
-
     .modal button {
       padding: 10px 20px;
       font-size: 16px;
@@ -185,7 +158,6 @@
       color: white;
       cursor: pointer;
     }
-
     .modal p {
       color: white;
       margin-bottom: 10px;
@@ -193,25 +165,22 @@
   </style>
 </head>
 <body>
-  <!-- Modal de login para segurança -->
+  <!-- Modal de senha do diário (segurança adicional) -->
   <div id="login-modal" class="modal">
-    <p>Digite seu e-mail e senha para acessar o Diário:</p>
-    <input type="email" id="email-input" placeholder="E-mail">
+    <p>Digite a senha para acessar o Diário:</p>
     <input type="password" id="password-input" placeholder="Senha">
     <button id="login-btn">Entrar</button>
-    <p id="login-error" style="color: #e53e3e; display: none;"></p>
+    <p id="login-error" style="color: #e53e3e; display: none;">Senha incorreta!</p>
   </div>
 
   <div class="header">
     <span class="book-icon">📖</span>
-    <div>
-      <a href="Memories.html">Início</a>
-      <a href="historia.html">Histórias</a>
-      <a href="Sobre.html">Sobre</a>
-      <a href="diario.html">Resetar página</a>
-    </div>
-    <!-- Exibição do nome do usuário logado -->
-    <span id="user-info"></span>
+    <a href="Memories.html">Início</a>
+    <a href="historia.html">Histórias</a>
+    <a href="Sobre.html">Sobre</a>
+    <a href="diario.html">Resetar página</a>
+    <!-- Aqui mostramos "Login" ou o username -->
+    <span id="nav-user"></span>
   </div>
 
   <div class="diary-container">
@@ -221,95 +190,125 @@
   </div>
 
   <script>
-    // Inicialização do cliente Supabase
-    const SUPABASE_URL = 'https://seu-projeto.supabase.co'; // Substitua pela URL do seu projeto
-    const SUPABASE_ANON_KEY = 'sua-anon-key'; // Substitua pela sua chave anônima
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    /* ------------------------------------------------------------------
+       1) Inicializamos o cliente Supabase e checamos a sessão.
+          Se houver usuário logado, buscamos o username na tabela "profile".
+       ------------------------------------------------------------------ */
+    const SUPABASE_URL = 'https://SEU_PROJETO.supabase.co';  // Ajuste para seu projeto
+    const SUPABASE_ANON_KEY = 'SUA_ANON_KEY';                // Ajuste para sua chave anônima
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    var loggedUser = null; // Armazena o objeto do usuário retornado pelo Supabase
-    var logoutClickCount = 0;
-    var logoutTimer = null;
+    // Referências aos elementos
+    const navUser    = document.getElementById('nav-user');
+    const diaryText  = document.getElementById('diary-text');
+    const loginModal = document.getElementById('login-modal');
+    const loginError = document.getElementById('login-error');
 
-    // Função para carregar o conteúdo do diário (armazenado no localStorage)
-    function loadDiary() {
-      if (loggedUser) {
-        const savedText = localStorage.getItem('diaryContent_' + loggedUser.id);
-        if (savedText) {
-          document.getElementById('diary-text').value = savedText;
+    let logoutClickCount = 0;
+    let logoutTimer = null;
+
+    // Verifica se existe sessão de usuário no Supabase
+    async function checkSession() {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (session) {
+        // Se existe sessão, busca "username" na tabela "profile"
+        const userId = session.user.id;
+        let { data: profileData, error: profileError } = await supabase
+          .from('profile')
+          .select('username')
+          .eq('id', userId)
+          .single();
+
+        if (!profileError && profileData) {
+          navUser.innerText = profileData.username;  // Exibe o username
+        } else {
+          navUser.innerText = "Login"; // Se não achou, mostra "Login"
         }
+      } else {
+        // Se não há sessão
+        navUser.innerText = "Login";
       }
     }
 
-    // Função para salvar o conteúdo do diário
+    // Chamamos a checagem assim que possível
+    checkSession();
+
+    /* ------------------------------------------------------------------
+       2) Senha para exibir a área do diário (camada adicional).
+          "minhaSenha123" dá acesso ao container de texto.
+       ------------------------------------------------------------------ */
+    const correctDiaryPassword = "minhaSenha123";
+    document.getElementById('login-btn').addEventListener('click', function() {
+      const inputPass = document.getElementById('password-input').value;
+      if (inputPass === correctDiaryPassword) {
+        loginModal.style.display = 'none';
+        loadDiary();
+      } else {
+        loginError.style.display = 'block';
+      }
+    });
+
+    // Carrega o texto do diário do localStorage
+    function loadDiary() {
+      const savedText = localStorage.getItem('diaryContent');
+      if (savedText) {
+        diaryText.value = savedText;
+      }
+    }
+
+    // Salva o texto do diário no localStorage
     function saveDiary() {
-      if (loggedUser) {
-        const text = document.getElementById('diary-text').value;
-        localStorage.setItem('diaryContent_' + loggedUser.id, text);
-        alert('Conteúdo salvo!');
-      }
+      const text = diaryText.value;
+      localStorage.setItem('diaryContent', text);
+      alert('Conteúdo salvo!');
     }
-
     document.getElementById('save-btn').addEventListener('click', saveDiary);
 
-    // Lógica de login utilizando Supabase
-    document.getElementById('login-btn').addEventListener('click', async function() {
-      const email = document.getElementById('email-input').value;
-      const password = document.getElementById('password-input').value;
-      
-      const { user, error } = await supabaseClient.auth.signIn({ email, password });
-      
-      if (error) {
-        document.getElementById('login-error').innerText = error.message;
-        document.getElementById('login-error').style.display = 'block';
-      } else {
-        document.getElementById('login-modal').style.display = 'none';
-        loggedUser = user;
-        document.getElementById('user-info').innerText = user.email; // Exibe o e-mail ou outro atributo do usuário
-        loadDiary();
-      }
-    });
-
-    // Evento de clique no nome do usuário para efetuar logout (2 cliques seguidos)
-    document.getElementById("user-info").addEventListener("click", async function(){
-      if (!loggedUser) return;
+    /* ------------------------------------------------------------------
+       3) Desconectar do diário (2 cliques rápidos no username).
+          - 1º clique: mostra aviso "Clique novamente para deslogar"
+            que some em 5s.
+          - 2º clique (dentro dos 5s): redireciona para Criacao.html
+       ------------------------------------------------------------------ */
+    navUser.addEventListener('click', function() {
+      // Se navUser é "Login", não faz nada (não tem sessão)
+      if (navUser.innerText === "Login") return;
 
       if (logoutClickCount === 0) {
-         logoutClickCount = 1;
-         let warningDiv = document.createElement("div");
-         warningDiv.setAttribute("id", "logout-warning");
-         warningDiv.style.position = "fixed";
-         warningDiv.style.top = "50px";
-         warningDiv.style.right = "20px";
-         warningDiv.style.backgroundColor = "#f0ad4e";
-         warningDiv.style.padding = "10px";
-         warningDiv.style.borderRadius = "5px";
-         warningDiv.style.boxShadow = "0 2px 6px rgba(0,0,0,0.2)";
-         warningDiv.style.zIndex = "300";
-         warningDiv.innerText = "Clique novamente para deslogar";
-         document.body.appendChild(warningDiv);
-         logoutTimer = setTimeout(function(){
-            logoutClickCount = 0;
-            if (warningDiv.parentNode) {
-                warningDiv.parentNode.removeChild(warningDiv);
-            }
-         }, 5000);
-      } else if (logoutClickCount === 1) {
-         clearTimeout(logoutTimer);
-         let existingWarning = document.getElementById("logout-warning");
-         if (existingWarning) existingWarning.remove();
-         const { error } = await supabaseClient.auth.signOut();
-         if (error) {
-           alert('Erro ao deslogar: ' + error.message);
-         } else {
-           loggedUser = null;
-           document.getElementById('user-info').innerText = "";
-           document.getElementById('login-modal').style.display = 'flex';
-         }
-         logoutClickCount = 0;
+        logoutClickCount = 1;
+        // Mostra aviso
+        let warningDiv = document.createElement("div");
+        warningDiv.setAttribute("id", "logout-warning");
+        warningDiv.style.position = "fixed";
+        warningDiv.style.top = "50px";
+        warningDiv.style.right = "20px";
+        warningDiv.style.backgroundColor = "#f0ad4e";
+        warningDiv.style.padding = "10px";
+        warningDiv.style.borderRadius = "5px";
+        warningDiv.style.boxShadow = "0 2px 6px rgba(0,0,0,0.2)";
+        warningDiv.style.zIndex = "300";
+        warningDiv.innerText = "Clique novamente para deslogar";
+        document.body.appendChild(warningDiv);
+
+        logoutTimer = setTimeout(() => {
+          logoutClickCount = 0;
+          if (warningDiv.parentNode) {
+            warningDiv.parentNode.removeChild(warningDiv);
+          }
+        }, 5000);
+      } else {
+        // 2º clique: remove o aviso e redireciona
+        clearTimeout(logoutTimer);
+        let existingWarning = document.getElementById("logout-warning");
+        if (existingWarning) existingWarning.remove();
+        
+        // Redireciona para Criacao.html
+        window.location.href = "Criacao.html";
+        logoutClickCount = 0;
       }
     });
 
-    // Função para criar elementos flutuantes (engrenagens)
+    /* Efeito de engrenagens flutuando */
     function createFloatingElements() {
       for (let i = 0; i < 5; i++) {
         const gear = document.createElement("div");
