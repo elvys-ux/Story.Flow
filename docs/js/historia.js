@@ -458,26 +458,35 @@ async function publicarCartao(storyID) {
          return;
     }
 
-    // Para cada categoria selecionada, converte o nome para o ID e insere o relacionamento
+    // Obtém o ID do usuário autenticado
+    const sessionResponse = await supabase.auth.getSession();
+    const userId = sessionResponse.data.session?.user?.id;
+    
+    // Para cada categoria selecionada, converte o nome para o ID e insere o relacionamento, incluindo o user_id
     for (let categoriaName of categoriasSelecionadas) {
          const catId = await getCategoriaId(categoriaName);
          if (catId) {
              const { error: catError } = await supabase
                  .from('historia_categorias')
-                 .insert({ historia_id: storyID, categoria_id: catId });
+                 .insert({ historia_id: storyID, categoria_id: catId, user_id: userId });
              if (catError) {
                  console.error(`Erro ao inserir categoria ${catId}:`, catError);
              }
+         } else {
+             console.error(`Não foi encontrado ID para a categoria: ${categoriaName}`);
          }
     }
     
-    // Opcional: Atualiza a coluna 'categorais' na tabela 'cartoes'
+    // Opcional: Atualiza a coluna 'categorais' na tabela 'cartoes' com os nomes concatenados
     const categoriaTexto = categoriasSelecionadas.join(', ');
-    await supabase
+    const { error: updError } = await supabase
       .from('cartoes')
       .update({ categorais: categoriaTexto })
       .eq('historia_id', storyID);
-
+    if (updError) {
+         console.error("Erro ao atualizar a coluna categorais:", updError);
+    }
+    
     alert("Cartão publicado com sucesso!");
 }
 
