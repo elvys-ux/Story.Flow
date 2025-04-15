@@ -48,7 +48,7 @@
       position: fixed;
       top: 0;
       left: 0;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
       z-index: 100;
       display: flex;
       align-items: center;
@@ -71,7 +71,7 @@
       color: white;
       margin-right: 15px;
     }
-    /* Elemento para exibir o nome do usuário com logout */
+    /* Elemento para exibir o nome do usuário */
     #user-display {
       color: white;
       font-size: 18px;
@@ -149,6 +149,7 @@
       z-index: 200;
       flex-direction: column;
     }
+    .modal input[type="email"],
     .modal input[type="password"] {
       padding: 10px;
       font-size: 16px;
@@ -169,7 +170,7 @@
       color: white;
       margin-bottom: 10px;
     }
-    /* Estilo do aviso de logout */
+    /* Aviso de logout */
     .logout-warning {
       position: absolute;
       top: 110%;
@@ -184,12 +185,13 @@
   </style>
 </head>
 <body>
-  <!-- Modal de login para segurança -->
+  <!-- Modal de login -->
   <div id="login-modal" class="modal">
-    <p>Digite a senha para acessar o Diário:</p>
+    <p>Digite seu email e senha para acessar o Diário:</p>
+    <input type="email" id="email-input" placeholder="Email">
     <input type="password" id="password-input" placeholder="Senha">
     <button id="login-btn">Entrar</button>
-    <p id="login-error" style="color: #e53e3e; display: none;">Senha incorreta!</p>
+    <p id="login-error" style="color: #e53e3e; display: none;">Email ou senha incorretos!</p>
   </div>
 
   <div class="header">
@@ -198,8 +200,7 @@
     <a href="historia.html">Histórias</a>
     <a href="Sobre.html">Sobre</a>
     <a href="diario.html">Resetar página</a>
-    <!-- Elemento para exibir o nome do usuário -->
-    <span id="user-display" style="margin-left: 20px; cursor: pointer;">Usuário</span>
+    <span id="user-display">Usuário</span>
   </div>
 
   <div class="diary-container">
@@ -208,59 +209,151 @@
     <button class="save-btn" id="save-btn">Guardar</button>
   </div>
 
-  <script>
-    // Função para carregar o diário do localStorage
-    function loadDiary() {
-      const savedText = localStorage.getItem('diaryContent');
-      if (savedText) {
-        document.getElementById('diary-text').value = savedText;
+  <script type="module">
+    import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js';
+
+    // Configure os valores do seu projeto Supabase:
+    const supabaseUrl = 'https://YOUR-SUPABASE-PROJECT.supabase.co';
+    const supabaseKey = 'YOUR_PUBLIC_ANON_KEY';
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Carrega o diário do banco de dados e preenche o textarea
+    async function loadDiaryFromDB() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.warn("Nenhum usuário autenticado");
+        return;
+      }
+      const { data, error } = await supabase
+        .from('diario')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .single();
+      if (error) {
+        console.error("Erro ao carregar o diário:", error);
+        return;
+      }
+      if (data) {
+        document.getElementById('diary-text').value = data.conteudo || "";
       }
     }
-    // Função para salvar o diário no localStorage
-    function saveDiary() {
-      const text = document.getElementById('diary-text').value;
-      localStorage.setItem('diaryContent', text);
-      alert('Conteúdo salvo!');
-    }
-    document.getElementById('save-btn').addEventListener('click', saveDiary);
 
-    // Lógica do modal de login utilizando senha fixa
-    const correctPassword = "minhaSenha123"; // Alterar para a senha desejada
-    document.getElementById('login-btn').addEventListener('click', function() {
-      const inputPassword = document.getElementById('password-input').value.trim();
-      if (inputPassword === correctPassword) {
-        document.getElementById('login-modal').style.display = 'none';
-        loadDiary();
+    // Salva ou atualiza o diário no banco de dados
+    async function saveDiaryToDB() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert("Usuário não autenticado.");
+        return;
+      }
+      const conteudo = document.getElementById('diary-text').value;
+      const titulo = "Meu Diário";
+      const data_criacao = new Date().toISOString();
+
+      const { data, error } = await supabase
+        .from('diario')
+        .upsert({ user_id: session.user.id, titulo, conteudo, data_criacao });
+      if (error) {
+        console.error("Erro ao salvar o diário:", error);
+        alert("Erro ao salvar o diário.");
       } else {
+        alert("Diário salvo com sucesso!");
+      }
+    }
+
+    // Exibe o nome do usuário no header a partir da sessão (ou do profile)
+    async function exibirUsuarioLogado() {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error("Erro ao obter a sessão:", error);
+        return;
+      }
+      if (session) {
+        // Se você tem uma tabela profiles com o username, pode buscar lá.
+        // Caso contrário, utilize session.user.email
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', session.user.id)
+          .single();
+        const username = profileError || !profileData || !profileData.username
+          ? session.user.email
+          : profileData.username;
+        document.getElementById('user-display').textContent = username;
+      }
+    }
+
+    // Função de login com Supabase Auth
+    async function loginUser() {
+      const email = document.getElementById('email-input').value.trim();
+      const password = document.getElementById('password-input').value.trim();
+      if (!email || !password) {
+        document.getElementById('login-error').style.display = 'block';
+        return;
+      }
+      const { error } = await supabase.auth.signIn({ email, password });
+      if (error) {
+        console.error("Erro no login:", error);
         document.getElementById('login-error').style.display = 'block';
       }
-    });
+    }
 
-    // Lógica para logout ao clicar duas vezes no nome do usuário
+    // Função para logout
+    async function logoutUser() {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Erro ao deslogar:", error);
+        alert("Erro ao deslogar.");
+      } else {
+        window.location.reload();
+      }
+    }
+
+    // Lógica de deslogar ao clicar duas vezes no nome do usuário
     let logoutTimer = null;
     document.getElementById('user-display').addEventListener('click', function() {
       const userDisplay = document.getElementById('user-display');
-      // Se já estiver aguardando, significa segundo clique; efetuar logout
       if (logoutTimer) {
-        // Simular logout: limpar o localStorage e recarregar página (ou exibir modal novamente)
-        localStorage.removeItem('diaryContent');
-        // Opcional: se desejar armazenar o fato de estar logado, remova também essa informação
-        alert("Você foi deslogado!");
-        window.location.reload();
+        // Segundo clique: efetua logout
+        logoutUser();
       } else {
-        // Exibe aviso para clicar novamente
+        // Primeiro clique: exibe aviso
         const warning = document.createElement('span');
         warning.classList.add('logout-warning');
         warning.textContent = "Clique novamente para deslogar";
         userDisplay.appendChild(warning);
-        logoutTimer = setTimeout(function() {
-          // Remove o aviso após 5 segundos e reseta a variável
+        logoutTimer = setTimeout(() => {
           if (warning.parentNode) {
             warning.parentNode.removeChild(warning);
           }
           logoutTimer = null;
         }, 5000);
       }
+    });
+
+    // Observador de mudanças de autenticação
+    supabase.auth.onAuthStateChange((event, session) => {
+      console.log("Estado de autenticação alterado:", event, session);
+      if (session) {
+        document.getElementById('login-modal').style.display = 'none';
+        exibirUsuarioLogado();
+        loadDiaryFromDB();
+      } else {
+        document.getElementById('login-modal').style.display = 'flex';
+      }
+    });
+
+    // Configura os eventos quando o DOM estiver totalmente carregado
+    document.addEventListener('DOMContentLoaded', async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        document.getElementById('login-modal').style.display = 'none';
+        exibirUsuarioLogado();
+        loadDiaryFromDB();
+      } else {
+        document.getElementById('login-modal').style.display = 'flex';
+      }
+      document.getElementById('save-btn').addEventListener('click', saveDiaryToDB);
+      document.getElementById('login-btn').addEventListener('click', loginUser);
     });
 
     // Função para criar elementos flutuantes (engrenagens e foguetes)
