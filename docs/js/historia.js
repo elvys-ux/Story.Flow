@@ -60,16 +60,20 @@ async function exibirUsuarioLogado() {
 }
 
 /*************************************************************
- * [B] VARIÁVEIS GLOBAIS (Para localStorage)
+ * [B] VARIÁVEIS GLOBAIS
  *************************************************************/
 let modoCorrido = true;
 let partesHistoria = [];
 let parteAtual = 0;
 let isTitleListVisible = false;
 let currentStoryId = null;  // ID da história atualmente aberta
-const wrapWidth = 80;       // nº de caracteres por linha
-const lineHeightPx = 22;    // altura aproximada da linha (px)
-let textoCompleto = "";     // Armazena o texto completo para o modo leitura
+
+// Parâmetros para formatação de leitura
+const wrapWidth = 80;       // número de caracteres por linha (para quebra)
+const lineHeightPx = 22;    // altura aproximada da linha (em px)
+
+// Armazenar o texto completo original
+let textoCompleto = "";
 
 /*************************************************************
  * [C] LISTA LATERAL (HOVER) – Mostrar/Esconder
@@ -103,26 +107,28 @@ document.body.addEventListener('click', function(e) {
 });
 
 /*************************************************************
- * [D] OPERAR COM HISTÓRIAS E CARTÕES NO localStorage
+ * [D] MOSTRAR HISTÓRIAS NA LISTA LATERAL
  *************************************************************/
-// Funções auxiliares para manipulação dos dados via localStorage
-function obterHistorias() {
-    return JSON.parse(localStorage.getItem('historias')) || [];
-}
-
-function salvarHistorias(historias) {
-    localStorage.setItem('historias', JSON.stringify(historias));
-}
-
 async function mostrarHistorias() {
     const ul = document.getElementById('titleListUl');
     if (!ul) return;
     ul.innerHTML = '';
-    const historias = obterHistorias();
+
+    // Busca as histórias do Supabase, ordenando pela data de criação (mais recentes primeiro)
+    const { data: historias, error } = await supabase
+        .from('historias')
+        .select('*')
+        .order('data_criacao', { ascending: false });
+    if (error) {
+        console.error("Erro ao buscar histórias:", error);
+        return;
+    }
+
     historias.forEach((h) => {
         const li = document.createElement('li');
         li.textContent = h.titulo || "(sem título)";
         li.dataset.id = h.id;
+
         li.addEventListener('click', function(e) {
             e.stopPropagation();
             toggleMenuOpcoes(li, h.id);
@@ -142,7 +148,7 @@ function toggleMenuOpcoes(li, storyID) {
 
     const cartaoBtn = document.createElement('button');
     cartaoBtn.textContent = 'Cartão';
-    cartaoBtn.onclick = e => {
+    cartaoBtn.onclick = (e) => {
         e.stopPropagation();
         mostrarCartaoForm(storyID);
         menu.remove();
@@ -150,7 +156,7 @@ function toggleMenuOpcoes(li, storyID) {
 
     const editBtn = document.createElement('button');
     editBtn.textContent = 'Editar';
-    editBtn.onclick = e => {
+    editBtn.onclick = (e) => {
         e.stopPropagation();
         editarHistoria(storyID);
         menu.remove();
@@ -158,7 +164,7 @@ function toggleMenuOpcoes(li, storyID) {
 
     const delBtn = document.createElement('button');
     delBtn.textContent = 'Excluir';
-    delBtn.onclick = e => {
+    delBtn.onclick = (e) => {
         e.stopPropagation();
         excluirHistoria(storyID);
         menu.remove();
@@ -172,49 +178,87 @@ function toggleMenuOpcoes(li, storyID) {
 }
 
 /*************************************************************
- * [E] SALVAR/EDITAR HISTÓRIA (via localStorage)
+ * [E] SALVAR/EDITAR HISTÓRIA
  *************************************************************/
 async function salvarHistoria(titulo, descricao) {
-    let historias = obterHistorias();
-    const editID = document.getElementById('storyForm').dataset.editId;
+    const storyForm = document.getElementById('storyForm');
+    const editID = storyForm.dataset.editId;
+
+    // Obtém o usuário autenticado via Supabase
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError || !userData?.user) {
+        alert("Usuário não autenticado.");
+        return;
+    }
+    const user_id = userData.user.id;
+
     if (editID) {
         // Atualiza a história existente
-        const idx = historias.findIndex(h => h.id === editID);
-        if (idx !== -1) {
-            historias[idx].titulo = titulo;
-            historias[idx].descricao = descricao;
+        const { data, error } = await supabase
+            .from('historias')
+            .update({ titulo, descricao })
+            .eq('id', editID);
+        if (error) {
+            console.error("Erro ao atualizar a história:", error);
+            alert("Erro ao atualizar a história.");
+            return;
         }
         alert("História atualizada com sucesso!");
         exibirHistoriaNoContainer(editID);
     } else {
-        // Nova história – gera um ID único e cria o objeto
-        const newID = Date.now().toString();
-        const nova = { id: newID, titulo, descricao, cartao: null };
-        historias.push(nova);
+        // Insere nova história com data de criação atual
+        const data_criacao = new Date().toISOString();
+        const { data: novaHistoria, error } = await supabase
+            .from('historias')
+            .insert([{ user_id, titulo, descricao, data_criacao }])
+            .single();
+        if (error) {
+            console.error("Erro ao inserir a história:", error);
+            alert("Erro ao salvar a história.");
+            return;
+        }
         alert("História salva com sucesso (nova)!");
+        // Limpa o formulário e remove exibições anteriores
         limparFormulario();
         removerExibicaoHistoria();
+        // Opcional: você pode atualizar a lista agora ou deixar o usuário escolher publicar o cartão posteriormente.
     }
-    salvarHistorias(historias);
-    mostrarHistorias();
+    mostrarHistorias(); // Atualiza a lista lateral
 }
 
-function editarHistoria(storyID) {
-    let historias = obterHistorias();
-    const found = historias.find(h => h.id === storyID);
-    if (!found) return;
+async function editarHistoria(storyID) {
+    // Busca a história pelo ID no Supabase
+    const { data: found, error } = await supabase
+        .from('historias')
+        .select('*')
+        .eq('id', storyID)
+        .single();
+    if (error) {
+        console.error("Erro ao buscar a história:", error);
+        return;
+    }
+
+    // Preenche o formulário com os dados da história
     document.getElementById('titulo').value = found.titulo;
     document.getElementById('descricao').value = found.descricao;
     document.getElementById('storyForm').dataset.editId = found.id;
     document.querySelector('.btn[type="submit"]').textContent = "Atualizar";
+
+    // Exibe a história no container
     exibirHistoriaNoContainer(storyID);
 }
 
-function excluirHistoria(storyID) {
+async function excluirHistoria(storyID) {
     if (!confirm("Deseja excluir a história?")) return;
-    let historias = obterHistorias();
-    historias = historias.filter(h => h.id !== storyID);
-    salvarHistorias(historias);
+    const { data, error } = await supabase
+        .from('historias')
+        .delete()
+        .eq('id', storyID);
+    if (error) {
+        console.error("Erro ao excluir a história:", error);
+        alert("Erro ao excluir a história.");
+        return;
+    }
     alert("História excluída.");
     mostrarHistorias();
     const editID = document.getElementById('storyForm').dataset.editId;
@@ -231,77 +275,138 @@ function limparFormulario() {
     document.querySelector('.btn[type="submit"]').textContent = "Salvar";
 }
 
-function exibirHistoriaNoContainer(storyID) {
+/*************************************************************
+ * [F] EXIBIR UMA HISTÓRIA (ABAIXO DO FORMULÁRIO)
+ *************************************************************/
+async function exibirHistoriaNoContainer(storyID) {
     const container = document.getElementById('storyContainer');
     if (!container) return;
+
+    // Remove exibição anterior
     const oldDiv = container.querySelector('.exibicao-historia');
     if (oldDiv) oldDiv.remove();
-    let historias = obterHistorias();
-    const found = historias.find(h => h.id === storyID);
-    if (!found) return;
-    currentStoryId = storyID;
+
+    // Busca a história no Supabase
+    const { data: found, error } = await supabase
+        .from('historias')
+        .select('*')
+        .eq('id', storyID)
+        .single();
+    if (error) {
+        console.error("Erro ao buscar a história:", error);
+        return;
+    }
+
+    currentStoryId = storyID; // Define a história atual para marcador de leitura
+
     const div = document.createElement('div');
     div.classList.add('exibicao-historia');
     div.style.border = '1px solid #ccc';
     div.style.marginTop = '10px';
     div.style.padding = '10px';
+
+    // Título
     const h3 = document.createElement('h3');
     h3.textContent = found.titulo || "(sem título)";
     div.appendChild(h3);
+
+    // Descrição
     const p = document.createElement('p');
     p.textContent = found.descricao || "";
     div.appendChild(p);
+
+    // Se existir informação do cartão (opcional, se salva via outra função), exibe aviso
     if (found.cartao) {
         const infoCartao = document.createElement('p');
         infoCartao.innerHTML = "<em>(Este texto foi publicado no Cartão)</em>";
         div.appendChild(infoCartao);
     }
+
     container.appendChild(div);
 }
 
 /*************************************************************
- * [F] CARTÃO – OPERAR VIA localStorage
+ * [G] REMOVER EXIBIÇÃO DA HISTÓRIA
  *************************************************************/
-function mostrarCartaoForm(storyID) {
+function removerExibicaoHistoria() {
+    const container = document.getElementById('storyContainer');
+    if (!container) return;
+    const oldDiv = container.querySelector('.exibicao-historia');
+    if (oldDiv) oldDiv.remove();
+}
+
+/*************************************************************
+ * [H] CARTÃO – EXIBIR FORMULÁRIO E PUBLICAR CARTÃO
+ *************************************************************/
+async function mostrarCartaoForm(storyID) {
     const storyContainer = document.getElementById('storyContainer');
     const cartaoContainer = document.getElementById('cartaoContainer');
     if (!storyContainer || !cartaoContainer) return;
+
     storyContainer.style.display = 'none';
     cartaoContainer.style.display = 'block';
 
-    let historias = obterHistorias();
-    const found = historias.find(h => h.id === storyID) || {};
-    const cartao = found.cartao || { historia_completa: "", data_criacao: "", autor_cartao: "", categorias: [] };
+    // Busca a história no Supabase para, se necessário, preencher os dados do cartão (se já existir)
+    const { data: h, error } = await supabase
+        .from('historias')
+        .select('*')
+        .eq('id', storyID)
+        .single();
+    if (error) {
+        console.error("Erro ao buscar a história:", error);
+        return;
+    }
 
-    // Mesmo que o HTML possua um input para "cartaoTitulo", a tabela do cartão não possui esse campo, então podemos ignorá-lo
-    document.getElementById('cartaoSinopse').value = cartao.historia_completa;
-    document.getElementById('cartaoData').value = cartao.data_criacao || new Date().toISOString().split('T')[0];
-    document.getElementById('cartaoAutor').value = cartao.autor_cartao || "";
-    document.querySelectorAll('input[name="categoria"]').forEach(chk => chk.checked = false);
+    // Se não houver dados de cartão, inicializa um objeto vazio (para os campos do formulário)
+    // Note: A inserção no Cartões será feita na função "publicarCartao" e usará o mesmo ID (storyID)
+    let cartao = { tituloCartao: "", sinopseCartao: "", dataCartao: "", autorCartao: "", categorias: [] };
+    if (h.cartao) {
+        cartao = h.cartao;
+    }
+
+    document.getElementById('cartaoTitulo').value = cartao.tituloCartao;
+    document.getElementById('cartaoSinopse').value = cartao.sinopseCartao;
+    document.getElementById('cartaoData').value = cartao.dataCartao || new Date().toISOString().split('T')[0];
+    document.getElementById('cartaoAutor').value = cartao.autorCartao || "";
+
+    // Limpa seleção de categorias e marca as que existem
+    document.querySelectorAll('input[name="categoria"]').forEach(chk => {
+        chk.checked = false;
+    });
     if (cartao.categorias) {
         document.querySelectorAll('input[name="categoria"]').forEach(chk => {
-            if (cartao.categorias.includes(chk.value)) chk.checked = true;
+            if (cartao.categorias.includes(chk.value)) {
+                chk.checked = true;
+            }
         });
     }
-    document.getElementById('btnPublicarCartao').onclick = () => publicarCartao(storyID);
-    document.getElementById('btnLerMais').onclick = () => lerMais(storyID);
-    document.getElementById('btnVoltar').onclick = () => {
+
+    document.getElementById('btnPublicarCartao').onclick = function() {
+        publicarCartao(storyID);
+    };
+    document.getElementById('btnLerMais').onclick = function() {
+        lerMais(storyID);
+    };
+    document.getElementById('btnVoltar').onclick = function() {
         cartaoContainer.style.display = 'none';
         storyContainer.style.display = 'block';
     };
 }
 
-function publicarCartao(storyID) {
-    if (!confirm("Aviso: Ao publicar o cartão, o conteúdo fica definitivo.\nEdições futuras não serão refletidas no cartão.\n\nContinuar?")) {
+async function publicarCartao(storyID) {
+    const msg = "Aviso: Ao publicar o cartão, o conteúdo fica definitivo.\nEdições futuras não serão refletidas no cartão.\n\nContinuar?";
+    if (!confirm(msg)) {
         alert("Publicação cancelada.");
         return;
     }
+
     const cartaoTitulo = document.getElementById('cartaoTitulo').value.trim();
     const cartaoSinopse = document.getElementById('cartaoSinopse').value.trim();
     const cartaoData = document.getElementById('cartaoData').value.trim();
     const autor = document.getElementById('cartaoAutor').value.trim();
-    const categoriasSelecionadas = Array.from(document.querySelectorAll('input[name="categoria"]:checked')).map(chk => chk.value);
-    // Se desejar, você pode validar o input do "cartaoTitulo" embora a tabela não possua esse campo; aqui exemplifico:
+    const categoriasSelecionadas = Array.from(document.querySelectorAll('input[name="categoria"]:checked'))
+      .map(chk => chk.value);
+
     if (!cartaoTitulo) {
         alert("Preencha o título do Cartão!");
         return;
@@ -314,60 +419,81 @@ function publicarCartao(storyID) {
         alert("Selecione pelo menos uma categoria!");
         return;
     }
-    // Monta o objeto do cartão – observe que usamos os nomes que queremos persistir
+
+    // Monta o objeto do cartão com os dados do formulário
     const cartao = {
-        // Embora o input "cartaoTitulo" exista, a tabela não tem essa coluna. Você pode usá-lo internamente se desejar.
-        historia_completa: cartaoSinopse,
-        data_criacao: cartaoData || new Date().toISOString(),
-        autor_cartao: autor || "Desconhecido",
+        tituloCartao: cartaoTitulo,
+        sinopseCartao: cartaoSinopse,
+        dataCartao: cartaoData,
+        autorCartao: autor,
         categorias: categoriasSelecionadas,
+        // Aqui você pode definir outros campos se desejar (ex: likes permanece 0)
         likes: 0
     };
 
-    // Atualiza o objeto da história no localStorage
-    let historias = obterHistorias();
-    const idx = historias.findIndex(h => h.id === storyID);
-    if (idx !== -1) {
-        historias[idx].cartao = cartao;
-        salvarHistorias(historias);
-        alert("Cartão publicado com sucesso!");
-    } else {
-        alert("Erro: História não encontrada.");
+    // Insere ou atualiza o registro na tabela 'cartoes' utilizando o mesmo ID da história
+    // Se o registro ainda não existir, insere; se existir, atualiza
+    // Primeiro tenta atualizar (caso já exista)
+    let { data, error } = await supabase
+        .from('cartoes')
+        .update(cartao)
+        .eq('id', storyID);
+
+    if (error || !data || data.length === 0) {
+        // Se não existir, insere um novo registro usando o mesmo ID
+        const { error: errInsert } = await supabase
+            .from('cartoes')
+            .insert([{ id: storyID, ...cartao }]);
+        if (errInsert) {
+            console.error("Erro ao inserir o cartão:", errInsert);
+            alert("Erro ao publicar o cartão.");
+            return;
+        }
     }
+
+    alert("Cartão publicado com sucesso!");
 }
 
-function lerMais(storyID) {
+async function lerMais(storyID) {
     const modalOverlay = document.getElementById('modalOverlay');
     if (!modalOverlay) return;
-    let historias = obterHistorias();
-    const found = historias.find(h => h.id === storyID);
-    if (!found) {
-        alert("História não encontrada!");
+
+    // Busca a história no Supabase
+    const { data: h, error } = await supabase
+        .from('historias')
+        .select('*')
+        .eq('id', storyID)
+        .single();
+    if (error) {
+        console.error("Erro ao buscar a história:", error);
         return;
     }
-    document.getElementById('modalTitulo').textContent = found.titulo || "";
-    document.getElementById('modalDescricao').textContent = found.descricao || "";
-    if (!found.cartao) {
+
+    document.getElementById('modalTitulo').textContent = h.titulo || "";
+    document.getElementById('modalDescricao').textContent = h.descricao || "";
+
+    if (!h.cartao) {
         document.getElementById('modalCartaoTitulo').textContent = "";
         document.getElementById('modalCartaoSinopse').textContent = "";
         document.getElementById('modalCartaoData').textContent = "";
         document.getElementById('modalCartaoAutor').textContent = "";
         document.getElementById('modalCartaoCategorias').textContent = "";
     } else {
-        document.getElementById('modalCartaoTitulo').textContent = found.cartao.tituloCartao || "";
-        document.getElementById('modalCartaoSinopse').textContent = found.cartao.historia_completa || "";
-        document.getElementById('modalCartaoData').textContent = found.cartao.data_criacao || "";
-        document.getElementById('modalCartaoAutor').textContent = found.cartao.autor_cartao || "";
+        document.getElementById('modalCartaoTitulo').textContent = h.cartao.tituloCartao || "";
+        document.getElementById('modalCartaoSinopse').textContent = h.cartao.sinopseCartao || "";
+        document.getElementById('modalCartaoData').textContent = h.cartao.dataCartao || "";
+        document.getElementById('modalCartaoAutor').textContent = h.cartao.autorCartao || "";
         document.getElementById('modalCartaoCategorias').textContent =
-            (found.cartao.categorias && found.cartao.categorias.length > 0)
-                ? found.cartao.categorias.join(', ')
-                : "";
+          (h.cartao.categorias && h.cartao.categorias.length > 0)
+            ? h.cartao.categorias.join(', ')
+            : "";
     }
+
     modalOverlay.style.display = 'flex';
 }
 
 /*************************************************************
- * MODO DE LEITURA E MARCADOR
+ * [L] MARCADOR DE LINHA: Salvar posição de leitura
  *************************************************************/
 function markReadingPosition(element) {
     const index = element.getAttribute('data-index');
@@ -403,6 +529,7 @@ function highlightLine(lineNumber) {
     container.scrollTo({ top: scrollTarget, behavior: 'smooth' });
 }
 
+// Clique no container de leitura para salvar a linha (marcador)
 const containerLeitura = document.getElementById('historia-conteudo');
 if (containerLeitura) {
     containerLeitura.addEventListener('click', function(e) {
@@ -428,14 +555,33 @@ function continuarMarcador() {
 }
 
 /*************************************************************
- * PESQUISA: Filtrar histórias por título ou autor (via localStorage)
+ * [M] PESQUISA: Filtrar histórias por título ou autor
  *************************************************************/
 async function filtrarHistorias(query) {
     query = query.toLowerCase();
-    const todas = obterHistorias();
-    return todas.filter(story => {
-        const t = (story.titulo || "").toLowerCase();
-        const a = (story.cartao?.autor_cartao || "").toLowerCase();
+    const { data: todas, error } = await supabase
+        .from('historias')
+        .select('*');
+    if (error) {
+        console.error("Erro ao buscar histórias para pesquisa:", error);
+        return [];
+    }
+    // Para cada história, traz os dados do cartão se existirem
+    const resultados = [];
+    for (let story of todas) {
+        // Tenta usar o campo "cartao" (se tiver sido salvo através de update) ou define a partir do título
+        const cartao = story.cartao || { 
+            tituloCartao: story.titulo || "(Sem Título)", 
+            autorCartao: "Desconhecido" 
+        };
+        resultados.push({
+            ...story,
+            cartao: cartao
+        });
+    }
+    return resultados.filter(story => {
+        const t = (story.cartao.tituloCartao || "").toLowerCase();
+        const a = (story.cartao.autorCartao || "").toLowerCase();
         return t.includes(query) || a.includes(query);
     });
 }
@@ -450,8 +596,8 @@ function exibirSugestoes(lista) {
     }
     let html = '';
     lista.forEach(story => {
-        const t = story.titulo || "(Sem Título)";
-        const a = story.cartao?.autor_cartao || "Desconhecido";
+        const t = story.cartao?.tituloCartao || "(Sem Título)";
+        const a = story.cartao?.autorCartao || "Desconhecido";
         html += `
       <div class="suggestion-item" data-id="${story.id}"
            style="padding:6px; border-bottom:1px solid #ccc; cursor:pointer;">
@@ -462,6 +608,7 @@ function exibirSugestoes(lista) {
     });
     searchResults.innerHTML = html;
     searchResults.style.display = 'block';
+
     const items = searchResults.querySelectorAll('.suggestion-item');
     items.forEach(item => {
         item.addEventListener('click', function() {
@@ -473,15 +620,17 @@ function exibirSugestoes(lista) {
 }
 
 async function abrirHistoriaPorId(storyId) {
-    exibirHistoriaNoContainer(storyId);
+    await exibirHistoriaNoContainer(storyId);
 }
 
 /*************************************************************
- * EVENTO DOMContentLoaded: INICIALIZAÇÃO
+ * [N] EVENTO DOMContentLoaded: CONFIGURAR TUDO
  *************************************************************/
 document.addEventListener('DOMContentLoaded', function() {
+    // Inicializa a lista lateral
     mostrarHistorias();
 
+    // Lida com o submit do formulário para salvar/editar a história
     const storyForm = document.getElementById('storyForm');
     storyForm.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -494,6 +643,7 @@ document.addEventListener('DOMContentLoaded', function() {
         salvarHistoria(titulo, descricao);
     });
 
+    // Botão Nova História
     const novaHistoriaBtn = document.getElementById('novaHistoriaBtn');
     if (novaHistoriaBtn) {
         novaHistoriaBtn.addEventListener('click', function () {
@@ -504,8 +654,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Exibe usuário logado (usando Supabase)
     exibirUsuarioLogado();
 
+    // Ativa o hover na lista lateral (duplicado para garantir)
     document.body.addEventListener('mousemove', function(e) {
         if (e.clientX < 50 && !isTitleListVisible) {
             toggleTitleList(true);
@@ -523,6 +675,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // Configura a pesquisa
     const searchBar = document.getElementById('searchBar');
     const searchBtn = document.getElementById('searchBtn');
     const searchResults = document.getElementById('searchResults');
@@ -555,6 +708,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Configura os botões do modo de leitura e marcador
     const btnVoltar = document.getElementById('btn-voltar');
     const btnContinuar = document.getElementById('btn-continuar');
     if (btnVoltar) btnVoltar.addEventListener('click', voltarPagina);
