@@ -2,27 +2,22 @@ import { supabase } from "./supabase.js";
 
 /*************************************************************
  * HISTORIA.JS
- * - Gerencia a criação/edição de histórias, publicação dos cartões
- * - Armazena todas as informações via Supabase:
- *     Tabela "historias": id, titulo, descricao, user_id, data_criacao
- *     Tabela "cartoes": id, historia_id, titulo_cartao, sinopse_cartao,
- *                       historia_completa, data_criacao, autor_cartao
- *     Tabela "categorias": id, nome
- *     Tabela "historias_categoria": historia_id, categoria_id
+ * - Gerencia a criação/edição de histórias, publicação dos cartões e associação com categorias
+ * - Todas as operações (salvar, editar, excluir e consultar) são feitas via Supabase
  *************************************************************/
 
-// Variável global para armazenar o id da história atualmente selecionada
-let currentStoryId = null;
-// Controle da visibilidade da lista lateral
-let isTitleListVisible = false;
+// Variáveis globais
+let currentStoryId = null;             // Id da história atualmente selecionada
+let loggedInUserId = null;             // Id do usuário logado (obtido via Supabase Auth)
+let isTitleListVisible = false;        // Para controle da lista lateral
 
 document.addEventListener('DOMContentLoaded', async function() {
   console.log("DOM carregado");
 
-  // Exibe usuário logado via Supabase
+  // Exibe o usuário logado e armazena o id do usuário globalmente
   await exibirUsuarioLogado();
 
-  // Carrega a lista lateral de histórias (consulta Supabase)
+  // Carrega a lista lateral com as histórias do usuário
   await mostrarHistorias();
 
   // Configura o formulário de história (criação/edição)
@@ -51,16 +46,16 @@ document.addEventListener('DOMContentLoaded', async function() {
         alert("História atualizada com sucesso!");
         currentStoryId = editID;
       } else {
-        // Insere nova história; utiliza Date.now() como id e define data_criacao
+        // Insere nova história com data atual e usuário logado
         const newID = Date.now().toString();
         const { data: novaHistoria, error } = await supabase
           .from('historias')
-          .insert([{ 
-            id: newID, 
-            titulo, 
-            descricao, 
-            user_id: supabase.auth.session()?.user.id || null,
-            data_criacao: new Date().toISOString() 
+          .insert([{
+            id: newID,
+            titulo,
+            descricao,
+            user_id: loggedInUserId,
+            data_criacao: new Date().toISOString()
           }])
           .single();
         if (error) {
@@ -90,21 +85,21 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
   }
 
-  // Configura os botões do cartão
+  // Botões do cartão
   const btnPublicar = document.getElementById('btnPublicarCartao');
   if (btnPublicar) {
     btnPublicar.addEventListener('click', async function() {
       await publicarCartao(currentStoryId);
     });
   }
-
   const btnLerMais = document.getElementById('btnLerMais');
   if (btnLerMais) {
     btnLerMais.addEventListener('click', function() {
-      if (currentStoryId) lerMais(currentStoryId);
+      if (currentStoryId) {
+        await lerMais(currentStoryId);
+      }
     });
   }
-
   const btnVoltar = document.getElementById('btnVoltar');
   if (btnVoltar) {
     btnVoltar.addEventListener('click', function() {
@@ -113,9 +108,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
   }
 
-  // Configura os eventos para a lista lateral (on hover)
+  // Eventos para a lista lateral (on hover)
   document.body.addEventListener('mousemove', function(e) {
-    if (e.clientX < 100 && !isTitleListVisible) {  // Threshold ajustado para 100px
+    if (e.clientX < 100 && !isTitleListVisible) { // 100 px threshold
       toggleTitleList(true);
     }
   });
@@ -135,12 +130,11 @@ document.addEventListener('DOMContentLoaded', async function() {
 
 /*************************************************************
  * USUÁRIO LOGADO VIA SUPABASE
- * Exibe o usuário na área "userMenuArea" e configura logout.
+ * Exibe o usuário na área "userMenuArea" e armazena o id na variável global.
  *************************************************************/
 async function exibirUsuarioLogado() {
   const userArea = document.getElementById('userMenuArea');
   if (!userArea) return;
-
   try {
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     if (sessionError) {
@@ -154,11 +148,11 @@ async function exibirUsuarioLogado() {
       userArea.onclick = null;
       return;
     }
-    const userId = session.user.id;
+    loggedInUserId = session.user.id;
     const { data: profileData, error: profileError } = await supabase
       .from("profiles")
       .select("username")
-      .eq("id", userId)
+      .eq("id", loggedInUserId)
       .single();
     let displayName = "";
     if (profileError || !profileData || !profileData.username) {
@@ -186,7 +180,8 @@ async function exibirUsuarioLogado() {
 
 /*************************************************************
  * MOSTRAR HISTÓRIAS NA LISTA LATERAL
- * Consulta a tabela "historias" e monta a lista.
+ * Consulta a tabela "historias" filtrando pelo usuário logado
+ * e monta a lista lateral.
  *************************************************************/
 async function mostrarHistorias() {
   const ul = document.getElementById('titleListUl');
@@ -194,10 +189,16 @@ async function mostrarHistorias() {
     console.error("Elemento 'titleListUl' não encontrado!");
     return;
   }
-  // Consulta histórias ordenadas por data_criacao (descendente)
+  if (!loggedInUserId) {
+    console.warn("Usuário não logado; nenhuma história para exibir na lista lateral.");
+    ul.innerHTML = '';
+    return;
+  }
+
   const { data: historias, error } = await supabase
       .from('historias')
       .select('*')
+      .eq('user_id', loggedInUserId)
       .order('data_criacao', { ascending: false });
   if (error) {
     console.error("Erro ao buscar histórias:", error);
@@ -262,11 +263,11 @@ function toggleMenuOpcoes(li, storyID) {
 
 /*************************************************************
  * SALVAR/EDITAR HISTÓRIA
+ * Insere ou atualiza uma história na tabela "historias".
  *************************************************************/
 async function salvarHistoria(titulo, descricao) {
   const storyForm = document.getElementById('storyForm');
   const editID = storyForm.dataset.editId;
-
   if (editID) {
     const { error } = await supabase
       .from('historias')
@@ -283,12 +284,12 @@ async function salvarHistoria(titulo, descricao) {
     const newID = Date.now().toString();
     const { data: novaHistoria, error } = await supabase
       .from('historias')
-      .insert([{ 
-          id: newID, 
-          titulo, 
-          descricao, 
-          user_id: supabase.auth.session()?.user.id || null, 
-          data_criacao: new Date().toISOString() 
+      .insert([{
+        id: newID,
+        titulo,
+        descricao,
+        user_id: loggedInUserId,
+        data_criacao: new Date().toISOString()
       }])
       .single();
     if (error) {
@@ -297,15 +298,15 @@ async function salvarHistoria(titulo, descricao) {
       return;
     }
     alert("História salva com sucesso (nova)!");
-    document.getElementById('storyForm').reset();
+    storyForm.reset();
     currentStoryId = newID;
   }
-
   await mostrarHistorias();
 }
 
 /*************************************************************
  * EDITAR HISTÓRIA
+ * Preenche o formulário com os dados da história (consulta Supabase).
  *************************************************************/
 async function editarHistoria(storyID) {
   const { data: historia, error } = await supabase
@@ -326,6 +327,7 @@ async function editarHistoria(storyID) {
 
 /*************************************************************
  * EXCLUIR HISTÓRIA
+ * Remove a história da tabela "historias".
  *************************************************************/
 async function excluirHistoria(storyID) {
   if (!confirm("Deseja excluir a história?")) return;
@@ -359,6 +361,7 @@ function limparFormulario() {
 
 /*************************************************************
  * EXIBIR UMA HISTÓRIA NO CONTEINER
+ * Exibe os detalhes da história na área "storyContainer".
  *************************************************************/
 async function exibirHistoriaNoContainer(storyID) {
   const { data: historia, error } = await supabase
@@ -372,8 +375,6 @@ async function exibirHistoriaNoContainer(storyID) {
   }
   const container = document.getElementById('storyContainer');
   if (!container) return;
-
-  // Remove exibições anteriores
   const oldDiv = container.querySelector('.exibicao-historia');
   if (oldDiv) oldDiv.remove();
 
@@ -391,13 +392,12 @@ async function exibirHistoriaNoContainer(storyID) {
   p.textContent = historia.descricao || "";
   div.appendChild(p);
 
-  // Se houver cartão publicado (opcional, se salvo via outra função), exibe aviso
+  // Opcional: se houver cartão publicado (você pode consultar a tabela "cartoes")
   if (historia.cartao) {
     const infoCartao = document.createElement('p');
     infoCartao.innerHTML = "<em>(Este texto foi publicado no Cartão)</em>";
     div.appendChild(infoCartao);
   }
-
   container.appendChild(div);
 }
 
@@ -408,17 +408,14 @@ async function mostrarCartaoForm(storyID) {
   const storyContainer = document.getElementById('storyContainer');
   const cartaoContainer = document.getElementById('cartaoContainer');
   if (!storyContainer || !cartaoContainer) return;
-
-  // Esconde a área de criação e mostra a área do cartão
   storyContainer.style.display = 'none';
   cartaoContainer.style.display = 'block';
-
-  // Se necessário, consulte a tabela "cartoes" para preencher os inputs caso o cartão já exista
+  // Opcional: se houver um cartão já publicado, você pode consultar a tabela "cartoes" e preencher os inputs
 }
 
 /*************************************************************
  * PUBLICAR CARTÃO
- * Mapeia os inputs para a estrutura da tabela "cartoes" e realiza um upsert via Supabase.
+ * Mapeia os inputs para a estrutura da tabela "cartoes" e realiza um upsert.
  *************************************************************/
 async function publicarCartao(storyID) {
   if (!storyID) {
@@ -436,9 +433,8 @@ async function publicarCartao(storyID) {
   const cartaoSinopse = document.getElementById('sinopse_cartao').value.trim();
   const cartaoData = document.getElementById('data_criacao').value.trim() || new Date().toISOString();
   const autor = document.getElementById('autor_cartao').value.trim();
-  // Obtém os nomes das categorias selecionadas (ex: "Fantasia", "Terror", etc.)
   const categoriasSelecionadas = Array.from(document.querySelectorAll('input[name="categoria"]:checked'))
-                                         .map(chk => chk.value);
+    .map(chk => chk.value);
 
   if (!cartaoTitulo) {
     alert("Preencha o título do Cartão!");
@@ -453,13 +449,12 @@ async function publicarCartao(storyID) {
     return;
   }
 
-  // Mapeia os dados para o objeto que será salvo na tabela "cartoes"
   const novoCartao = {
-    id: storyID,              // Usa o mesmo id da história como id do cartão
-    historia_id: storyID,      // Associação com a história
+    id: storyID,              // Usamos o mesmo id da história para o cartão
+    historia_id: storyID,      // Associa o cartão à história
     titulo_cartao: cartaoTitulo,
     sinopse_cartao: cartaoSinopse,
-    // "historia_completa" utiliza a descrição completa da história do input "descricao"
+    // "historia_completa" é preenchida com a descrição completa da história
     historia_completa: document.getElementById('descricao').value.trim() || "",
     data_criacao: cartaoData,
     autor_cartao: autor || "Anônimo",
@@ -467,7 +462,6 @@ async function publicarCartao(storyID) {
     likes: 0
   };
 
-  // Upsert na tabela "cartoes"
   const { error } = await supabase
     .from('cartoes')
     .upsert(novoCartao, { returning: 'minimal' });
@@ -478,15 +472,14 @@ async function publicarCartao(storyID) {
   }
   
   alert("Cartão publicado com sucesso!");
-  
-  // Processa as categorias: para cada categoria selecionada, garante que a categoria existe e insere associação
+  // Processa as associações de categorias
   await processarCategorias(storyID, categoriasSelecionadas);
 }
 
 /*************************************************************
  * PROCESSAR CATEGORIAS
- * Para cada categoria selecionada (pelo nome), verifica se existe na tabela "categorias";
- * se não existir, insere-a e, em seguida, insere a associação em "historias_categoria".
+ * Para cada categoria selecionada, verifica se já existe na tabela "categorias";
+ * se não existir, insere; em seguida, insere a associação na tabela "historias_categoria".
  *************************************************************/
 async function processarCategorias(storyID, categoriasSelecionadas) {
   for (const catNome of categoriasSelecionadas) {
@@ -496,9 +489,8 @@ async function processarCategorias(storyID, categoriasSelecionadas) {
       .select('id')
       .eq('nome', catNome)
       .single();
-
     if (error || !categoria) {
-      // Se não existir, insere a nova categoria
+      // Insere a nova categoria, se necessário
       const { data: novaCat, error: insertError } = await supabase
         .from('categorias')
         .insert([{ nome: catNome }])
@@ -509,21 +501,19 @@ async function processarCategorias(storyID, categoriasSelecionadas) {
       }
       categoria = novaCat;
     }
-
-    // Insere a associação na tabela "historias_categoria"
-    // Você pode usar "upsert" para evitar duplicatas
+    // Insere (ou atualiza) a associação em "historias_categoria"
     const { error: assocError } = await supabase
       .from('historias_categoria')
       .upsert({ historia_id: storyID, categoria_id: categoria.id }, { returning: 'minimal' });
     if (assocError) {
-      console.error("Erro ao associar categoria com a história:", assocError);
+      console.error("Erro ao associar categoria:", assocError);
     }
   }
 }
 
 /*************************************************************
  * LER MAIS
- * Consulta os dados do cartão e exibe no modal.
+ * Consulta a tabela "cartoes" e exibe os detalhes do cartão no modal.
  *************************************************************/
 async function lerMais(storyID) {
   const modalOverlay = document.getElementById('modalOverlay');
@@ -554,7 +544,7 @@ async function lerMais(storyID) {
 }
 
 /*************************************************************
- * FUNÇÕES AUXILIARES: Formatação, modo de leitura, marcador, etc.
+ * FUNÇÕES AUXILIARES (Ex.: formatação, marcador de linha)
  *************************************************************/
 function formatarTexto(str) {
   let contador = 0;
