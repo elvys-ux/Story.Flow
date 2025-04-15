@@ -330,7 +330,7 @@ async function mostrarCartaoForm(storyID) {
     storyContainer.style.display = 'none';
     cartaoContainer.style.display = 'block';
 
-    // Recupera a história (mesmo que os dados do cartão estejam em outra tabela)
+    // Recupera a história
     const { data: historia, error } = await supabase
         .from('historias')
         .select('*')
@@ -341,17 +341,18 @@ async function mostrarCartaoForm(storyID) {
         return;
     }
 
-    // Tenta recuperar os dados do cartão, se já existentes
+    // Tenta recuperar os dados do cartão, se existentes
     const { data: card, error: cardError } = await supabase
         .from('cartoes')
         .select('*')
         .eq('historia_id', storyID)
         .single();
 
-    document.getElementById('cartaoTitulo').value = card ? card.titulo_cartao : "";
-    document.getElementById('cartaoSinopse').value = card ? card.sinopse_cartao : "";
-    document.getElementById('cartaoData').value = card ? card.data_criacao : new Date().toISOString().split('T')[0];
-    document.getElementById('cartaoAutor').value = card ? card.autor_cartao : "";
+    // Atualiza os campos utilizando os IDs definidos no HTML
+    document.getElementById('titulo_cartao').value = card ? card.titulo_cartao : "";
+    document.getElementById('sinopse_cartao').value = card ? card.sinopse_cartao : "";
+    document.getElementById('data_criacao').value = card ? card.data_criacao : new Date().toISOString().split('T')[0];
+    document.getElementById('autor_cartao').value = card ? card.autor_cartao : "";
 
     // Ajusta a seleção de categorias com base na tabela de relacionamento
     let selectedCats = [];
@@ -398,10 +399,10 @@ async function publicarCartao(storyID) {
         return;
     }
 
-    const cartaoTitulo = document.getElementById('cartaoTitulo').value.trim();
-    const cartaoSinopse = document.getElementById('cartaoSinopse').value.trim();
-    const cartaoData = document.getElementById('cartaoData').value.trim();
-    const autor = document.getElementById('cartaoAutor').value.trim();
+    const cartaoTitulo = document.getElementById('titulo_cartao').value.trim();
+    const cartaoSinopse = document.getElementById('sinopse_cartao').value.trim();
+    const cartaoData = document.getElementById('data_criacao').value.trim();
+    const autor = document.getElementById('autor_cartao').value.trim();
     const categoriasSelecionadas = Array.from(document.querySelectorAll('input[name="categoria"]:checked'))
       .map(chk => chk.value);
 
@@ -435,7 +436,6 @@ async function publicarCartao(storyID) {
     }
 
     // Insere as categorias selecionadas na tabela 'historias_categoria'
-    // Para simplicidade, esta implementação insere os relacionamentos sem limpar préviamente os existentes.
     for (let catId of categoriasSelecionadas) {
          const { error: catError } = await supabase
              .from('historias_categoria')
