@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function toggleReadingMode() {
         modoCorrido = !modoCorrido;
         localStorage.setItem('modoCorrido', JSON.stringify(modoCorrido));
-        // Aqui é possível adicionar chamadas para atualizar a interface conforme o novo modo
+        // Atualize a interface conforme o novo modo, se necessário
     }
     
     /*************************************************************
@@ -358,7 +358,7 @@ document.addEventListener('DOMContentLoaded', function() {
         storyContainer.style.display = 'none';
         cartaoContainer.style.display = 'block';
     
-        // Busca a história no Supabase para preencher os dados do cartão, se existirem
+        // Busca a história no Supabase para preencher os dados do cartão
         const { data: h, error } = await supabase
             .from('historias')
             .select('*')
@@ -369,10 +369,15 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
     
-        // Inicializa objeto cartao se não houver dados
+        // Inicializa objeto cartao se não houver dados no registro
         let cartao = { tituloCartao: "", sinopseCartao: "", dataCartao: "", autorCartao: "", categorias: [] };
         if (h.cartao) {
             cartao = h.cartao;
+        }
+        // Se houver cartão salvo no localStorage, utiliza-o para preencher os dados
+        const storedCartao = localStorage.getItem('cartao_' + storyID);
+        if (storedCartao) {
+            cartao = JSON.parse(storedCartao);
         }
     
         document.getElementById('cartaoTitulo').value = cartao.tituloCartao;
@@ -380,7 +385,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('cartaoData').value = cartao.dataCartao || new Date().toISOString().split('T')[0];
         document.getElementById('cartaoAutor').value = cartao.autorCartao || "";
     
-        // Limpa seleção e marca as categorias já selecionadas
+        // Limpa seleção de categorias e marca as já selecionadas
         document.querySelectorAll('input[name="categoria"]').forEach(chk => {
             chk.checked = false;
         });
@@ -441,13 +446,14 @@ document.addEventListener('DOMContentLoaded', function() {
             likes: 0
         };
     
-        // Tenta atualizar o registro, se não existir insere um novo
+        // Tenta atualizar o registro na tabela 'cartoes'
         let { data, error } = await supabase
             .from('cartoes')
             .update(cartao)
             .eq('id', storyID);
     
         if (error || !data || data.length === 0) {
+            // Se não existir, insere um novo registro usando o mesmo ID
             const { error: errInsert } = await supabase
                 .from('cartoes')
                 .insert([{ id: storyID, ...cartao }]);
@@ -457,6 +463,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
         }
+    
+        // Salva o cartão no localStorage
+        localStorage.setItem('cartao_' + storyID, JSON.stringify(cartao));
     
         alert("Cartão publicado com sucesso!");
     }
@@ -709,13 +718,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Configuração dos botões do modo de leitura e marcador
     const btnVoltar = document.getElementById('btn-voltar');
     if (btnVoltar) btnVoltar.addEventListener('click', function() {
-        // Implemente a função voltarPagina se necessário
         window.history.back();
     });
     const btnContinuar = document.getElementById('btn-continuar');
     if (btnContinuar) btnContinuar.addEventListener('click', function() {
-        // Implemente a função continuarHistoria se necessário
-        // Exemplo: continuarMarcador();
         continuarMarcador();
     });
     const toggleBtn = document.getElementById('toggleMode');
