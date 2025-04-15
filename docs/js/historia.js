@@ -179,7 +179,7 @@ async function mostrarHistorias() {
   const { data: historias, error } = await supabase
       .from('historias')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('data_criacao', { ascending: false });
   if (error) {
       console.error("Erro ao buscar histórias:", error);
       return;
