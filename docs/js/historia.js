@@ -1,12 +1,27 @@
 import { supabase } from "./supabase.js";
 
 /*************************************************************
+ * FUNÇÃO AUXILIAR PARA OBTER O ID DA CATEGORIA PELO NOME
+ *************************************************************/
+async function getCategoriaId(nome) {
+    const { data, error } = await supabase
+      .from('categorias')
+      .select('id')
+      .eq('nome', nome)
+      .single();
+    if (error) {
+      console.error(`Erro ao buscar a categoria ${nome}:`, error);
+      return null;
+    }
+    return data.id;
+}
+
+/*************************************************************
  * HISTORIA.JS
  * - Salva e atualiza histórias na tabela 'historias'.
  * - Publica cartões na tabela 'cartoes'
- * - Insere as categorias selecionadas na tabela 'historias_categoria'
+ * - Insere as categorias selecionadas na tabela 'historia_categorias'
  *************************************************************/
-
 document.addEventListener('DOMContentLoaded', async function() {
     await mostrarHistorias(); // Carrega a lista lateral
 
@@ -31,6 +46,14 @@ document.addEventListener('DOMContentLoaded', async function() {
                 limparFormulario();
                 removerExibicaoHistoria();
             }
+        });
+    }
+
+    // Listener para fechar o modal "Ler Mais"
+    const closeModal = document.getElementById('closeModal');
+    if (closeModal) {
+        closeModal.addEventListener('click', function() {
+            document.getElementById('modalOverlay').style.display = 'none';
         });
     }
 
@@ -358,7 +381,7 @@ async function mostrarCartaoForm(storyID) {
     let selectedCats = [];
     if (card) {
         const { data: catData, error: catError } = await supabase
-            .from('historias_categoria')
+            .from('historia_categorias')
             .select('categoria_id')
             .eq('historia_id', storyID);
         if (!catError && catData) {
@@ -435,15 +458,26 @@ async function publicarCartao(storyID) {
          return;
     }
 
-    // Insere as categorias selecionadas na tabela 'historias_categoria'
-    for (let catId of categoriasSelecionadas) {
-         const { error: catError } = await supabase
-             .from('historias_categoria')
-             .insert({ historia_id: storyID, categoria_id: catId });
-         if (catError) {
-             console.error(`Erro ao inserir categoria ${catId}:`, catError);
+    // Para cada categoria selecionada, converte o nome para o ID e insere o relacionamento
+    for (let categoriaName of categoriasSelecionadas) {
+         const catId = await getCategoriaId(categoriaName);
+         if (catId) {
+             const { error: catError } = await supabase
+                 .from('historia_categorias')
+                 .insert({ historia_id: storyID, categoria_id: catId });
+             if (catError) {
+                 console.error(`Erro ao inserir categoria ${catId}:`, catError);
+             }
          }
     }
+    
+    // Opcional: Atualiza a coluna 'categorais' na tabela 'cartoes'
+    const categoriaTexto = categoriasSelecionadas.join(', ');
+    await supabase
+      .from('cartoes')
+      .update({ categorais: categoriaTexto })
+      .eq('historia_id', storyID);
+
     alert("Cartão publicado com sucesso!");
 }
 
@@ -481,11 +515,17 @@ async function lerMais(storyID) {
     } else {
          document.getElementById('modalCartaoTitulo').textContent = card.titulo_cartao || "";
          document.getElementById('modalCartaoSinopse').textContent = card.sinopse_cartao || "";
-         document.getElementById('modalCartaoData').textContent = card.data_criacao || "";
+         // Formata a data para exibição amigável
+         if (card.data_criacao) {
+             const dataFormatada = new Date(card.data_criacao).toLocaleDateString('pt-PT');
+             document.getElementById('modalCartaoData').textContent = dataFormatada;
+         } else {
+             document.getElementById('modalCartaoData').textContent = "";
+         }
          document.getElementById('modalCartaoAutor').textContent = card.autor_cartao || "";
          // Recupera os nomes das categorias relacionadas
          const { data: catData, error: catJoinError } = await supabase
-              .from('historias_categoria')
+              .from('historia_categorias')
               .select('categoria_id')
               .eq('historia_id', storyID);
          if (catJoinError) {
