@@ -9,7 +9,7 @@
     /* Estilos Gerais (Tema Neutro/Masculino) */
     body {
       font-family: 'Indie Flower', cursive;
-      background-color: #e2e8f0; /* tom azul acinzentado */
+      background-color: #e2e8f0;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -19,7 +19,7 @@
       overflow: hidden;
       position: relative;
     }
-    /* Elementos flutuantes: substituímos flores/cordeiros por engrenagens e foguetes */
+    /* Elementos flutuantes */
     .gear, .rocket {
       position: absolute;
       font-size: 24px;
@@ -127,7 +127,7 @@
       background: #4a5568;
       transform: scale(1.05);
     }
-    /* Estilos do modal de login */
+    /* Modal de login */
     .modal {
       position: fixed;
       top: 0;
@@ -165,7 +165,7 @@
   </style>
 </head>
 <body>
-  <!-- Modal de login para segurança -->
+  <!-- Modal de login -->
   <div id="login-modal" class="modal">
     <p>Digite seu email e senha para acessar o Diário:</p>
     <input type="email" id="email-input" placeholder="Email">
@@ -189,16 +189,15 @@
     <button class="save-btn" id="save-btn">Guardar</button>
   </div>
 
-  <!-- Inclua o script como módulo -->
+  <!-- Script em módulo -->
   <script type="module">
-    // Importa o Supabase Client da CDN; substitua pela sua lib ou path se necessário
     import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js';
-    
-    // Substitua abaixo pelos seus valores do projeto Supabase
+
+    // Configure seus valores do projeto Supabase:
     const supabaseUrl = 'https://YOUR-SUPABASE-PROJECT.supabase.co';
     const supabaseKey = 'YOUR_PUBLIC_ANON_KEY';
     const supabase = createClient(supabaseUrl, supabaseKey);
-    
+
     // Função para carregar o diário do banco de dados para o usuário autenticado
     async function loadDiaryFromDB() {
       const { data: { session } } = await supabase.auth.getSession();
@@ -219,7 +218,7 @@
         document.getElementById('diary-text').value = data.conteudo || "";
       }
     }
-    
+
     // Função para salvar ou atualizar o diário no banco de dados
     async function saveDiaryToDB() {
       const { data: { session } } = await supabase.auth.getSession();
@@ -228,10 +227,9 @@
         return;
       }
       const conteudo = document.getElementById('diary-text').value;
-      const titulo = "Meu Diário";  // Você pode ampliar para permitir alteração
+      const titulo = "Meu Diário"; // Título fixo ou um input extra, se necessário
       const data_criacao = new Date().toISOString();
-    
-      // Upsert: insere ou atualiza o diário deste usuário
+
       const { data, error } = await supabase
         .from('diario')
         .upsert({ user_id: session.user.id, titulo, conteudo, data_criacao });
@@ -242,8 +240,8 @@
         alert("Diário salvo com sucesso!");
       }
     }
-    
-    // Função para realizar o login utilizando Supabase Auth
+
+    // Função para realizar o login com Supabase Auth
     async function loginUser() {
       const email = document.getElementById('email-input').value.trim();
       const password = document.getElementById('password-input').value.trim();
@@ -251,18 +249,14 @@
         document.getElementById('login-error').style.display = 'block';
         return;
       }
-      const { data, error } = await supabase.auth.signIn({ email, password });
+      const { error } = await supabase.auth.signIn({ email, password });
       if (error) {
         console.error("Erro no login:", error);
         document.getElementById('login-error').style.display = 'block';
-      } else {
-        document.getElementById('login-error').style.display = 'none';
-        document.getElementById('login-modal').style.display = 'none';
-        await loadDiaryFromDB();
       }
     }
-    
-    // Função para realizar o logout
+
+    // Função para realizar logout
     async function logoutUser() {
       const { error } = await supabase.auth.signOut();
       if (error) {
@@ -272,9 +266,21 @@
         window.location.reload();
       }
     }
-    
-    // Configurar eventos quando o DOM for carregado
+
+    // Monitorar mudanças de sessão para carregar o diário e ocultar o modal
+    supabase.auth.onAuthStateChange((event, session) => {
+      console.log("Estado de auth mudou:", event, session);
+      if (session) {
+        document.getElementById('login-modal').style.display = 'none';
+        loadDiaryFromDB();
+      } else {
+        document.getElementById('login-modal').style.display = 'flex';
+      }
+    });
+
+    // Configurar eventos após o carregamento do DOM
     document.addEventListener('DOMContentLoaded', async () => {
+      // Verifica se há sessão ativa
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         document.getElementById('login-modal').style.display = 'none';
@@ -282,7 +288,6 @@
       } else {
         document.getElementById('login-modal').style.display = 'flex';
       }
-    
       document.getElementById('save-btn').addEventListener('click', saveDiaryToDB);
       document.getElementById('login-btn').addEventListener('click', loginUser);
       document.getElementById('logout-btn').addEventListener('click', logoutUser);
