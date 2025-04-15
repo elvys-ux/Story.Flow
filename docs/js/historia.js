@@ -174,29 +174,37 @@ async function exibirUsuarioLogado() {
  *************************************************************/
 async function mostrarHistorias() {
   const ul = document.getElementById('titleListUl');
-  if (!ul) return;
-
+  if (!ul) {
+    console.error("Elemento 'titleListUl' não encontrado!");
+    return;
+  }
+  
+  // Usa "data_criacao" para ordenar as histórias
   const { data: historias, error } = await supabase
       .from('historias')
       .select('*')
       .order('data_criacao', { ascending: false });
+  
   if (error) {
-      console.error("Erro ao buscar histórias:", error);
-      return;
+    console.error("Erro ao buscar histórias:", error);
+    return;
   }
 
+  console.log("Histórias retornadas:", historias);
+  
   ul.innerHTML = '';
   historias.forEach((h) => {
-      const li = document.createElement('li');
-      li.textContent = h.titulo || "(sem título)";
-      li.dataset.id = h.id;
-      li.addEventListener('click', function(e) {
-          e.stopPropagation();
-          toggleMenuOpcoes(li, h.id);
-      });
-      ul.appendChild(li);
+    const li = document.createElement('li');
+    li.textContent = h.titulo || "(sem título)";
+    li.dataset.id = h.id;
+    li.addEventListener('click', function(e) {
+      e.stopPropagation();
+      toggleMenuOpcoes(li, h.id);
+    });
+    ul.appendChild(li);
   });
 }
+
 
 /*************************************************************
  * FUNÇÃO: TOGGLE MENU OPÇÕES (LISTA LATERAL)
