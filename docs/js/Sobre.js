@@ -68,7 +68,7 @@ async function exibirUsuarioLogado() {
     if (error) {
       alert("Erro ao deslogar: " + error.message);
     } else {
-      window.location.href = "index.html"; // Redireciona para a página inicial
+      window.location.href = "Criacao.html"; // Redireciona para a página inicial
     }
   });
 }
