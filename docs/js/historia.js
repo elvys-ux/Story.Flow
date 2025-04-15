@@ -10,15 +10,16 @@ async function getCategoriaId(nome) {
       .eq('nome', nome)
       .single();
     if (error) {
-      console.error(`Erro ao buscar a categoria ${nome}:`, error);
+      console.error(`Erro ao buscar a categoria "${nome}":`, error);
       return null;
     }
+    console.log(`Categoria "${nome}" encontrada com ID: ${data.id}`);
     return data.id;
 }
 
 /*************************************************************
  * HISTORIA.JS
- * - Salva e atualiza histórias na tabela 'historias'.
+ * - Salva e atualiza histórias na tabela 'historias'
  * - Publica cartões na tabela 'cartoes'
  * - Insere as categorias selecionadas na tabela 'historia_categorias'
  *************************************************************/
@@ -100,8 +101,8 @@ function toggleTitleList(show) {
 async function mostrarHistorias() {
     const ul = document.getElementById('titleListUl');
     if (!ul) return;
-
     ul.innerHTML = '';
+
     // Busca as histórias do Supabase, ordenadas por data_criacao decrescente
     const { data: historias, error } = await supabase
         .from('historias')
@@ -111,7 +112,6 @@ async function mostrarHistorias() {
         console.error("Erro ao recuperar histórias:", error);
         return;
     }
-
     historias.forEach((h) => {
         const li = document.createElement('li');
         li.textContent = h.titulo || "(sem título)";
@@ -175,7 +175,6 @@ async function salvarHistoria(titulo, descricao) {
         alert("Usuário não autenticado.");
         return;
     }
-
     if (editID) {
         // Atualiza história existente
         const { error } = await supabase
@@ -298,7 +297,6 @@ function removerExibicaoHistoria() {
 async function exibirUsuarioLogado(){
     const userArea = document.getElementById('userMenuArea');
     if (!userArea) return;
-
     try {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         if (sessionError) {
@@ -442,7 +440,14 @@ async function publicarCartao(storyID) {
         return;
     }
 
-    // Insere ou atualiza os dados do cartão na tabela 'cartoes'
+    // Inserir ou atualizar os dados do cartão na tabela 'cartoes'
+    console.log("Inserindo cartão com:", {
+      historia_id: storyID,
+      titulo_cartao: cartaoTitulo,
+      sinopse_cartao: cartaoSinopse,
+      autor_cartao: autor,
+      data_criacao: cartaoData
+    });
     const { error: cardError } = await supabase
          .from('cartoes')
          .upsert({
@@ -461,19 +466,23 @@ async function publicarCartao(storyID) {
     // Obtém o ID do usuário autenticado
     const sessionResponse = await supabase.auth.getSession();
     const userId = sessionResponse.data.session?.user?.id;
-    
+    console.log("User ID para relacionamento:", userId);
+
     // Para cada categoria selecionada, converte o nome para o ID e insere o relacionamento, incluindo o user_id
     for (let categoriaName of categoriasSelecionadas) {
          const catId = await getCategoriaId(categoriaName);
          if (catId) {
+             console.log(`Inserindo relacionamento: historia_id=${storyID}, categoria_id=${catId}, user_id=${userId}`);
              const { error: catError } = await supabase
                  .from('historia_categorias')
                  .insert({ historia_id: storyID, categoria_id: catId, user_id: userId });
              if (catError) {
                  console.error(`Erro ao inserir categoria ${catId}:`, catError);
+             } else {
+                 console.log(`Relacionamento inserido com sucesso para a categoria "${categoriaName}"`);
              }
          } else {
-             console.error(`Não foi encontrado ID para a categoria: ${categoriaName}`);
+             console.error(`Não foi encontrado ID para a categoria: "${categoriaName}"`);
          }
     }
     
