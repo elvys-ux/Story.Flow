@@ -19,7 +19,6 @@
       overflow: hidden;
       position: relative;
     }
-
     /* Elementos flutuantes: substituímos flores/cordeiros por engrenagens e foguetes */
     .gear, .rocket {
       position: absolute;
@@ -27,12 +26,12 @@
       animation-timing-function: linear;
     }
     .gear {
-      color: #4a5568; /* cinza escuro */
+      color: #4a5568;
       animation: floatUp 10s infinite;
     }
     .rocket {
       font-size: 30px;
-      color: #2d3748; /* tom mais escuro, quase preto */
+      color: #2d3748;
       animation: floatDown 10s infinite;
     }
     @keyframes floatUp {
@@ -43,10 +42,9 @@
       0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
       100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
     }
-
     .header {
       width: 100%;
-      background-color: #2d3748; /* cor escura, neutra */
+      background-color: #2d3748;
       padding: 10px 0;
       text-align: center;
       position: fixed;
@@ -88,7 +86,6 @@
       box-sizing: border-box;
     }
     .diary-container h2 {
-      text-align: center;
       color: #2d3748;
       margin-bottom: 15px;
       font-family: sans-serif;
@@ -144,6 +141,7 @@
       z-index: 200;
       flex-direction: column;
     }
+    .modal input[type="email"],
     .modal input[type="password"] {
       padding: 10px;
       font-size: 16px;
@@ -169,10 +167,11 @@
 <body>
   <!-- Modal de login para segurança -->
   <div id="login-modal" class="modal">
-    <p>Digite a senha da sua conta para acessar o Diário:</p>
+    <p>Digite seu email e senha para acessar o Diário:</p>
+    <input type="email" id="email-input" placeholder="Email">
     <input type="password" id="password-input" placeholder="Senha">
     <button id="login-btn">Entrar</button>
-    <p id="login-error" style="color: #e53e3e; display: none;">Senha incorreta!</p>
+    <p id="login-error" style="color: #e53e3e; display: none;">Email ou senha incorretos!</p>
   </div>
 
   <div class="header">
@@ -181,6 +180,7 @@
     <a href="historia.html">Histórias</a>
     <a href="Sobre.html">Sobre</a>
     <a href="diario.html">Resetar página</a>
+    <a href="#" id="logout-btn" style="margin-left: 15px;">Logout</a>
   </div>
 
   <div class="diary-container">
@@ -189,111 +189,104 @@
     <button class="save-btn" id="save-btn">Guardar</button>
   </div>
 
-  <script>
-   import { supabase } from "./supabase.js";
-
-// Função para carregar o diário do banco de dados para o usuário autenticado
-async function loadDiaryFromDB() {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
-    console.warn("Nenhum usuário autenticado");
-    return;
-  }
-  // Buscamos o diário do usuário; assumimos que há uma única linha por usuário.
-  const { data, error } = await supabase
-    .from('diario')
-    .select('*')
-    .eq('user_id', session.user.id)
-    .single();
-  if (error) {
-    console.error("Erro ao carregar o diário:", error);
-    return;
-  }
-  if (data) {
-    document.getElementById('diary-text').value = data.conteudo || "";
-  }
-}
-
-// Função para salvar ou atualizar o diário no banco de dados
-async function saveDiaryToDB() {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
-    alert("Usuário não autenticado.");
-    return;
-  }
-  const conteudo = document.getElementById('diary-text').value;
-  const titulo = "Meu Diário"; // ou você pode criar um input para título, se desejar
-  const data_criacao = new Date().toISOString();
-
-  // Utilize upsert para inserir ou atualizar o diário deste usuário
-  const { data, error } = await supabase
-    .from('diario')
-    .upsert({ user_id: session.user.id, titulo, conteudo, data_criacao });
-  if (error) {
-    console.error("Erro ao salvar o diário:", error);
-    alert("Erro ao salvar o diário.");
-  } else {
-    alert("Diário salvo com sucesso!");
-  }
-}
-
-// Função para realizar o login usando Supabase Auth
-async function loginUser() {
-  const inputPassword = document.getElementById('password-input').value.trim();
-  // Neste exemplo, pediremos o e-mail via prompt (você pode aprimorar o modal para incluir um input)
-  const email = prompt("Digite seu email para login:");
-  if (!email || !inputPassword) {
-    document.getElementById('login-error').style.display = 'block';
-    return;
-  }
-  const { data, error } = await supabase.auth.signIn({ email, password: inputPassword });
-  if (error) {
-    console.error("Erro no login:", error);
-    document.getElementById('login-error').style.display = 'block';
-  } else {
-    document.getElementById('login-modal').style.display = 'none';
-    await loadDiaryFromDB();
-  }
-}
-
-// Função para realizar logout
-async function logoutUser() {
-  const { error } = await supabase.auth.signOut();
-  if (error) {
-    console.error("Erro ao deslogar:", error);
-    alert("Erro ao deslogar.");
-  } else {
-    // Você pode redirecionar ou simplesmente recarregar a página
-    window.location.reload();
-  }
-}
-
-// Ao carregar a página
-document.addEventListener('DOMContentLoaded', async function () {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session) {
-    // Se o usuário já estiver autenticado, esconda o modal e carregue o diário
-    document.getElementById('login-modal').style.display = 'none';
-    await loadDiaryFromDB();
-  } else {
-    // Caso não haja sessão, o modal de login já ficará visível (conforme o HTML)
-    document.getElementById('login-modal').style.display = 'flex';
-  }
-
-  // Vincula o botão de salvar ao saveDiaryToDB
-  document.getElementById('save-btn').addEventListener('click', saveDiaryToDB);
-
-  // Você pode adicionar um listener de logout. Por exemplo, se desejar um botão
-  // No header, suponha que haja um elemento com id "logout-btn"
-  const logoutBtn = document.getElementById('logout-btn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', logoutUser);
-  }
-
-  // Vincula o botão de login no modal
-  document.getElementById('login-btn').addEventListener('click', loginUser);
-});
-
+  <!-- Inclua o script como módulo -->
+  <script type="module">
+    // Importa o Supabase Client da CDN; substitua pela sua lib ou path se necessário
+    import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js';
+    
+    // Substitua abaixo pelos seus valores do projeto Supabase
+    const supabaseUrl = 'https://YOUR-SUPABASE-PROJECT.supabase.co';
+    const supabaseKey = 'YOUR_PUBLIC_ANON_KEY';
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    // Função para carregar o diário do banco de dados para o usuário autenticado
+    async function loadDiaryFromDB() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.warn("Nenhum usuário autenticado");
+        return;
+      }
+      const { data, error } = await supabase
+        .from('diario')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .single();
+      if (error) {
+        console.error("Erro ao carregar o diário:", error);
+        return;
+      }
+      if (data) {
+        document.getElementById('diary-text').value = data.conteudo || "";
+      }
+    }
+    
+    // Função para salvar ou atualizar o diário no banco de dados
+    async function saveDiaryToDB() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert("Usuário não autenticado.");
+        return;
+      }
+      const conteudo = document.getElementById('diary-text').value;
+      const titulo = "Meu Diário";  // Você pode ampliar para permitir alteração
+      const data_criacao = new Date().toISOString();
+    
+      // Upsert: insere ou atualiza o diário deste usuário
+      const { data, error } = await supabase
+        .from('diario')
+        .upsert({ user_id: session.user.id, titulo, conteudo, data_criacao });
+      if (error) {
+        console.error("Erro ao salvar o diário:", error);
+        alert("Erro ao salvar o diário.");
+      } else {
+        alert("Diário salvo com sucesso!");
+      }
+    }
+    
+    // Função para realizar o login utilizando Supabase Auth
+    async function loginUser() {
+      const email = document.getElementById('email-input').value.trim();
+      const password = document.getElementById('password-input').value.trim();
+      if (!email || !password) {
+        document.getElementById('login-error').style.display = 'block';
+        return;
+      }
+      const { data, error } = await supabase.auth.signIn({ email, password });
+      if (error) {
+        console.error("Erro no login:", error);
+        document.getElementById('login-error').style.display = 'block';
+      } else {
+        document.getElementById('login-error').style.display = 'none';
+        document.getElementById('login-modal').style.display = 'none';
+        await loadDiaryFromDB();
+      }
+    }
+    
+    // Função para realizar o logout
+    async function logoutUser() {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Erro ao deslogar:", error);
+        alert("Erro ao deslogar.");
+      } else {
+        window.location.reload();
+      }
+    }
+    
+    // Configurar eventos quando o DOM for carregado
+    document.addEventListener('DOMContentLoaded', async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        document.getElementById('login-modal').style.display = 'none';
+        await loadDiaryFromDB();
+      } else {
+        document.getElementById('login-modal').style.display = 'flex';
+      }
+    
+      document.getElementById('save-btn').addEventListener('click', saveDiaryToDB);
+      document.getElementById('login-btn').addEventListener('click', loginUser);
+      document.getElementById('logout-btn').addEventListener('click', logoutUser);
+    });
   </script>
 </body>
 </html>
