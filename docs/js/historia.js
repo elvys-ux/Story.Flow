@@ -3,7 +3,7 @@ import { supabase } from "./supabase.js";
 /*************************************************************
  * HISTORIA.JS
  * - Gerencia a criação/edição de histórias e a publicação dos cartões
- * - Utiliza o Supabase para salvar/consultar/atualizar os dados
+ * - Usa Supabase para todas as operações (salvar, atualizar, excluir e consultar)
  *************************************************************/
 
 // Variável global para armazenar o id da história atualmente selecionada
@@ -13,10 +13,10 @@ document.addEventListener('DOMContentLoaded', async function() {
   // Exibe o usuário logado (via Supabase)
   await exibirUsuarioLogado();
 
-  // Carrega a lista lateral de histórias
+  // Carrega a lista lateral de histórias (consultando Supabase)
   await mostrarHistorias();
 
-  // Configura o submit do formulário de história (criação/edição)
+  // Configura o formulário de história (criação/edição)
   const storyForm = document.getElementById('storyForm');
   storyForm.addEventListener('submit', async function(e) {
       e.preventDefault();
@@ -27,13 +27,13 @@ document.addEventListener('DOMContentLoaded', async function() {
           return;
       }
 
-      // Se estiver editando, atualize; senão, insere uma nova história
+      // Se estiver editando, atualiza; senão, insere nova história
       const editID = storyForm.dataset.editId;
       if (editID) {
           const { error } = await supabase
-            .from("historias")
-            .update({ titulo, descricao })
-            .eq('id', editID);
+              .from('historias')
+              .update({ titulo, descricao })
+              .eq('id', editID);
           if (error) {
               console.error("Erro ao atualizar a história:", error);
               alert("Erro ao atualizar a história.");
@@ -42,14 +42,14 @@ document.addEventListener('DOMContentLoaded', async function() {
           alert("História atualizada com sucesso!");
           currentStoryId = editID;
       } else {
-          // Nova história: usamos Date.now() para gerar um id (ou permita que o Supabase gere o id se preferir)
+          // Nova história: usamos Date.now() para gerar um id
           const newID = Date.now().toString();
           const { data: novaHistoria, error } = await supabase
-            .from("historias")
-            .insert([{ id: newID, titulo, descricao }])
-            .single();
+              .from('historias')
+              .insert([{ id: newID, titulo, descricao }])
+              .single();
           if (error) {
-              console.error("Erro ao salvar a história:", error);
+              console.error("Erro ao inserir a história:", error);
               alert("Erro ao salvar a história.");
               return;
           }
@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', async function() {
           storyForm.reset();
           currentStoryId = newID;
       }
-      
+
       await mostrarHistorias();
   });
 
@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       });
   }
 
-  // Configura os botões do cartão:
+  // Configura os botões do cartão
   document.getElementById('btnPublicarCartao').addEventListener('click', async function() {
       await publicarCartao(currentStoryId);
   });
@@ -93,12 +93,28 @@ document.addEventListener('DOMContentLoaded', async function() {
       document.getElementById('storyContainer').style.display = 'block';
   });
 
-  // Outras configurações (por exemplo, lista lateral, leitura de teclado, etc.) podem ser adicionadas aqui
+  // Configura a lista lateral (exemplo de hover)
+  document.body.addEventListener('mousemove', function(e) {
+    if (e.clientX < 50 && !isTitleListVisible) {
+      toggleTitleList(true);
+    }
+  });
+  document.body.addEventListener('mouseleave', function() {
+    if (isTitleListVisible) {
+      toggleTitleList(false);
+    }
+  });
+  document.body.addEventListener('click', function(e) {
+    const titleList = document.getElementById('titleListLeft');
+    if (isTitleListVisible && titleList && !titleList.contains(e.target)) {
+      toggleTitleList(false);
+    }
+  });
 });
 
 /*************************************************************
- * USUÁRIO LOGADO VIA SUPABASE
- * Exibe o usuário (com dados do Supabase) e permite logout.
+ * FUNÇÃO: USUÁRIO LOGADO VIA SUPABASE
+ * Exibe o usuário logado em "userMenuArea" e permite logout.
  *************************************************************/
 async function exibirUsuarioLogado() {
   const userArea = document.getElementById('userMenuArea');
@@ -111,10 +127,9 @@ async function exibirUsuarioLogado() {
           return;
       }
       if (!session) {
-          userArea.innerHTML = `
-            <a href="Criacao.html" style="color:white;">
+          userArea.innerHTML = `<a href="Criacao.html" style="color:white;">
               <i class="fas fa-user"></i> Login
-            </a>`;
+          </a>`;
           userArea.onclick = null;
           return;
       }
@@ -155,13 +170,12 @@ async function exibirUsuarioLogado() {
 
 /*************************************************************
  * FUNÇÃO: MOSTRAR HISTÓRIAS NA LISTA LATERAL
- * Realiza uma consulta à tabela "historias" e exibe os itens.
+ * Consulta a tabela "historias" e monta a lista lateral.
  *************************************************************/
 async function mostrarHistorias() {
   const ul = document.getElementById('titleListUl');
   if (!ul) return;
 
-  // Consulta as histórias do Supabase – você pode ordenar conforme desejar
   const { data: historias, error } = await supabase
       .from('historias')
       .select('*')
@@ -176,7 +190,6 @@ async function mostrarHistorias() {
       const li = document.createElement('li');
       li.textContent = h.titulo || "(sem título)";
       li.dataset.id = h.id;
-
       li.addEventListener('click', function(e) {
           e.stopPropagation();
           toggleMenuOpcoes(li, h.id);
@@ -201,7 +214,6 @@ function toggleMenuOpcoes(li, storyID) {
   cartaoBtn.textContent = 'Cartão';
   cartaoBtn.onclick = (e) => {
       e.stopPropagation();
-      // Exibe a área para publicação do cartão
       mostrarCartaoForm(storyID);
       menu.remove();
   };
@@ -231,7 +243,7 @@ function toggleMenuOpcoes(li, storyID) {
 
 /*************************************************************
  * FUNÇÃO: SALVAR/EDITAR HISTÓRIA
- * Se estiver editando, atualiza o registro; se nova, insere no Supabase.
+ * Se estiver editando, atualiza; senão, insere um novo registro.
  *************************************************************/
 async function salvarHistoria(titulo, descricao) {
   const storyForm = document.getElementById('storyForm');
@@ -270,7 +282,7 @@ async function salvarHistoria(titulo, descricao) {
 
 /*************************************************************
  * FUNÇÃO: EDITAR HISTÓRIA
- * Preenche o formulário com os dados da história consultada via Supabase.
+ * Preenche o formulário com os dados da história (consulta ao Supabase).
  *************************************************************/
 async function editarHistoria(storyID) {
   const { data: historia, error } = await supabase
@@ -286,7 +298,6 @@ async function editarHistoria(storyID) {
   document.getElementById('descricao').value = historia.descricao;
   document.getElementById('storyForm').dataset.editId = historia.id;
   document.querySelector('.btn[type="submit"]').textContent = "Atualizar";
-  // Exibe a história no container (caso queira exibi-la)
   exibirHistoriaNoContainer(storyID);
 }
 
@@ -307,7 +318,6 @@ async function excluirHistoria(storyID) {
   }
   alert("História excluída.");
   await mostrarHistorias();
-  // Se a história excluída estava em edição, limpa o formulário e a exibição
   const editID = document.getElementById('storyForm').dataset.editId;
   if (editID === storyID) {
       limparFormulario();
@@ -370,26 +380,24 @@ async function exibirHistoriaNoContainer(storyID) {
 }
 
 /*************************************************************
- * FUNÇÃO: MOSTRAR CARTÃO – Área de Publicação do Cartão
+ * FUNÇÃO: MOSTRAR CARTÃO – Exibe a área de publicação do cartão
  *************************************************************/
 async function mostrarCartaoForm(storyID) {
   const storyContainer = document.getElementById('storyContainer');
   const cartaoContainer = document.getElementById('cartaoContainer');
   if (!storyContainer || !cartaoContainer) return;
 
-  // Esconde a área de criação e exibe a área do cartão
+  // Esconde a área de criação e mostra a área do cartão
   storyContainer.style.display = 'none';
   cartaoContainer.style.display = 'block';
 
-  // Para exibir o formulário, pode-se, se necessário, buscar os dados do cartão já publicado
-  // Neste exemplo, assumimos que o usuário preencherá os campos do cartão
-  // Caso deseje, você pode consultar a tabela "cartoes" para popular o formulário se o cartão já existir
+  // Se necessário, você pode consultar a tabela "cartoes" para preencher os campos
+  // Se não, assume que o usuário irá preencher os inputs do cartão.
 }
 
 /*************************************************************
  * FUNÇÃO: PUBLICAR CARTÃO
- * Mapeia os dados dos inputs para a estrutura da tabela "cartoes"
- * e realiza um upsert via Supabase.
+ * Mapeia os inputs para a estrutura da tabela "cartoes" e realiza um upsert.
  *************************************************************/
 async function publicarCartao(storyID) {
   if (!storyID) {
@@ -423,18 +431,18 @@ async function publicarCartao(storyID) {
       return;
   }
 
-const novoCartao = {
-  id: storyID, // ou outro id que você utilize
-  historia_id: storyID, // associando ao id da história
-  titulo_cartao: document.getElementById('cartaoTitulo').value.trim(), // Título do cartão
-  historia_completa: document.getElementById('descricao').value.trim() || "",
-  data_criacao: cartaoData,
-  autor_cartao: autor || "Anônimo",
-  categorias: categoriasSelecionadas,
-  likes: 0,
-  sinopse_cartao: cartaoSinopse
-};
-
+  const novoCartao = {
+      id: storyID, // Vincula o cartão com a história
+      historia_id: storyID,
+      titulo_cartao: cartaoTitulo, // Campo na tabela
+      sinopse_cartao: cartaoSinopse,
+      // "historia_completa" pode vir da descrição completa da história
+      historia_completa: document.getElementById('descricao').value.trim() || "",
+      data_criacao: cartaoData,
+      autor_cartao: autor || "Anônimo",
+      categorias: categoriasSelecionadas,
+      likes: 0
+  };
 
   const { error } = await supabase
     .from('cartoes')
@@ -449,7 +457,7 @@ const novoCartao = {
 }
 
 /*************************************************************
- * FUNÇÃO: LER MAIS – Exibe detalhes do cartão no modal
+ * FUNÇÃO: LER MAIS – Exibe o modal com os detalhes do cartão
  *************************************************************/
 async function lerMais(storyID) {
   const modalOverlay = document.getElementById('modalOverlay');
@@ -469,8 +477,9 @@ async function lerMais(storyID) {
 
   document.getElementById('modalTitulo').textContent = item.autor_cartao || "";
   document.getElementById('modalDescricao').textContent = item.historia_completa || "";
-  document.getElementById('modalCartaoTitulo').textContent = item.cartaoSinopse ? item.cartaoSinopse.substring(0, 50) : "";
-  document.getElementById('modalCartaoSinopse').textContent = item.cartaoSinopse || "";
+  // Exibe os primeiros 50 caracteres do título do cartão no modal, por exemplo
+  document.getElementById('modalCartaoTitulo').textContent = item.titulo_cartao ? item.titulo_cartao.substring(0, 50) : "";
+  document.getElementById('modalCartaoSinopse').textContent = item.sinopse_cartao || "";
   document.getElementById('modalCartaoData').textContent = item.data_criacao ? new Date(item.data_criacao).toLocaleDateString() : "";
   document.getElementById('modalCartaoAutor').textContent = item.autor_cartao || "";
   document.getElementById('modalCartaoCategorias').textContent =
@@ -480,7 +489,7 @@ async function lerMais(storyID) {
 }
 
 /*************************************************************
- * OUTRAS FUNÇÕES (ex.: formatação, modo de leitura, marcador, etc.)
+ * FUNÇÕES AUXILIARES (Ex.: formatação, modo de leitura, marcador)
  *************************************************************/
 function formatarTexto(str) {
   let contador = 0;
@@ -497,9 +506,6 @@ function formatarTexto(str) {
   }
   return resultado;
 }
-
-// Exemplo: funções para modo de leitura e marcador de linha podem ser adicionadas aqui.
-// Caso deseje implementar navegação por partes do texto, use as funções abaixo (personalize conforme necessário):
 
 function wrapText(str, width) {
   const result = [];
@@ -539,12 +545,11 @@ if (containerLeitura) {
       const totalY = clickY + scrollOffset;
       const lineNumber = Math.floor(totalY / 22) + 1;
       console.log("Linha salva:", lineNumber);
-      // Você pode implementar a lógica para salvar essa informação se necessário
+      // Lógica para salvar ou acionar marcador, se necessário.
   });
 }
 
 function continuarMarcador() {
   if (!currentStoryId) return;
-  // Exemplo: implementar lógica para recuperar e destacar a linha salva
   alert("Função de marcador não implementada completamente.");
 }
