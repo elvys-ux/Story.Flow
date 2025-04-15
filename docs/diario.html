@@ -5,9 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Diário - StoryFlow</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <!-- Biblioteca do Supabase -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/supabase.min.js"></script>
-
+  <!-- Mantenha o mesmo CSS original -->
   <style>
     /* Estilos gerais */
     body {
@@ -22,7 +20,6 @@
       overflow: hidden;
       position: relative;
     }
-
     .gear {
       position: absolute;
       font-size: 24px;
@@ -33,7 +30,6 @@
       0% { transform: translateY(100vh) rotate(0deg); opacity: 1; }
       100% { transform: translateY(-60vh) rotate(360deg); opacity: 0; }
     }
-
     .header {
       width: 100%;
       background-color: #2d3748;
@@ -64,15 +60,13 @@
       font-size: 30px;
       color: white;
     }
-
-    /* Elemento para exibir nome do usuário ou "Login" */
+    /* Elemento para exibição do login/sessão */
     #nav-user {
       color: white;
       font-size: 18px;
       margin-left: 15px;
       cursor: pointer;
     }
-
     .diary-container {
       width: 90%;
       max-width: 600px;
@@ -129,12 +123,13 @@
       background: #4a5568;
       transform: scale(1.05);
     }
-
-    /* Estilos do modal de login do diário */
+    /* Estilos do modal de login para acesso ao Diário */
     .modal {
       position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       background: rgba(0,0,0,0.8);
       display: flex;
       justify-content: center;
@@ -165,7 +160,7 @@
   </style>
 </head>
 <body>
-  <!-- Modal de senha do diário (segurança adicional) -->
+  <!-- Modal de login para liberar o acesso ao Diário (senha fixa) -->
   <div id="login-modal" class="modal">
     <p>Digite a senha para acessar o Diário:</p>
     <input type="password" id="password-input" placeholder="Senha">
@@ -179,8 +174,8 @@
     <a href="historia.html">Histórias</a>
     <a href="Sobre.html">Sobre</a>
     <a href="diario.html">Resetar página</a>
-    <!-- Aqui mostramos "Login" ou o username -->
-    <span id="nav-user"></span>
+    <!-- Aqui ficará exibido "Login" ou o username vindo do Supabase -->
+    <span id="nav-user">Login</span>
   </div>
 
   <div class="diary-container">
@@ -189,94 +184,77 @@
     <button class="save-btn" id="save-btn">Guardar</button>
   </div>
 
+  <!-- Biblioteca do Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/supabase.min.js"></script>
   <script>
-    /* ------------------------------------------------------------------
-       1) Inicializamos o cliente Supabase e checamos a sessão.
-          Se houver usuário logado, buscamos o username na tabela "profile".
-       ------------------------------------------------------------------ */
-    const SUPABASE_URL = 'https://SEU_PROJETO.supabase.co';  // Ajuste para seu projeto
-    const SUPABASE_ANON_KEY = 'SUA_ANON_KEY';                // Ajuste para sua chave anônima
+    /* ------------------------------------------------------------
+       1. Integração com Supabase para exibir o username na barra
+          - Se houver sessão ativa, busca na tabela "profile" a coluna "username".
+       ------------------------------------------------------------ */
+    // Substitua os valores abaixo pela URL e pela ANON KEY do seu projeto Supabase
+    const SUPABASE_URL = 'https://SEU_PROJETO.supabase.co';
+    const SUPABASE_ANON_KEY = 'SUA_ANON_KEY';
     const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Referências aos elementos
-    const navUser    = document.getElementById('nav-user');
-    const diaryText  = document.getElementById('diary-text');
-    const loginModal = document.getElementById('login-modal');
-    const loginError = document.getElementById('login-error');
-
-    let logoutClickCount = 0;
-    let logoutTimer = null;
-
-    // Verifica se existe sessão de usuário no Supabase
     async function checkSession() {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (session) {
-        // Se existe sessão, busca "username" na tabela "profile"
-        const userId = session.user.id;
-        let { data: profileData, error: profileError } = await supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session && session.user) {
+        // Consulta o profile para obter o username
+        const { data, error } = await supabase
           .from('profile')
           .select('username')
-          .eq('id', userId)
+          .eq('id', session.user.id)
           .single();
-
-        if (!profileError && profileData) {
-          navUser.innerText = profileData.username;  // Exibe o username
-        } else {
-          navUser.innerText = "Login"; // Se não achou, mostra "Login"
+        if (!error && data) {
+          document.getElementById('nav-user').innerText = data.username;
         }
-      } else {
-        // Se não há sessão
-        navUser.innerText = "Login";
       }
     }
-
-    // Chamamos a checagem assim que possível
+    // Chama a checagem logo ao carregar a página
     checkSession();
 
-    /* ------------------------------------------------------------------
-       2) Senha para exibir a área do diário (camada adicional).
-          "minhaSenha123" dá acesso ao container de texto.
-       ------------------------------------------------------------------ */
-    const correctDiaryPassword = "minhaSenha123";
+    /* ------------------------------------------------------------
+       2. Acesso ao Diário via senha fixa ("minhaSenha123")
+          - A área de escrita do diário (localStorage) só é exibida se a senha estiver correta.
+       ------------------------------------------------------------ */
+    const correctPassword = "minhaSenha123";
     document.getElementById('login-btn').addEventListener('click', function() {
       const inputPass = document.getElementById('password-input').value;
-      if (inputPass === correctDiaryPassword) {
-        loginModal.style.display = 'none';
+      if (inputPass === correctPassword) {
+        document.getElementById('login-modal').style.display = 'none';
         loadDiary();
       } else {
-        loginError.style.display = 'block';
+        document.getElementById('login-error').style.display = 'block';
       }
     });
 
-    // Carrega o texto do diário do localStorage
     function loadDiary() {
       const savedText = localStorage.getItem('diaryContent');
       if (savedText) {
-        diaryText.value = savedText;
+        document.getElementById('diary-text').value = savedText;
       }
     }
 
-    // Salva o texto do diário no localStorage
     function saveDiary() {
-      const text = diaryText.value;
+      const text = document.getElementById('diary-text').value;
       localStorage.setItem('diaryContent', text);
       alert('Conteúdo salvo!');
     }
     document.getElementById('save-btn').addEventListener('click', saveDiary);
 
-    /* ------------------------------------------------------------------
-       3) Desconectar do diário (2 cliques rápidos no username).
-          - 1º clique: mostra aviso "Clique novamente para deslogar"
-            que some em 5s.
-          - 2º clique (dentro dos 5s): redireciona para Criacao.html
-       ------------------------------------------------------------------ */
-    navUser.addEventListener('click', function() {
-      // Se navUser é "Login", não faz nada (não tem sessão)
-      if (navUser.innerText === "Login") return;
+    /* ------------------------------------------------------------
+       3. Logout (saída do Diário) via duplo clique no username:
+          - Primeiro clique: mostra o aviso "Clique novamente para deslogar" (sumindo em 5s).
+          - Segundo clique (dentro de 5s): redireciona para a página "Criacao.html".
+       ------------------------------------------------------------ */
+    let logoutClickCount = 0;
+    let logoutTimer = null;
+    document.getElementById('nav-user').addEventListener('click', function() {
+      // Se o texto for "Login" (nenhuma sessão ativa) não faz nada
+      if (document.getElementById('nav-user').innerText === "Login") return;
 
       if (logoutClickCount === 0) {
         logoutClickCount = 1;
-        // Mostra aviso
         let warningDiv = document.createElement("div");
         warningDiv.setAttribute("id", "logout-warning");
         warningDiv.style.position = "fixed";
@@ -290,25 +268,25 @@
         warningDiv.innerText = "Clique novamente para deslogar";
         document.body.appendChild(warningDiv);
 
-        logoutTimer = setTimeout(() => {
+        logoutTimer = setTimeout(function(){
           logoutClickCount = 0;
           if (warningDiv.parentNode) {
             warningDiv.parentNode.removeChild(warningDiv);
           }
         }, 5000);
       } else {
-        // 2º clique: remove o aviso e redireciona
         clearTimeout(logoutTimer);
-        let existingWarning = document.getElementById("logout-warning");
-        if (existingWarning) existingWarning.remove();
-        
-        // Redireciona para Criacao.html
+        const warningDiv = document.getElementById("logout-warning");
+        if (warningDiv) warningDiv.parentNode.removeChild(warningDiv);
+        // Redireciona para a página "Criacao.html"
         window.location.href = "Criacao.html";
         logoutClickCount = 0;
       }
     });
 
-    /* Efeito de engrenagens flutuando */
+    /* ------------------------------------------------------------
+       4. Efeito de engrenagens flutuantes (mantido do código original)
+       ------------------------------------------------------------ */
     function createFloatingElements() {
       for (let i = 0; i < 5; i++) {
         const gear = document.createElement("div");
