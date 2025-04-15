@@ -48,8 +48,11 @@
       position: fixed;
       top: 0;
       left: 0;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
       z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     .header a {
       color: white;
@@ -64,11 +67,17 @@
       background: #4a5568;
     }
     .book-icon {
-      position: absolute;
-      top: 5px;
-      left: 15px;
       font-size: 30px;
       color: white;
+      margin-right: 15px;
+    }
+    /* Elemento para exibir o nome do usuário com logout */
+    #user-display {
+      color: white;
+      font-size: 18px;
+      margin-left: 15px;
+      cursor: pointer;
+      position: relative;
     }
     .diary-container {
       width: 90%;
@@ -160,6 +169,18 @@
       color: white;
       margin-bottom: 10px;
     }
+    /* Estilo do aviso de logout */
+    .logout-warning {
+      position: absolute;
+      top: 110%;
+      left: 0;
+      background: rgba(255, 255, 0, 0.9);
+      color: #2d3748;
+      padding: 3px 6px;
+      border-radius: 3px;
+      font-size: 14px;
+      white-space: nowrap;
+    }
   </style>
 </head>
 <body>
@@ -177,6 +198,8 @@
     <a href="historia.html">Histórias</a>
     <a href="Sobre.html">Sobre</a>
     <a href="diario.html">Resetar página</a>
+    <!-- Elemento para exibir o nome do usuário -->
+    <span id="user-display" style="margin-left: 20px; cursor: pointer;">Usuário</span>
   </div>
 
   <div class="diary-container">
@@ -186,33 +209,57 @@
   </div>
 
   <script>
-    // Função para carregar o conteúdo salvo do diário do localStorage
+    // Função para carregar o diário do localStorage
     function loadDiary() {
       const savedText = localStorage.getItem('diaryContent');
       if (savedText) {
         document.getElementById('diary-text').value = savedText;
       }
     }
-
-    // Função para salvar o conteúdo do diário no localStorage
+    // Função para salvar o diário no localStorage
     function saveDiary() {
       const text = document.getElementById('diary-text').value;
       localStorage.setItem('diaryContent', text);
       alert('Conteúdo salvo!');
     }
-
     document.getElementById('save-btn').addEventListener('click', saveDiary);
 
-    // Lógica simples de login utilizando apenas uma senha fixa
-    const correctPassword = "minhaSenha123"; // Altere para a senha desejada
+    // Lógica do modal de login utilizando senha fixa
+    const correctPassword = "minhaSenha123"; // Alterar para a senha desejada
     document.getElementById('login-btn').addEventListener('click', function() {
       const inputPassword = document.getElementById('password-input').value.trim();
       if (inputPassword === correctPassword) {
-        // Oculta o modal e carrega o diário
         document.getElementById('login-modal').style.display = 'none';
         loadDiary();
       } else {
         document.getElementById('login-error').style.display = 'block';
+      }
+    });
+
+    // Lógica para logout ao clicar duas vezes no nome do usuário
+    let logoutTimer = null;
+    document.getElementById('user-display').addEventListener('click', function() {
+      const userDisplay = document.getElementById('user-display');
+      // Se já estiver aguardando, significa segundo clique; efetuar logout
+      if (logoutTimer) {
+        // Simular logout: limpar o localStorage e recarregar página (ou exibir modal novamente)
+        localStorage.removeItem('diaryContent');
+        // Opcional: se desejar armazenar o fato de estar logado, remova também essa informação
+        alert("Você foi deslogado!");
+        window.location.reload();
+      } else {
+        // Exibe aviso para clicar novamente
+        const warning = document.createElement('span');
+        warning.classList.add('logout-warning');
+        warning.textContent = "Clique novamente para deslogar";
+        userDisplay.appendChild(warning);
+        logoutTimer = setTimeout(function() {
+          // Remove o aviso após 5 segundos e reseta a variável
+          if (warning.parentNode) {
+            warning.parentNode.removeChild(warning);
+          }
+          logoutTimer = null;
+        }, 5000);
       }
     });
 
