@@ -113,13 +113,7 @@ let likedStories = JSON.parse(localStorage.getItem('likedStories') || '[]');
 function loadAllStories() {
   // Se não houver histórias salvas, usamos um dummy data
   const raw = JSON.parse(localStorage.getItem('historias')) || [];
-  if (raw.length === 0) {
-    raw.push({
-      id: 1,
-      titulo: "Exemplo de História",
-      descricao: "A Sombra do Tirano\nIntrodução\nNa década de 1950, durante um regime marcado pela opressão e pelo medo, Eduardo era um dos principais colaboradores de um governo autoritário. O peso de suas ações, decepções e a constante vigilância moldavam um ambiente onde o horror não vinha apenas do lado externo, mas também de sua própria consciência.\n\nO Início da Dissolução\nÀ medida que os anos avançavam, Eduardo começou a ser assombrado por visões perturbadoras.\nA Descida ao Abismo\nOs sonhos de Eduardo transformaram-se em pesadelos constantes.\n\nClímax e Confronto Interno\n..."
-    });
-  }
+
   
   // Para cada história que não possuir "cartao", cria um cartão padrão a partir da "descricao"
   const transformed = raw.map(st => {
