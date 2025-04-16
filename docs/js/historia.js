@@ -1,9 +1,83 @@
+import { supabase } from './supabase.js';
 /*************************************************************
  * HISTORIA.JS
  * - A história permanece no container após “Atualizar”.
  * - Só aparece ao clicar em “Editar”. Se é “nova” não exibe nada.
  *************************************************************/
+/************************************************************
+ * [1] LOGIN/LOGOUT com Supabase
+ ************************************************************/
+async function exibirUsuarioLogado() {
+  const userArea = document.getElementById('userMenuArea');
+  if (!userArea) return;
+  try {
+    // Obtém a sessão atual do Supabase.
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+      console.error("Erro ao obter a sessão:", sessionError);
+      userArea.innerHTML = `<a href="Criacao.html" style="color:white;">
+        <i class="fas fa-user"></i> Login
+      </a>`;
+      return;
+    }
+    // Se não houver sessão ativa, exibe o link para login.
+    if (!session) {
+      userArea.innerHTML = `<a href="Criacao.html" style="color:white;">
+        <i class="fas fa-user"></i> Login
+      </a>`;
+      userArea.onclick = null;
+      return;
+    }
+    const userId = session.user.id;
+    // Consulta a tabela "profiles" para obter o campo "username".
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", userId)
+      .single();
 
+    let username = "";
+    if (profileError || !profile || !profile.username) {
+      // Se não encontrar o username, utiliza o email do usuário.
+      username = session.user.email;
+      console.warn("Não foi possível recuperar o username; utilizando email:", username);
+    } else {
+      username = profile.username;
+    }
+    
+    // Exibe o username na área destinada.
+    userArea.innerHTML = username;
+    // Ao clicar no nome do usuário, oferece a opção para logout.
+    userArea.onclick = () => {
+      if (confirm("Deseja fazer logout?")) {
+        supabase.auth.signOut().then(({ error }) => {
+          if (error) {
+            alert("Erro ao deslogar: " + error.message);
+          } else {
+      window.location.href = "Criacao.html"; // Redireciona para a página inicial
+    }
+        });
+      }
+    };
+  } catch (ex) {
+    console.error("Exceção em exibirUsuarioLogado:", ex);
+  }
+}
+
+/************************************************************
+ * [2] TOAST (Notificação)
+ ************************************************************/
+function showToast(message, duration = 2000) {
+  const toast = document.createElement('div');
+  toast.className = 'my-toast';
+  toast.innerText = message;
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    if (toast.parentNode) {
+      toast.parentNode.removeChild(toast);
+    }
+  }, duration);
+}
 /*************************************************************
  * EVENTO DOMContentLoaded
  *************************************************************/
@@ -269,34 +343,6 @@ function removerExibicaoHistoria() {
     const oldDiv = container.querySelector('.exibicao-historia');
     if (oldDiv) oldDiv.remove();
 }
-
-/*************************************************************
- * USUÁRIO LOGADO (OPCIONAL)
- *************************************************************/
-function exibirUsuarioLogado(){
-    const userArea = document.getElementById('userMenuArea');
-    if (!userArea) return;
-
-    userArea.innerHTML = '';
-    const userData = JSON.parse(localStorage.getItem('loggedUser'));
-
-    if(userData && userData.username){
-        userArea.innerHTML = userData.username;
-        userArea.onclick = function(){
-            if(confirm("Deseja fazer logout?")){
-                localStorage.removeItem('loggedUser');
-                location.reload();
-            }
-        };
-    } else {
-        userArea.innerHTML = `
-            <a href="Criacao.html" style="color:white;">
-                <i class="fas fa-user"></i> Login
-            </a>`;
-        userArea.onclick = null;
-    }
-}
-
 /*************************************************************
  * CARTÃO (ABORDAGEM B)
  *************************************************************/
