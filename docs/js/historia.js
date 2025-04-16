@@ -64,6 +64,7 @@ document.addEventListener('DOMContentLoaded', function() {
   exibirUsuarioLogado();
   mostrarHistorias();
 
+  // Form de História
   const storyForm = document.getElementById('storyForm');
   storyForm.addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -76,6 +77,7 @@ document.addEventListener('DOMContentLoaded', function() {
     await salvarHistoria(titulo, descricao);
   });
 
+  // Botão Nova História
   const novaHistoriaBtn = document.getElementById('novaHistoriaBtn');
   if (novaHistoriaBtn) novaHistoriaBtn.addEventListener('click', function() {
     if (confirm('Tem certeza de que deseja começar uma nova história?')) {
@@ -83,6 +85,12 @@ document.addEventListener('DOMContentLoaded', function() {
       removerExibicaoHistoria();
     }
   });
+
+  // Botão fechar modal
+  const closeModalBtn = document.getElementById('closeModal');
+  if (closeModalBtn) closeModalBtn.onclick = () => {
+    document.getElementById('modalOverlay').style.display = 'none';
+  };
 });
 
 /************************************************************
@@ -261,70 +269,76 @@ async function mostrarCartaoForm(storyID) {
   const { data: sessionData } = await supabase.auth.getSession();
   const userId = sessionData.session.user.id;
 
-  // Carrega cartão
+  // Carrega cartão existente
   const { data: card, error: cardErr } = await supabase
     .from('cartoes')
     .select('*')
     .eq('historia_id', storyID)
     .single();
   // Carrega categorias existentes
-  const { data: rels, error: relErr } = await supabase
+  const { data: rels = [], error: relErr } = await supabase
     .from('historia_categorias')
     .select('categoria_id')
     .eq('historia_id', storyID);
 
-  // Preenchimento
-  document.getElementById('cartaoTitulo').value = card?.titulo_cartao || '';
-  document.getElementById('cartaoSinopse').value = card?.sinopse_cartao || '';
-  document.getElementById('cartaoData').value = card?.data_criacao
-    ? new Date(card.data_criacao).toISOString().split('T')[0]
-    : new Date().toISOString().split('T')[0];
-  document.getElementById('cartaoAutor').value = card?.autor_cartao || '';
+  // Preenche campos do cartão
+  document.getElementById('titulo_cartao').value   = card?.titulo_cartao || '';
+  document.getElementById('sinopse_cartao').value = card?.sinopse_cartao   || '';
+  document.getElementById('data_criacao').value   = card?.data_criacao     ? new Date(card.data_criacao).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+  document.getElementById('autor_cartao').value   = card?.autor_cartao     || '';
 
-  const selected = rels?.map(r => String(r.categoria_id)) || [];
+  const selectedIds = rels.map(r => String(r.categoria_id));
   document.querySelectorAll('input[name="categoria"]').forEach(chk => {
-    chk.checked = selected.includes(chk.value);
+    chk.checked = selectedIds.includes(chk.value);
     const subDiv = document.getElementById('sub' + chk.value);
-    if (chk.checked && subDiv) subDiv.style.display = 'block';
-    else if (subDiv) subDiv.style.display = 'none';
+    if (subDiv) subDiv.style.display = chk.checked ? 'block' : 'none';
   });
 
   document.getElementById('btnPublicarCartao').onclick = () => publicarCartao(storyID, userId);
-  document.getElementById('btnLerMais').onclick = () => lerMais(storyID);
-  document.getElementById('btnVoltar').onclick = () => {
+  document.getElementById('btnLerMais').onclick       = () => lerMais(storyID);
+  document.getElementById('btnVoltar').onclick        = () => {
     cartaoArea.style.display = 'none';
-    storyArea.style.display = 'block';
+    storyArea.style.display  = 'block';
   };
 }
 
 async function publicarCartao(storyID, userId) {
-  if (!confirm('Aviso: Ao publicar o cartão, o conteúdo fica definitivo. Continuar?'))
-    return;
+  if (!confirm('Aviso: Ao publicar o cartão, o conteúdo fica definitivo. Continuar?')) return;
 
-  const tituloCartao = document.getElementById('cartaoTitulo').value.trim();
-  const sinopse = document.getElementById('cartaoSinopse').value.trim();
-  const dataCri = document.getElementById('cartaoData').value;
-  const autor = document.getElementById('cartaoAutor').value.trim();
-  const categorias = Array.from(document.querySelectorAll('input[name="categoria"]:checked'))
-    .map(chk => chk.value);
+  // Coleta valores do formulário
+  const tituloCartao = document.getElementById('titulo_cartao').value.trim();
+  const sinopse      = document.getElementById('sinopse_cartao').value.trim();
+  const dataCri      = document.getElementById('data_criacao').value;
+  const autor        = document.getElementById('autor_cartao').value.trim();
+  const nomesCategorias = Array.from(document.querySelectorAll('input[name="categoria"]:checked'))
+    .map(chk => chk.dataset.nome || chk.value);
 
-  if (!tituloCartao || !sinopse || categorias.length === 0) {
+  if (!tituloCartao || !sinopse || nomesCategorias.length === 0) {
     alert('Preencha todos os campos e selecione pelo menos uma categoria!');
     return;
   }
 
-  // Upsert cartão
+  // Obtém IDs das categorias pelo nome
+  const { data: cats, error: errCats } = await supabase
+    .from('categorias')
+    .select('id, nome')
+    .in('nome', nomesCategorias);
+  if (errCats || !cats) return alert('Erro ao buscar IDs de categorias: ' + errCats?.message);
+  const categoriaIds = cats.map(c => c.id);
+
+  // Insere ou atualiza cartão
   const { error: upErr } = await supabase
     .from('cartoes')
     .upsert({ historia_id: storyID, titulo_cartao: tituloCartao, sinopse_cartao: sinopse, autor_cartao: autor, data_criacao: dataCri });
   if (upErr) return alert('Erro ao publicar cartão: ' + upErr.message);
 
-  // Atualizar relação de categorias
+  // Atualiza relação de categorias
   await supabase
     .from('historia_categorias')
     .delete()
     .eq('historia_id', storyID);
-  const inserts = categorias.map(cid => ({ historia_id: storyID, categoria_id: cid, user_id: userId }));
+
+  const inserts = categoriaIds.map(cid => ({ historia_id: storyID, categoria_id: cid, user_id: userId }));
   const { error: catErr } = await supabase
     .from('historia_categorias')
     .insert(inserts);
@@ -339,20 +353,18 @@ async function publicarCartao(storyID, userId) {
 async function lerMais(storyID) {
   const modal = document.getElementById('modalOverlay');
   const tituloEl = document.getElementById('modalTitulo');
-  const descEl = document.getElementById('modalDescricao');
-  const tCartao = document.getElementById('modalCartaoTitulo');
-  const sCartao = document.getElementById('modalCartaoSinopse');
-  const dCartao = document.getElementById('modalCartaoData');
-  const aCartao = document.getElementById('modalCartaoAutor');
-  const cCartao = document.getElementById('modalCartaoCategorias');
+  const descEl   = document.getElementById('modalDescricao');
+  const tCartao  = document.getElementById('modalCartaoTitulo');
+  const sCartao  = document.getElementById('modalCartaoSinopse');
+  const dCartao  = document.getElementById('modalCartaoData');
+  const aCartao  = document.getElementById('modalCartaoAutor');
+  const cCartao  = document.getElementById('modalCartaoCategorias');
 
-  // Busca história
   const { data: hist } = await supabase
     .from('historias').select('*').eq('id', storyID).single();
   tituloEl.textContent = hist.titulo;
-  descEl.textContent = hist.descricao;
+  descEl.textContent   = hist.descricao;
 
-  // Busca cartão e categorias
   const { data: card } = await supabase
     .from('cartoes').select('*').eq('historia_id', storyID).single();
   const { data: rels } = await supabase
@@ -361,12 +373,11 @@ async function lerMais(storyID) {
     .eq('historia_id', storyID);
 
   tCartao.textContent = card?.titulo_cartao || '';
-  sCartao.textContent = card?.sinopse_cartao || '';
-  dCartao.textContent = card?.data_criacao || '';
-  aCartao.textContent = card?.autor_cartao || '';
+  sCartao.textContent = card?.sinopse_cartao  || '';
+  dCartao.textContent = card?.data_criacao    || '';
+  aCartao.textContent = card?.autor_cartao    || '';
   const names = rels?.map(r => r.categorias.nome) || [];
   cCartao.textContent = names.join(', ');
 
   modal.style.display = 'flex';
 }
-
