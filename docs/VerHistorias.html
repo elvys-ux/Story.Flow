@@ -29,6 +29,7 @@
     <div class="dropdown">
       <a href="#"><i class="fas fa-book"></i> Histórias</a>
       <div class="dropdown-content">
+        <!-- Links atualizados (sem espaços) -->
         <a href="hisotirasqueescrevi.html">Minhas Histórias</a>
         <a href="VerHistorias.html">Ler Histórias</a>
       </div>
@@ -44,7 +45,11 @@
   <div class="filter-bar">
     <select id="category-filter">
       <option value="">-- Categoria --</option>
-      <!-- Categorias serão carregadas via JavaScript -->
+      <option value="Fantasia">Fantasia</option>
+      <option value="Terror">Terror</option>
+      <option value="Comédia">Comédia</option>
+      <option value="Ficção Científica">Ficção Científica</option>
+      <option value="Drama">Drama</option>
     </select>
     <select id="sort-filter">
       <option value="date">Ordenar por Data</option>
@@ -67,8 +72,10 @@
     <div class="modal-content">
       <button class="modal-close" id="modalClose">Fechar</button>
       <h2 id="modalTitle">Título da História</h2>
-      <div id="modalFullText"></div>
-      <button id="continuarBtn" style="display:none">Continuar</button>
+      <!-- Texto completo (sinopse/história) -->
+      <p id="modalFullText"></p>
+      <button id="continuarBtn">Continuar</button>
+      <!-- Informações extras (data, autor, etc.) -->
       <div class="modal-info" id="modalInfo"></div>
     </div>
   </div>
@@ -88,7 +95,8 @@
     ©Ano-2025 / Elvys / StoryFlow / 𝐓𝐮𝐫𝐦𝐚-Tis7 <a href="Sobre.html">Termos de uso</a>
   </footer>
 
-  <!-- JS PRINCIPAL -->
+  <!-- JS PRINCIPAL: Inclua o script com type="module" se usar import/export -->
   <script type="module" src="js/VerHistorias.js"></script>
+
 </body>
 </html>
