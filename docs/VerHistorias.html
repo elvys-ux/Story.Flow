@@ -16,28 +16,29 @@
 </head>
 <body>
 
+
   <!-- NAVBAR -->
   <div class="navbar">
-    <a href="index.html"><i class="fas fa-home"></i> Início</a>
+    <a href="index.html"><i class="fas fa-home"></i>Início</a>
     <div class="dropdown">
-      <a href="#"><i class="fas fa-pencil-alt"></i> Criar História</a>
+      <a href="#"><i class="fas fa-pencil-alt"></i>Criar História</a>
       <div class="dropdown-content">
         <a href="diario.html">Escrever Diário</a>
         <a href="historia.html">Escrever História</a>
       </div>
     </div>
     <div class="dropdown">
-      <a href="#"><i class="fas fa-book"></i> Histórias</a>
+      <a href="#"><i class="fas fa-book"></i>Histórias</a>
       <div class="dropdown-content">
-        <!-- Links atualizados (sem espaços) -->
-        <a href="hisotirasqueescrevi.html">Minhas Histórias</a>
+         <a href="hisotirasqueescrevi.html">Minhas Histórias</a>
         <a href="VerHistorias.html">Ler Histórias</a>
       </div>
     </div>
     <div id="userMenuArea"></div>
     <div class="search-box">
       <button id="searchBtn"><i class="fas fa-search"></i></button>
-      <input type="text" id="searchBar" placeholder="Pesquisar...">
+	  <input type="text" id="searchBar" placeholder="Pesquisar...">
+
     </div>
   </div>
 
@@ -72,11 +73,13 @@
     <div class="modal-content">
       <button class="modal-close" id="modalClose">Fechar</button>
       <h2 id="modalTitle">Título da História</h2>
-      <!-- Texto completo (sinopse/história) -->
+
+      <!-- Texto completo (onde exibimos sinopse/história) -->
       <p id="modalFullText"></p>
-      <button id="continuarBtn">Continuar</button>
+	<button id="continuarBtn">Continuar</button>
       <!-- Informações extras (data, autor, etc.) -->
       <div class="modal-info" id="modalInfo"></div>
+
     </div>
   </div>
 
@@ -91,12 +94,13 @@
     </div>
   </div>
 
-  <footer>
+ <footer>
     ©Ano-2025 / Elvys / StoryFlow / 𝐓𝐮𝐫𝐦𝐚-Tis7 <a href="Sobre.html">Termos de uso</a>
   </footer>
 
   <!-- JS PRINCIPAL: Inclua o script com type="module" se usar import/export -->
   <script type="module" src="js/VerHistorias.js"></script>
+
 
 </body>
 </html>
