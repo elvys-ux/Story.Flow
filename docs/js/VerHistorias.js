@@ -112,7 +112,6 @@ let likedStories = JSON.parse(localStorage.getItem('likedStories') || '[]');
  ************************************************************/
 function loadAllStories() {
   // Se não houver histórias salvas, usamos um dummy data
-  const raw = JSON.parse(localStorage.getItem('historias')) || [];
 
   
   // Para cada história que não possuir "cartao", cria um cartão padrão a partir da "descricao"
