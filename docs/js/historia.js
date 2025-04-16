@@ -1,11 +1,12 @@
 import { supabase } from "./supabase.js";
 
 /*************************************************************
- * FUNÇÃO AUXILIAR
- * Trabalha com os dados de história e cartão no localStorage
+ * FUNÇÕES DE HISTÓRIA E CARTÃO (LocalStorage)
  *************************************************************/
 
-// Salva ou atualiza uma história no localStorage
+/**
+ * Salva ou atualiza uma história no localStorage.
+ */
 function salvarHistoria(titulo, descricao) {
   let historias = JSON.parse(localStorage.getItem('historias')) || [];
   const editID = document.getElementById('storyForm').dataset.editId;
@@ -32,150 +33,122 @@ function salvarHistoria(titulo, descricao) {
   mostrarHistorias();
 }
 
-// Atualiza o cartão de uma história no localStorage
+/**
+ * Atualiza o cartão de uma história (armazenado no localStorage).
+ */
 function publicarCartao(storyID) {
   const msg = "Aviso: Ao publicar o cartão, o conteúdo fica definitivo.\nEdições futuras não serão refletidas no cartão.\n\nContinuar?";
   if (!confirm(msg)) {
-      alert("Publicação cancelada.");
-      return;
+    alert("Publicação cancelada.");
+    return;
   }
-  
+
   let historias = JSON.parse(localStorage.getItem('historias')) || [];
   const h = historias.find(st => st.id === storyID);
   if (!h) return;
-  
+
   const cartaoTitulo = document.getElementById('cartaoTitulo').value.trim();
   const cartaoSinopse = document.getElementById('cartaoSinopse').value.trim();
   const cartaoData = document.getElementById('cartaoData').value.trim();
   const autor = document.getElementById('cartaoAutor').value.trim();
   const categoriasSelecionadas = Array.from(document.querySelectorAll('input[name="categoria"]:checked'))
       .map(chk => chk.value);
-      
+
   if (!cartaoTitulo) {
-      alert("Preencha o título do Cartão!");
-      return;
+    alert("Preencha o título do Cartão!");
+    return;
   }
   if (!cartaoSinopse) {
-      alert("Preencha a sinopse do Cartão!");
-      return;
+    alert("Preencha a sinopse do Cartão!");
+    return;
   }
   if (categoriasSelecionadas.length === 0) {
-      alert("Selecione pelo menos uma categoria!");
-      return;
+    alert("Selecione pelo menos uma categoria!");
+    return;
   }
-  
-  // Atualiza o objeto do cartão dentro da história
+
+  // Atualiza a propriedade 'cartao' na história
   h.cartao = {
-      tituloCartao: cartaoTitulo,
-      sinopseCartao: cartaoSinopse,
-      dataCartao: cartaoData, // Certifique-se de que o valor esteja no formato yyyy-MM-dd
-      autorCartao: autor,
-      categorias: categoriasSelecionadas,
-      historiaCompleta: h.descricao || "",
-      likes: (h.cartao && h.cartao.likes) ? h.cartao.likes : 0
+    tituloCartao: cartaoTitulo,
+    sinopseCartao: cartaoSinopse,
+    dataCartao: cartaoData, // o input type=date espera o formato yyyy-MM-dd
+    autorCartao: autor,
+    categorias: categoriasSelecionadas,
+    historiaCompleta: h.descricao || "",
+    likes: (h.cartao && h.cartao.likes) ? h.cartao.likes : 0
   };
-  
+
   const idx = historias.findIndex(st => st.id === storyID);
   if (idx >= 0) {
-      historias[idx] = h;
-      localStorage.setItem('historias', JSON.stringify(historias));
+    historias[idx] = h;
+    localStorage.setItem('historias', JSON.stringify(historias));
   }
-  
+
   alert("Cartão publicado com sucesso!");
 }
 
-/*************************************************************
- * EVENTO DOMContentLoaded
- *************************************************************/
-document.addEventListener('DOMContentLoaded', function() {
-  mostrarHistorias(); // Carrega a lista lateral
+/**
+ * Exibe os detalhes da história e do cartão no modal.
+ */
+function lerMais(storyID) {
+  const modalOverlay = document.getElementById('modalOverlay');
+  if (!modalOverlay) return;
 
-  // Submissão do formulário de história
-  const storyForm = document.getElementById('storyForm');
-  storyForm.addEventListener('submit', function(e) {
-      e.preventDefault();
-      const titulo = document.getElementById('titulo').value.trim();
-      const descricao = document.getElementById('descricao').value.trim();
-      if (!titulo || !descricao) {
-          alert("Preencha o título e a descrição!");
-          return;
-      }
-      salvarHistoria(titulo, descricao);
-  });
+  let historias = JSON.parse(localStorage.getItem('historias')) || [];
+  const h = historias.find(st => st.id === storyID);
+  if (!h) return;
 
-  // Botão Nova História
-  const novaHistoriaBtn = document.getElementById('novaHistoriaBtn');
-  if (novaHistoriaBtn) {
-      novaHistoriaBtn.addEventListener('click', function () {
-          if (confirm("Tem certeza de que deseja começar uma nova história?")) {
-              limparFormulario();
-              removerExibicaoHistoria();
-          }
-      });
-  }
+  document.getElementById('modalTitulo').textContent = h.titulo || "";
+  document.getElementById('modalDescricao').textContent = h.descricao || "";
 
-  // Exibe usuário logado via Supabase (mantém o login ativo)
-  exibirUsuarioLogado();
-});
-
-/*************************************************************
- * LISTA LATERAL (HOVER)
- *************************************************************/
-let isTitleListVisible = false;
-document.body.addEventListener('mousemove', function(e) {
-  if (e.clientX < 50 && !isTitleListVisible) {
-      toggleTitleList(true);
-  }
-});
-document.body.addEventListener('mouseleave', function() {
-  if (isTitleListVisible) {
-      toggleTitleList(false);
-  }
-});
-document.body.addEventListener('click', function(e) {
-  const titleList = document.getElementById('titleListLeft');
-  if (isTitleListVisible && titleList && !titleList.contains(e.target)) {
-      toggleTitleList(false);
-  }
-});
-
-function toggleTitleList(show) {
-  const list = document.getElementById('titleListLeft');
-  if (!list) return;
-  if (show) {
-      list.classList.add('visible');
-      isTitleListVisible = true;
+  if (!h.cartao) {
+    document.getElementById('modalCartaoTitulo').textContent = "";
+    document.getElementById('modalCartaoSinopse').textContent = "";
+    document.getElementById('modalCartaoData').textContent = "";
+    document.getElementById('modalCartaoAutor').textContent = "";
+    document.getElementById('modalCartaoCategorias').textContent = "";
   } else {
-      list.classList.remove('visible');
-      isTitleListVisible = false;
+    document.getElementById('modalCartaoTitulo').textContent = h.cartao.tituloCartao || "";
+    document.getElementById('modalCartaoSinopse').textContent = h.cartao.sinopseCartao || "";
+    document.getElementById('modalCartaoData').textContent = h.cartao.dataCartao || "";
+    document.getElementById('modalCartaoAutor').textContent = h.cartao.autorCartao || "";
+    document.getElementById('modalCartaoCategorias').textContent =
+      (h.cartao.categorias && h.cartao.categorias.length > 0)
+        ? h.cartao.categorias.join(', ')
+        : "";
   }
+  modalOverlay.style.display = 'flex';
 }
 
-/*************************************************************
- * MOSTRAR HISTÓRIAS NA LISTA LATERAL
- *************************************************************/
+/**
+ * Exibe a lista de histórias (lado esquerdo)
+ */
 function mostrarHistorias() {
   const ul = document.getElementById('titleListUl');
   if (!ul) return;
+
   ul.innerHTML = '';
   let historias = JSON.parse(localStorage.getItem('historias')) || [];
   historias.forEach((h) => {
-      const li = document.createElement('li');
-      li.textContent = h.titulo || "(sem título)";
-      li.dataset.id = h.id;
-      li.addEventListener('click', function(e) {
-          e.stopPropagation();
-          toggleMenuOpcoes(li, h.id);
-      });
-      ul.appendChild(li);
+    const li = document.createElement('li');
+    li.textContent = h.titulo || "(sem título)";
+    li.dataset.id = h.id;
+    li.addEventListener('click', function(e) {
+      e.stopPropagation();
+      toggleMenuOpcoes(li, h.id);
+    });
+    ul.appendChild(li);
   });
 }
 
+/**
+ * Exibe um menu de opções (Cartão, Editar, Excluir) para uma história.
+ */
 function toggleMenuOpcoes(li, storyID) {
   const existingMenu = li.querySelector('.menu-opcoes');
   if (existingMenu) {
-      existingMenu.remove();
-      return;
+    existingMenu.remove();
+    return;
   }
   const menu = document.createElement('div');
   menu.classList.add('menu-opcoes');
@@ -183,25 +156,25 @@ function toggleMenuOpcoes(li, storyID) {
   const cartaoBtn = document.createElement('button');
   cartaoBtn.textContent = 'Cartão';
   cartaoBtn.onclick = (e) => {
-      e.stopPropagation();
-      mostrarCartaoForm(storyID);
-      menu.remove();
+    e.stopPropagation();
+    mostrarCartaoForm(storyID);
+    menu.remove();
   };
 
   const editBtn = document.createElement('button');
   editBtn.textContent = 'Editar';
   editBtn.onclick = (e) => {
-      e.stopPropagation();
-      editarHistoria(storyID);
-      menu.remove();
+    e.stopPropagation();
+    editarHistoria(storyID);
+    menu.remove();
   };
 
   const delBtn = document.createElement('button');
   delBtn.textContent = 'Excluir';
   delBtn.onclick = (e) => {
-      e.stopPropagation();
-      excluirHistoria(storyID);
-      menu.remove();
+    e.stopPropagation();
+    excluirHistoria(storyID);
+    menu.remove();
   };
 
   menu.appendChild(cartaoBtn);
@@ -211,9 +184,9 @@ function toggleMenuOpcoes(li, storyID) {
   menu.style.display = 'block';
 }
 
-/*************************************************************
- * SALVAR/EDITAR EXIBIR HISTÓRIA (LocalStorage)
- *************************************************************/
+/**
+ * Preenche o formulário com os dados da história para edição.
+ */
 function editarHistoria(storyID) {
   let historias = JSON.parse(localStorage.getItem('historias')) || [];
   const found = historias.find(h => h.id === storyID);
@@ -225,6 +198,9 @@ function editarHistoria(storyID) {
   exibirHistoriaNoContainer(storyID);
 }
 
+/**
+ * Exclui uma história do localStorage.
+ */
 function excluirHistoria(storyID) {
   if (!confirm("Deseja excluir a história?")) return;
   let historias = JSON.parse(localStorage.getItem('historias')) || [];
@@ -234,11 +210,14 @@ function excluirHistoria(storyID) {
   mostrarHistorias();
   const editID = document.getElementById('storyForm').dataset.editId;
   if (editID === storyID) {
-      limparFormulario();
-      removerExibicaoHistoria();
+    limparFormulario();
+    removerExibicaoHistoria();
   }
 }
 
+/**
+ * Limpa o formulário de história.
+ */
 function limparFormulario() {
   document.getElementById('titulo').value = '';
   document.getElementById('descricao').value = '';
@@ -246,14 +225,19 @@ function limparFormulario() {
   document.querySelector('.btn[type="submit"]').textContent = "Salvar";
 }
 
+/**
+ * Exibe uma única história (abaixo do formulário).
+ */
 function exibirHistoriaNoContainer(storyID) {
   let historias = JSON.parse(localStorage.getItem('historias')) || [];
   const found = historias.find(h => h.id === storyID);
   if (!found) return;
   const container = document.getElementById('storyContainer');
   if (!container) return;
+  // Remove exibição anterior
   const oldDiv = container.querySelector('.exibicao-historia');
   if (oldDiv) oldDiv.remove();
+  // Cria uma nova div para exibir a história
   const div = document.createElement('div');
   div.classList.add('exibicao-historia');
   div.style.border = '1px solid #ccc';
@@ -266,9 +250,9 @@ function exibirHistoriaNoContainer(storyID) {
   p.textContent = found.descricao || "";
   div.appendChild(p);
   if (found.cartao) {
-      const infoCartao = document.createElement('p');
-      infoCartao.innerHTML = "<em>(Este texto foi publicado no Cartão)</em>";
-      div.appendChild(infoCartao);
+    const infoCartao = document.createElement('p');
+    infoCartao.innerHTML = "<em>(Este texto foi publicado no Cartão)</em>";
+    div.appendChild(infoCartao);
   }
   container.appendChild(div);
 }
@@ -280,45 +264,46 @@ async function exibirUsuarioLogado(){
   const userArea = document.getElementById('userMenuArea');
   if (!userArea) return;
   try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError) {
-          console.error("Erro ao obter a sessão:", sessionError);
-          return;
-      }
-      if (!session) {
-          userArea.innerHTML = `<a href="Criacao.html" style="color:white;">
-              <i class="fas fa-user"></i> Login
-          </a>`;
-          userArea.onclick = null;
-          return;
-      }
-      const userId = session.user.id;
-      const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("username")
-          .eq("id", userId)
-          .single();
-      let displayName = "";
-      if (profileError || !profileData || !profileData.username) {
-          displayName = session.user.email;
-          console.warn("Não foi possível recuperar o username; utilizando email:", displayName);
-      } else {
-          displayName = profileData.username;
-      }
-      userArea.innerHTML = displayName;
-      userArea.onclick = () => {
-          if (confirm("Deseja fazer logout?")) {
-              supabase.auth.signOut().then(({ error }) => {
-                  if (error) {
-                      alert("Erro ao deslogar: " + error.message);
-                  } else {
-                      window.location.href = "Criacao.html";
-                  }
-              });
+    // Obtém a sessão atual do Supabase
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+      console.error("Erro ao obter a sessão:", sessionError);
+      return;
+    }
+    if (!session) {
+      userArea.innerHTML = `<a href="Criacao.html" style="color:white;">
+          <i class="fas fa-user"></i> Login
+      </a>`;
+      userArea.onclick = null;
+      return;
+    }
+    const userId = session.user.id;
+    const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("username")
+        .eq("id", userId)
+        .single();
+    let displayName = "";
+    if (profileError || !profileData || !profileData.username) {
+      displayName = session.user.email;
+      console.warn("Não foi possível recuperar o username; utilizando email:", displayName);
+    } else {
+      displayName = profileData.username;
+    }
+    userArea.innerHTML = displayName;
+    userArea.onclick = () => {
+      if (confirm("Deseja fazer logout?")) {
+        supabase.auth.signOut().then(({ error }) => {
+          if (error) {
+            alert("Erro ao deslogar: " + error.message);
+          } else {
+            window.location.href = "Criacao.html";
           }
-      };
+        });
+      }
+    };
   } catch (ex) {
-      console.error("Exceção em exibirUsuarioLogado:", ex);
+    console.error("Exceção em exibirUsuarioLogado:", ex);
   }
 }
 
@@ -329,134 +314,78 @@ function mostrarCartaoForm(storyID) {
   const storyContainer = document.getElementById('storyContainer');
   const cartaoContainer = document.getElementById('cartaoContainer');
   if (!storyContainer || !cartaoContainer) return;
-  
+
   storyContainer.style.display = 'none';
   cartaoContainer.style.display = 'block';
-  
+
   let historias = JSON.parse(localStorage.getItem('historias')) || [];
   const h = historias.find(st => st.id === storyID);
   if (!h) return;
-  
-  // Inicializa o objeto do cartão, se não existir
+
+  // Inicializa o objeto do cartão se não existir
   if (!h.cartao) {
-      h.cartao = {
-          tituloCartao: "",
-          sinopseCartao: "",
-          dataCartao: "",
-          autorCartao: "",
-          categorias: []
-      };
+    h.cartao = {
+      tituloCartao: "",
+      sinopseCartao: "",
+      dataCartao: "",
+      autorCartao: "",
+      categorias: []
+    };
   }
-  
+
   document.getElementById('cartaoTitulo').value = h.cartao.tituloCartao;
   document.getElementById('cartaoSinopse').value = h.cartao.sinopseCartao;
   document.getElementById('cartaoData').value = h.cartao.dataCartao || new Date().toISOString().split('T')[0];
   document.getElementById('cartaoAutor').value = h.cartao.autorCartao;
-  
+
   // Configura os checkboxes de categorias
   document.querySelectorAll('input[name="categoria"]').forEach(chk => {
-      chk.checked = false;
+    chk.checked = false;
   });
   if (h.cartao.categorias) {
-      document.querySelectorAll('input[name="categoria"]').forEach(chk => {
-          if (h.cartao.categorias.includes(chk.value)) {
-              chk.checked = true;
-          }
-      });
+    document.querySelectorAll('input[name="categoria"]').forEach(chk => {
+      if (h.cartao.categorias.includes(chk.value)) {
+        chk.checked = true;
+      }
+    });
   }
-  
+
   document.getElementById('btnPublicarCartao').onclick = function() {
-      publicarCartao(storyID);
+    publicarCartao(storyID);
   };
   document.getElementById('btnLerMais').onclick = function() {
-      lerMais(storyID);
+    lerMais(storyID);
   };
   document.getElementById('btnVoltar').onclick = function() {
-      cartaoContainer.style.display = 'none';
-      storyContainer.style.display = 'block';
+    cartaoContainer.style.display = 'none';
+    storyContainer.style.display = 'block';
   };
 }
 
-// Salva o cartão e suas categorias no localStorage
-function publicarCartao(storyID) {
-  const msg = "Aviso: Ao publicar o cartão, o conteúdo fica definitivo.\nEdições futuras não serão refletidas no cartão.\n\nContinuar?";
-  if (!confirm(msg)) {
-      alert("Publicação cancelada.");
+/*************************************************************
+ * EVENTOS INICIAIS
+ *************************************************************/
+document.addEventListener('DOMContentLoaded', function() {
+  mostrarHistorias();
+  const storyForm = document.getElementById('storyForm');
+  storyForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const titulo = document.getElementById('titulo').value.trim();
+    const descricao = document.getElementById('descricao').value.trim();
+    if (!titulo || !descricao) {
+      alert("Preencha o título e a descrição!");
       return;
+    }
+    salvarHistoria(titulo, descricao);
+  });
+  const novaHistoriaBtn = document.getElementById('novaHistoriaBtn');
+  if (novaHistoriaBtn) {
+    novaHistoriaBtn.addEventListener('click', function() {
+      if (confirm("Tem certeza de que deseja começar uma nova história?")) {
+        limparFormulario();
+        removerExibicaoHistoria();
+      }
+    });
   }
-  
-  let historias = JSON.parse(localStorage.getItem('historias')) || [];
-  const h = historias.find(st => st.id === storyID);
-  if (!h) return;
-  
-  const cartaoTitulo = document.getElementById('cartaoTitulo').value.trim();
-  const cartaoSinopse = document.getElementById('cartaoSinopse').value.trim();
-  const cartaoData = document.getElementById('cartaoData').value.trim();
-  const autor = document.getElementById('cartaoAutor').value.trim();
-  const categoriasSelecionadas = Array.from(document.querySelectorAll('input[name="categoria"]:checked'))
-      .map(chk => chk.value);
-  
-  if (!cartaoTitulo) {
-      alert("Preencha o título do Cartão!");
-      return;
-  }
-  if (!cartaoSinopse) {
-      alert("Preencha a sinopse do Cartão!");
-      return;
-  }
-  if (categoriasSelecionadas.length === 0) {
-      alert("Selecione pelo menos uma categoria!");
-      return;
-  }
-  
-  // Atualiza os dados do cartão na história
-  h.cartao = {
-      tituloCartao: cartaoTitulo,
-      sinopseCartao: cartaoSinopse,
-      dataCartao: cartaoData, // O input date espera o formato yyyy-MM-dd
-      autorCartao: autor,
-      categorias: categoriasSelecionadas,
-      historiaCompleta: h.descricao || "",
-      likes: (h.cartao && h.cartao.likes) ? h.cartao.likes : 0
-  };
-  
-  const idx = historias.findIndex(st => st.id === storyID);
-  if (idx >= 0) {
-      historias[idx] = h;
-      localStorage.setItem('historias', JSON.stringify(historias));
-  }
-  
-  alert("Cartão publicado com sucesso!");
-}
-
-// Exibe os dados do cartão (e da história) no modal
-function lerMais(storyID) {
-  const modalOverlay = document.getElementById('modalOverlay');
-  if (!modalOverlay) return;
-  
-  let historias = JSON.parse(localStorage.getItem('historias')) || [];
-  const h = historias.find(st => st.id === storyID);
-  if (!h) return;
-  
-  document.getElementById('modalTitulo').textContent = h.titulo || "";
-  document.getElementById('modalDescricao').textContent = h.descricao || "";
-  
-  if (!h.cartao) {
-      document.getElementById('modalCartaoTitulo').textContent = "";
-      document.getElementById('modalCartaoSinopse').textContent = "";
-      document.getElementById('modalCartaoData').textContent = "";
-      document.getElementById('modalCartaoAutor').textContent = "";
-      document.getElementById('modalCartaoCategorias').textContent = "";
-  } else {
-      document.getElementById('modalCartaoTitulo').textContent = h.cartao.tituloCartao || "";
-      document.getElementById('modalCartaoSinopse').textContent = h.cartao.sinopseCartao || "";
-      document.getElementById('modalCartaoData').textContent = h.cartao.dataCartao || "";
-      document.getElementById('modalCartaoAutor').textContent = h.cartao.autorCartao || "";
-      document.getElementById('modalCartaoCategorias').textContent = 
-          (h.cartao.categorias && h.cartao.categorias.length > 0) 
-              ? h.cartao.categorias.join(', ')
-              : "";
-  }
-  
-  modalOverlay.style.display = 'flex';
-}
+  exibirUsuarioLogado();
+});
