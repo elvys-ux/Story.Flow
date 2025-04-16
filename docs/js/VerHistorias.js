@@ -52,7 +52,7 @@ async function exibirUsuarioLogado() {
         if (error) {
           alert("Erro ao deslogar: " + error.message);
         } else {
-          window.location.href = "index.html";
+          window.location.href = "Criacao.html";
         }
       });
     }
