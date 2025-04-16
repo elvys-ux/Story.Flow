@@ -4,17 +4,17 @@ import { supabase } from "./supabase.js";
  * FUNÇÃO AUXILIAR PARA OBTER O ID DA CATEGORIA PELO NOME
  *************************************************************/
 async function getCategoriaId(nome) {
-    const { data, error } = await supabase
-      .from('categorias')
-      .select('id')
-      .eq('nome', nome)
-      .single();
-    if (error) {
-      console.error(`Erro ao buscar a categoria "${nome}":`, error);
-      return null;
-    }
-    console.log(`Categoria "${nome}" encontrada com ID: ${data.id}`);
-    return data.id;
+  const { data, error } = await supabase
+    .from('categorias')
+    .select('id')
+    .eq('nome', nome)
+    .single();
+  if (error) {
+    console.error(`Erro ao buscar a categoria "${nome}":`, error);
+    return null;
+  }
+  console.log(`Categoria "${nome}" encontrada com ID: ${data.id}`);
+  return data.id;
 }
 
 /*************************************************************
@@ -375,7 +375,7 @@ async function mostrarCartaoForm(storyID) {
     document.getElementById('data_criacao').value = card ? card.data_criacao : new Date().toISOString().split('T')[0];
     document.getElementById('autor_cartao').value = card ? card.autor_cartao : "";
 
-    // Ajusta a seleção de categorias com base na tabela de relacionamento
+    // Ajusta a seleção de categorias com base na tabela de relacionamento (se houver dados salvos)
     let selectedCats = [];
     if (card) {
         const { data: catData, error: catError } = await supabase
@@ -440,7 +440,7 @@ async function publicarCartao(storyID) {
         return;
     }
 
-    // Inserir ou atualizar os dados do cartão na tabela 'cartoes'
+    // Insere ou atualiza os dados do cartão na tabela 'cartoes'
     console.log("Inserindo cartão com:", {
       historia_id: storyID,
       titulo_cartao: cartaoTitulo,
@@ -468,7 +468,7 @@ async function publicarCartao(storyID) {
     const userId = sessionResponse.data.session?.user?.id;
     console.log("User ID para relacionamento:", userId);
 
-    // Para cada categoria selecionada, converte o nome para o ID e insere o relacionamento, incluindo o user_id
+    // Para cada categoria selecionada, busca o ID e insere o relacionamento na tabela 'historia_categorias'
     for (let categoriaName of categoriasSelecionadas) {
          const catId = await getCategoriaId(categoriaName);
          if (catId) {
