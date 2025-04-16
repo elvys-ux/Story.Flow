@@ -59,21 +59,7 @@ async function exibirUsuarioLogado() {
     console.error("Exceção em exibirUsuarioLogado:", ex);
   }
 }
-/************************************************************
- * [2] TOAST (Notificação)
- ************************************************************/
-function showToast(message, duration = 2000) {
-  const toast = document.createElement('div');
-  toast.className = 'my-toast'; 
-  toast.innerText = message;
-  document.body.appendChild(toast);
 
-  setTimeout(() => {
-    if (toast.parentNode) {
-      toast.parentNode.removeChild(toast);
-    }
-  }, duration);
-}
 
 /************************************************************
  * [3] VARIÁVEIS GLOBAIS
