@@ -273,70 +273,51 @@ function removerExibicaoHistoria() {
  * CARTÃO (Supabase)
  ************************************************************/
 async function mostrarCartaoForm(storyID) {
-  const storyArea  = document.getElementById('storyContainer');
-  const cartaoArea = document.getElementById('cartaoContainer');
-  storyArea.style.display  = 'none';
-  cartaoArea.style.display = 'block';
-
-  const { data: { session } } = await supabase.auth.getSession();
-  const userId = session.user.id;
-
-  const { data: card } = await supabase
-    .from('cartoes')
-    .select('*')
-    .eq('historia_id', storyID)
-    .single();
-  const { data: rels = [] } = await supabase
-    .from('historia_categorias')
-    .select('categoria_id')
-    .eq('historia_id', storyID);
-
-  // Preenche campos
-  document.getElementById('titulo_cartao').value   = card?.titulo_cartao || '';
-  document.getElementById('sinopse_cartao').value = card?.sinopse_cartao  || '';
-  document.getElementById('data_criacao').value   = card?.data_criacao    ? new Date(card.data_criacao).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
-  document.getElementById('autor_cartao').value   = card?.autor_cartao    || '';
-
+  const storyArea = document.getElementById('storyContainer'); const cartaoArea = document.getElementById('cartaoContainer');
+  storyArea.style.display = 'none'; cartaoArea.style.display = 'block';
+  const { data: { session } } = await supabase.auth.getSession(); const userId = session.user.id;
+  const { data: card } = await supabase.from('cartoes').select('*').eq('historia_id', storyID).single();
+  const { data: rels = [] } = await supabase.from('historia_categorias').select('categoria_id').eq('historia_id', storyID);
+  document.getElementById('titulo_cartao').value = card?.titulo_cartao || '';
+  document.getElementById('sinopse_cartao').value = card?.sinopse_cartao || '';
+  document.getElementById('data_criacao').value = card?.data_criacao ? new Date(card.data_criacao).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+  document.getElementById('autor_cartao').value = card?.autor_cartao || '';
   const selected = rels.map(r => String(r.categoria_id));
-  document.querySelectorAll('input[name="categoria"]').forEach(chk => {
-    chk.checked = selected.includes(chk.value);
-  });
-
+  document.querySelectorAll('input[name="categoria"]').forEach(chk => chk.checked = selected.includes(chk.value));
   document.getElementById('btnPublicarCartao').onclick = () => publicarCartao(storyID, userId);
-  document.getElementById('btnLerMais').onclick       = () => lerMais(storyID);
-  document.getElementById('btnVoltar').onclick        = () => {
-    cartaoArea.style.display  = 'none';
-    storyArea.style.display   = 'block';
-  };
+  document.getElementById('btnLerMais').onclick = () => lerMais(storyID);
+  document.getElementById('btnVoltar').onclick = () => { cartaoArea.style.display = 'none'; storyArea.style.display = 'block'; };
 }
 
 async function publicarCartao(storyID, userId) {
   if (!confirm('Aviso: Ao publicar o cartão, o conteúdo fica definitivo. Continuar?')) return;
-
   const tituloCartao = document.getElementById('titulo_cartao').value.trim();
-  const sinopse      = document.getElementById('sinopse_cartao').value.trim();
-  const dataCri      = document.getElementById('data_criacao').value;
-  const autor        = document.getElementById('autor_cartao').value.trim();
-  const nomesCat     = Array.from(document.querySelectorAll('input[name="categoria"]:checked')).map(chk => chk.value);
+  const sinopse = document.getElementById('sinopse_cartao').value.trim();
+  const dataCri = document.getElementById('data_criacao').value;
+  const autor = document.getElementById('autor_cartao').value.trim();
+  const nomesCat = Array.from(document.querySelectorAll('input[name="categoria"]:checked')).map(chk => chk.value);
+  if (!tituloCartao || !sinopse || !nomesCat.length) return alert('Preencha todos os campos e selecione pelo menos uma categoria!');
 
-  if (!tituloCartao || !sinopse || !nomesCat.length) {
-    return alert('Preencha todos os campos e selecione pelo menos uma categoria!');
-  }
-
-  const { data: cats } = await supabase
+  const { data: cats, error: errCats } = await supabase
     .from('categorias')
     .select('id')
     .in('nome', nomesCat);
+  if (errCats) return alert('Erro ao buscar categorias: ' + errCats.message);
   const catIds = cats.map(c => c.id);
 
-  await supabase.from('cartoes').upsert({ historia_id: storyID, titulo_cartao: tituloCartao, sinopse_cartao: sinopse, autor_cartao: autor, data_criacao: dataCri });
+  const { error: upErr } = await supabase.from('cartoes').upsert({ historia_id: storyID, titulo_cartao: tituloCartao, sinopse_cartao: sinopse, autor_cartao: autor, data_criacao: dataCri });
+  if (upErr) return alert('Erro ao salvar cartão: ' + upErr.message);
 
-  await supabase.from('historia_categorias').delete().eq('historia_id', storyID);
+  const { error: delErr } = await supabase.from('historia_categorias').delete().eq('historia_id', storyID);
+  if (delErr) return alert('Erro ao limpar categorias antigas: ' + delErr.message);
+
   const inserts = catIds.map(id => ({ historia_id: storyID, categoria_id: id, user_id: userId }));
-  await supabase.from('historia_categorias').insert(inserts);
+  const { data: inserted, error: insErr } = await supabase.from('historia_categorias').insert(inserts);
+  if (insErr) return alert('Erro ao salvar categorias: ' + insErr.message);
 
-  alert('Cartão publicado com sucesso!');
+  showToast('Cartão e categorias publicados com sucesso!', 3000);
 }
+
 
 /************************************************************
  * LER MAIS (modal)
