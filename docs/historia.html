@@ -5,43 +5,56 @@
   <title>StoryFlow - Cartão Fundo Bege (Menor Modal)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Ícones do Font Awesome (opcional) -->
+  <!-- Ícones do Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-<link rel="stylesheet" href="css/historia.css">
+  <link rel="stylesheet" href="css/historia.css">
+
+  <!-- Scripts Supabase e User Display -->
   <script type="module" src="js/supabase.js"></script>
   <script type="module" src="js/userDisplay.js"></script>
 
+  <!-- Posicionamento do toast no topo -->
+  <style>
+    .my-toast {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.7);
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 5px;
+      z-index: 1000;
+      font-size: 14px;
+    }
+  </style>
 </head>
 <body>
 
-
   <!-- BARRA DE NAVEGAÇÃO FIXA -->
   <div class="navbar">
-    <a href="index.html"><i class="fas fa-home"></i>Início</a>
+    <a href="index.html"><i class="fas fa-home"></i> Início</a>
     <div class="dropdown">
-      <a href="#"><i class="fas fa-pencil-alt"></i>Criar História</a>
+      <a href="#"><i class="fas fa-pencil-alt"></i> Criar História</a>
       <div class="dropdown-content">
         <a href="diario.html">Escrever Diário</a>
         <a href="historia.html">Escrever História</a>
       </div>
     </div>
     <div class="dropdown">
-      <a href="#"><i class="fas fa-book"></i>Histórias</a>
+      <a href="#"><i class="fas fa-book"></i> Histórias</a>
       <div class="dropdown-content">
         <a href="hisotirasqueescrevi.html">Histórias escritas por mim</a>
         <a href="VerHistorias.html">Ler Histórias</a>
       </div>
     </div>
-    
     <div id="userMenuArea"></div>
-	
   </div>
 
   <!-- LISTA LATERAL (ON HOVER) -->
-<div id="titleListLeft" class="title-list">
-  <ul id="titleListUl"></ul>
-</div>
-
+  <div id="titleListLeft" class="title-list">
+    <ul id="titleListUl"></ul>
+  </div>
 
   <main>
     <!-- CONTAINER PRINCIPAL: HISTÓRIA -->
@@ -57,65 +70,38 @@
         <div class="button-container">
           <button class="btn" type="submit">Salvar</button>
           <button class="btn" type="reset">Limpar</button>
-		  <button class="btn btn-nova-historia" type="button" id="novaHistoriaBtn">Nova História</button>
-
+          <button class="btn btn-nova-historia" type="button" id="novaHistoriaBtn">Nova História</button>
         </div>
       </form>
     </div>
 
-    <!-- CONTÊINER: CARTÃO FUNDO BEGE (Menor) -->
+    <!-- CONTÊINER: CARTÃO -->
     <div class="cartao-container" id="cartaoContainer">
       <div class="form-field">
-        <label for="cartaoTitulo">Título do Cartão</label>
+        <label for="titulo_cartao">Título do Cartão</label>
         <input type="text" id="titulo_cartao" placeholder="Título do Cartão...">
       </div>
 
       <div class="form-field">
-        <label for="cartaoSinopse">Sinopse</label>
+        <label for="sinopse_cartao">Sinopse</label>
         <textarea id="sinopse_cartao" rows="3" placeholder="Introdução curta..."></textarea>
       </div>
 
       <div class="form-field">
-        <label for="cartaoData">Data de Criação</label>
+        <label for="data_criacao">Data de Criação</label>
         <input type="date" id="data_criacao">
       </div>
 
       <div class="form-field">
-        <label for="cartaoAutor">Nome do Escritor</label>
-        <input type="text" id="autor_cartao" placeholder="Seu nome (ou deixe em branco se anônimo)">
+        <label for="autor_cartao">Nome do Escritor</label>
+        <input type="text" id="autor_cartao" placeholder="Seu nome (ou anônimo)">
       </div>
 
-      <!-- ADIÇÃO: CATEGORIAS -->
+      <!-- CATEGORIAS DINÂMICAS -->
       <div class="form-field">
         <label>Categorias:</label>
-        <div class="categorias">
-          <label>
-            <input type="checkbox" name="categoria" value="Fantasia" class="categoria"> Fantasia
-          </label>
-          
-
-          <label>
-            <input type="checkbox" name="categoria" value="Terror" class="categoria"> Terror
-          </label>
-         
-
-          <label>
-            <input type="checkbox" name="categoria" value="Comédia" class="categoria"> Comédia
-          </label>
-          
-
-          <label>
-            <input type="checkbox" name="categoria" value="Ficção Científica" class="categoria"> Ficção Científica
-          </label>
-          
-
-          <label>
-            <input type="checkbox" name="categoria" value="Drama" class="categoria"> Drama
-          </label>
-          
-        </div>
+        <div class="categorias"></div>
       </div>
-      <!-- FIM DA ADIÇÃO DE CATEGORIAS -->
 
       <div class="cartao-buttons">
         <button id="btnPublicarCartao">Publicar Cartão</button>
@@ -125,7 +111,7 @@
     </div>
   </main>
 
-  <!-- MODAL LER MAIS (~50 linhas) - Menor -->
+  <!-- MODAL LER MAIS -->
   <div id="modalOverlay" class="modal-overlay">
     <div class="modal-content">
       <button class="close-modal" id="closeModal">Fechar</button>
@@ -137,15 +123,14 @@
       <p><strong>Sinopse:</strong> <span id="modalCartaoSinopse"></span></p>
       <p><strong>Data:</strong> <span id="modalCartaoData"></span></p>
       <p><strong>Autor:</strong> <span id="modalCartaoAutor"></span></p>
-      <p><strong>Categorias:</strong> <span id="modalCartaoCategorias"></span></p> <!-- Mostra categorias no modal -->
+      <p><strong>Categorias:</strong> <span id="modalCartaoCategorias"></span></p>
     </div>
   </div>
-		
+
   <footer>
     ©Ano-2025/Elvys/𝐓𝐮𝐫𝐦𝐚-Tis7 <a href="Sobre.html">Termos de uso</a>
   </footer>
 
-   <script type="module" src="js/historia.js"></script>
-
+  <script type="module" src="js/historia.js"></script>
 </body>
 </html>
