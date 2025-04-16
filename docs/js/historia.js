@@ -221,7 +221,6 @@ async function salvarHistoria(titulo, descricao) {
     if (error) return alert('Erro ao salvar história: ' + error.message);
     alert('História salva!');
     limparFormulario();
-    removerExibicaoHistoria();
   }
 
   await mostrarHistorias();
