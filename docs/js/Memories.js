@@ -1,65 +1,26 @@
-import { supabase } from './supabase.js';
-
 /************************************************************
- * [1] LOGIN/LOGOUT com Supabase
+ * [1] LOGIN/LOGOUT
  ************************************************************/
-async function exibirUsuarioLogado() {
+export async function exibirUsuarioLogado() {
   const userArea = document.getElementById('userMenuArea');
   if (!userArea) return;
-  try {
-    // Obtém a sessão atual do Supabase.
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError) {
-      console.error("Erro ao obter a sessão:", sessionError);
-      userArea.innerHTML = `<a href="Criacao.html" style="color:white;">
-        <i class="fas fa-user"></i> Login
-      </a>`;
-      return;
-    }
-    // Se não houver sessão ativa, exibe o link para login.
-    if (!session) {
-      userArea.innerHTML = `<a href="Criacao.html" style="color:white;">
-        <i class="fas fa-user"></i> Login
-      </a>`;
-      userArea.onclick = null;
-      return;
-    }
-    const userId = session.user.id;
-    // Consulta a tabela "profiles" para obter o campo "username".
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("username")
-      .eq("id", userId)
-      .single();
-
-    let username = "";
-    if (profileError || !profile || !profile.username) {
-      // Se não encontrar o username, utiliza o email do usuário.
-      username = session.user.email;
-      console.warn("Não foi possível recuperar o username; utilizando email:", username);
-    } else {
-      username = profile.username;
-    }
-    
-    // Exibe o username na área destinada.
-    userArea.innerHTML = username;
-    // Ao clicar no nome do usuário, oferece a opção para logout.
+  userArea.innerHTML = '';
+  const userData = JSON.parse(localStorage.getItem('loggedUser'));
+  if (userData && userData.username) {
+    userArea.textContent = userData.username;
     userArea.onclick = () => {
       if (confirm("Deseja fazer logout?")) {
-        supabase.auth.signOut().then(({ error }) => {
-          if (error) {
-            alert("Erro ao deslogar: " + error.message);
-          } else {
-      window.location.href = "Criacao.html"; // Redireciona para a página inicial
-    }
-        });
+        localStorage.removeItem('loggedUser');
+        location.reload();
       }
     };
-  } catch (ex) {
-    console.error("Exceção em exibirUsuarioLogado:", ex);
+  } else {
+    userArea.innerHTML = `<a href="Criacao.html" style="color:white;">
+      <i class="fas fa-user"></i> Login
+    </a>`;
+    userArea.onclick = null;
   }
 }
-
 
 /************************************************************
  * [2] TOAST (Notificação)
@@ -81,13 +42,16 @@ let allStories = [];
 let currentOffset = 0;
 const initialCount = 4;
 const increment = 4;
-const container = document.getElementById('featuredStories');
 
+const container      = document.getElementById('featuredStories');
+const loadMoreBtn    = document.getElementById('loadMoreBtn');
+const searchBar      = document.getElementById('searchBar');
+const searchResults  = document.getElementById('searchResults');
 const modalOverlay   = document.getElementById('modalOverlay');
 const modalClose     = document.getElementById('modalClose');
 const modalTitle     = document.getElementById('modalTitle');
 const modalFullText  = document.getElementById('modalFullText');
-const modalInfo      = document.getElementById('modalInfo');
+const continuarBtn   = document.getElementById('continuarBtn');
 const warningOverlay = document.getElementById('warningOverlay');
 const warningYes     = document.getElementById('warningYes');
 const warningNo      = document.getElementById('warningNo');
@@ -169,20 +133,26 @@ function destacarPalavra() {
 }
 
 /************************************************************
- * [6] CRIAR CARTÕES
+ * [6] CRIAR CARTÕES E MOSTRAR NO DOM
  ************************************************************/
 function createStoryCard(story) {
   const div = document.createElement('div');
   div.className = 'featured-sheet';
-  const titleEl = document.createElement('div');
-  titleEl.className = 'sheet-title';
-  titleEl.textContent = story.cartao.tituloCartao;
-  const sinopseEl = document.createElement('div');
-  sinopseEl.className = 'sheet-sinopse';
-  sinopseEl.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao);
-  div.append(titleEl, sinopseEl);
+  div.innerHTML = `
+    <div class="sheet-title">${story.cartao.tituloCartao}</div>
+    <div class="sheet-sinopse">${formatarPor4Linhas(story.cartao.sinopseCartao)}</div>
+  `;
   div.onclick = () => abrirModal(story);
   return div;
+}
+
+function showBatch(count) {
+  const term     = searchBar.value.trim().toLowerCase();
+  const filtered = allStories.filter(s => matchesSearch(s, term));
+  container.innerHTML = '';
+  filtered.slice(currentOffset, currentOffset + count)
+          .forEach(s => container.appendChild(createStoryCard(s)));
+  currentOffset += count;
 }
 
 /************************************************************
@@ -193,134 +163,89 @@ function abrirModal(story) {
   currentStoryId = story.id;
 
   modalTitle.textContent  = story.cartao.tituloCartao;
-  modalInfo.innerHTML     = '';
   modalFullText.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao);
+  continuarBtn.style.display = 
+    localStorage.getItem('readingPosition_' + story.id) !== null
+      ? 'inline-block'
+      : 'none';
 
-  // Botão “Ler”
+  // Ler
   const lerBtn = document.createElement('button');
   lerBtn.textContent = 'Ler';
   lerBtn.onclick = () => {
-    // Exibe o texto completo
     modalTitle.textContent  = story.titulo;
     modalFullText.innerHTML = formatarTextoParaLeitura(story.cartao.historiaCompleta);
-    // Mantém o botão "Continuar" após recarregar o texto
-    renderContinuarBtn(story);
+    // após recarregar, mantemos o botão Continuar
+    continuarBtn.style.display = 
+      localStorage.getItem('readingPosition_' + story.id) !== null
+        ? 'inline-block'
+        : 'none';
   };
+  // limpa qualquer botão anterior e anexa
   modalFullText.appendChild(lerBtn);
 
-  // Botão “Continuar”
-  renderContinuarBtn(story);
-
-  modalOverlay.style.display = 'flex';
-}
-
-// Função que (re)renderiza o botão “Continuar”
-function renderContinuarBtn(story) {
-  // Remove versão anterior
-  const old = modalFullText.querySelector('#continuarBtn');
-  if (old) old.remove();
-
-  const contBtn = document.createElement('button');
-  contBtn.id = 'continuarBtn';
-  contBtn.textContent = 'Continuar';
-  contBtn.onclick = () => {
+  // Continuar (botão estático)
+  continuarBtn.onclick = () => {
     modalTitle.textContent  = story.titulo;
     modalFullText.innerHTML = formatarTextoParaLeitura(story.cartao.historiaCompleta);
-    // Destaca a palavra salva
     setTimeout(destacarPalavra, 0);
-    // Após recarregar, garante que o "Continuar" permaneça
-    renderContinuarBtn(story);
+    // permanece visível
   };
-  const hasSaved = localStorage.getItem('readingPosition_' + story.id) !== null;
-  contBtn.style.display = hasSaved ? 'inline-block' : 'none';
-  modalFullText.appendChild(contBtn);
+
+  modalOverlay.style.display = 'flex';
 }
 
 /************************************************************
  * [8] PESQUISA E SUGESTÕES
  ************************************************************/
-function matchesSearch(story, text) {
-  text = text.trim().toLowerCase();
-  if (!text) return true;
-  return (story.cartao.tituloCartao||'').toLowerCase().includes(text)
-      || (story.cartao.autorCartao ||'').toLowerCase().includes(text);
+function matchesSearch(story, term) {
+  if (!term) return true;
+  return story.cartao.tituloCartao.toLowerCase().includes(term)
+      || (story.cartao.autorCartao || '').toLowerCase().includes(term);
 }
 
 function exibirSugestoes(list) {
-  const res = document.getElementById('searchResults');
   if (!list.length) {
-    res.innerHTML = `<div style="padding:6px;">Nenhuma história encontrada</div>`;
-    res.style.display = 'block';
-    return;
+    searchResults.innerHTML = `<div style="padding:6px;">Nenhuma história encontrada</div>`;
+  } else {
+    searchResults.innerHTML = list.map(s => `
+      <div class="suggestion-item" data-id="${s.id}" style="padding:6px;border-bottom:1px solid #ccc;cursor:pointer">
+        <strong>${s.cartao.tituloCartao}</strong><br>
+        <em>Autor: ${s.cartao.autorCartao || 'Desconhecido'}</em>
+      </div>
+    `).join('');
   }
-  res.innerHTML = list.map(s => `
-    <div class="suggestion-item" data-id="${s.id}" style="padding:6px;cursor:pointer;border-bottom:1px solid #ccc">
-      <strong>${s.cartao.tituloCartao}</strong><br>
-      <em>Autor: ${s.cartao.autorCartao||'Desconhecido'}</em>
-    </div>`).join('');
-  res.style.display = 'block';
-  res.querySelectorAll('.suggestion-item').forEach(el => {
-    el.onclick = () => {
-      const st = allStories.find(x => x.id == el.dataset.id);
-      res.style.display = 'none';
-      abrirModal(st);
-    };
-  });
+  searchResults.style.display = 'block';
+  searchResults.querySelectorAll('.suggestion-item')
+    .forEach(el => el.onclick = () => {
+      const s = allStories.find(x => x.id == el.dataset.id);
+      searchResults.style.display = 'none';
+      abrirModal(s);
+    });
 }
 
 /************************************************************
- * [9] PAGINAÇÃO, INICIALIZAÇÃO E “Load More”
+ * [9] EVENTOS E INICIALIZAÇÃO
  ************************************************************/
-function showBatch(count) {
-  const sb = document.getElementById('searchBar').value;
-  const filtered = allStories.filter(s => matchesSearch(s, sb));
-  container.innerHTML = '';
-  filtered.slice(currentOffset, currentOffset + count)
-          .forEach(s => container.appendChild(createStoryCard(s)));
-  currentOffset += count;
-}
-
-function initialLoad() {
-  currentOffset = 0;
-  showBatch(initialCount);
-}
-
-function loadMore() {
-  showBatch(increment);
-}
-
-/************************************************************
- * [10] FECHAR MODAL E AVISO DE CLIQUE FORA
- ************************************************************/
-if (modalClose) modalClose.onclick = () => { modalOverlay.style.display = 'none'; isModalOpen = false; };
-if (modalOverlay) modalOverlay.onclick = e => {
-  if (e.target === modalOverlay && isModalOpen) warningOverlay.style.display = 'flex';
+modalClose.onclick     = () => { modalOverlay.style.display = 'none'; isModalOpen = false; };
+modalOverlay.onclick   = e => { if (e.target === modalOverlay && isModalOpen) warningOverlay.style.display = 'flex'; };
+warningYes.onclick     = () => { modalOverlay.style.display = 'none'; warningOverlay.style.display = 'none'; isModalOpen = false; };
+warningNo.onclick      = () => { warningOverlay.style.display = 'none'; };
+loadMoreBtn.onclick    = () => showBatch(increment);
+searchBar.oninput      = () => {
+  const v = searchBar.value.trim().toLowerCase();
+  if (!v) {
+    searchResults.style.display = 'none';
+    currentOffset = 0;
+    showBatch(initialCount);
+  } else {
+    exibirSugestoes(allStories.filter(s => matchesSearch(s, v)));
+  }
 };
-if (warningYes && warningNo) {
-  warningYes.onclick = () => { modalOverlay.style.display = 'none'; warningOverlay.style.display = 'none'; isModalOpen = false; };
-  warningNo.onclick  = () => { warningOverlay.style.display = 'none'; };
-}
 
-/************************************************************
- * [11] DOMContentLoaded – SETUP INICIAL E PESQUISA
- ************************************************************/
 document.addEventListener('DOMContentLoaded', () => {
   exibirUsuarioLogado();
   loadAllStories();
-  initialLoad();
-
-  const sb      = document.getElementById('searchBar');
-  const res     = document.getElementById('searchResults');
-  const moreBtn = document.getElementById('loadMoreBtn');
-
-  if (moreBtn) moreBtn.onclick = loadMore;
-  if (sb) sb.oninput = () => {
-    const v = sb.value.trim();
-    if (!v) {
-      res.style.display = 'none';
-      initialLoad();
-    } else {
-      exibirSugestoes(allStories.filter(s => matchesSearch(s, v)));
-    }
-  };
+  currentOffset = 0;
+  showBatch(initialCount);
 });
