@@ -9,11 +9,10 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <!-- CSS principal -->
   <link rel="stylesheet" href="css/Memories.css">
-<script type="module" src="js/supabase.js"></script>
+     <script type="module" src="js/supabase.js"></script>
   <script type="module" src="js/userDisplay.js"></script>
 </head>
 <body>
-
 
   <!-- Barra de Navegação -->
   <div class="navbar">
@@ -28,25 +27,28 @@
     <div class="dropdown">
       <a href="#"><i class="fas fa-book"></i>Histórias</a>
       <div class="dropdown-content">
-      <a href="hisotirasqueescrevi.html">Minhas Histórias</a>
-        <a href="VerHistorias.html">Ler Histórias</a>
+      <a href="hisotirasqueescrevi.html">Histórias que eu escrevi</a>
+        <a href="VerHistorias.html">Histórias escritas</a>
       </div>
     </div>
+
+
     <!-- Área para mostrar usuário logado -->
     <div id="userMenuArea"></div>
-    <!-- Barra de pesquisa -->
-    <div class="search-box">
+
+    <!-- Caixa de pesquisa -->
+    <div class="search-box" style="position: relative;">
       <input type="text" id="searchBar" placeholder="Pesquisar...">
       <button id="searchBtn"><i class="fas fa-search"></i></button>
-      <!-- Sugestões (dropdown) -->
+      <!-- Div para sugestões (drop-down) -->
       <div id="searchResults"></div>
     </div>
+  </div>
   </div>
 
   <main>
     <h1>StoryFlow</h1>
-   <h2>Crie e personalize as suas histórias no StoryFlow.</h2>
-    <h3> Com recursos para guardar, editar e publicar histórias ao teu gosto.</h3>
+    <h2>Crie e personalize as suas histórias no StoryFlow, com recursos para guardar, editar e adicionar música às suas memórias.</h2>
     <!-- Container para exibir 4 cartões de destaque -->
     <div id="featuredStories" style="margin-top: 30px;"></div>
   </main>
@@ -81,10 +83,11 @@
   </div>
 
   <footer>
-©Ano-2025 / Elvys / StoryFlow / 𝐓𝐮𝐫𝐦𝐚-Tis7 <a href="Sobre.html">Termos de uso</a>
+    © 2025 / StoryFlow
+    <a href="sobre.html"><i class="fas fa-info-circle"></i>Termos de Uso</a>
   </footer>
 
   <!-- JavaScript principal -->
-  <script type="module" src="js/Memories.js"></script>
+     <script type="module" src="js/Memories.js"></script>
 </body>
 </html>
