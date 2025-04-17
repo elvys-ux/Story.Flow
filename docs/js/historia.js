@@ -278,8 +278,7 @@ function excluirHistoria(storyID) {
     // Se estava exibida, removemos do container
     const editID = document.getElementById('storyForm').dataset.editId;
     if (editID === storyID) {
-      limparFormulario();
-      removerExibicaoHistoria();
+      
     }
 }
 
