@@ -9,26 +9,26 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <!-- CSS principal -->
   <link rel="stylesheet" href="css/Memories.css">
-<script type="module" src="js/supabase.js"></script>
+  <!-- Supabase e exibição de usuário -->
+  <script type="module" src="js/supabase.js"></script>
   <script type="module" src="js/userDisplay.js"></script>
 </head>
 <body>
 
-
   <!-- Barra de Navegação -->
   <div class="navbar">
-    <a href="index.html"><i class="fas fa-home"></i>Início</a>
+    <a href="index.html"><i class="fas fa-home"></i> Início</a>
     <div class="dropdown">
-      <a href="#"><i class="fas fa-pencil-alt"></i>Criar História</a>
+      <a href="#"><i class="fas fa-pencil-alt"></i> Criar História</a>
       <div class="dropdown-content">
         <a href="diario.html">Escrever Diário</a>
         <a href="historia.html">Escrever História</a>
       </div>
     </div>
     <div class="dropdown">
-      <a href="#"><i class="fas fa-book"></i>Histórias</a>
+      <a href="#"><i class="fas fa-book"></i> Histórias</a>
       <div class="dropdown-content">
-      <a href="hisotirasqueescrevi.html">Minhas Histórias</a>
+        <a href="historiasqueescrevi.html">Minhas Histórias</a>
         <a href="VerHistorias.html">Ler Histórias</a>
       </div>
     </div>
@@ -45,10 +45,11 @@
 
   <main>
     <h1>StoryFlow</h1>
-   <h2>Crie e personalize as suas histórias no StoryFlow.</h2>
-    <h3> Com recursos para guardar, editar e publicar histórias ao teu gosto.</h3>
+    <h2>Crie e personalize as suas histórias no StoryFlow.</h2>
+    <h3>Com recursos para guardar, editar e publicar histórias ao teu gosto.</h3>
     <!-- Container para exibir 4 cartões de destaque -->
     <div id="featuredStories" style="margin-top: 30px;"></div>
+    <button id="loadMoreBtn">Carregar mais</button>
   </main>
 
   <!-- Modal para leitura de história -->
@@ -57,7 +58,7 @@
       <button class="modal-close" id="modalClose">Fechar</button>
       <h2 id="modalTitle">Título da História</h2>
       <!-- Texto completo (sinopse ou história completa) -->
-      <p id="modalFullText"></p>
+      <div id="modalFullText"></div>
       <!-- Botão Continuar (inicialmente oculto) -->
       <button id="continuarBtn" style="display: none;">Continuar</button>
       <div class="modal-info" id="modalInfo"></div>
@@ -75,13 +76,9 @@
     </div>
   </div>
 
-  <!-- Overlay para avisos (ex: linha salva) -->
-  <div id="avisoOverlay" style="display: none;">
-    <div id="avisoMessage"></div>
-  </div>
-
   <footer>
-©Ano-2025 / Elvys / StoryFlow / 𝐓𝐮𝐫𝐦𝐚-Tis7 <a href="Sobre.html">Termos de uso</a>
+    © 2025 / Elvys / StoryFlow / Turma-Tis7  
+    <a href="Sobre.html">Termos de uso</a>
   </footer>
 
   <!-- JavaScript principal -->
