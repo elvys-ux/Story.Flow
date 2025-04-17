@@ -3,35 +3,29 @@ import { supabase } from './supabase.js';
 /************************************************************
  * [1] LOGIN/LOGOUT com Supabase
  ************************************************************/
-export async function exibirUsuarioLogado() {
+async function exibirUsuarioLogado() {
   const userArea = document.getElementById('userMenuArea');
   if (!userArea) return;
   userArea.innerHTML = '';
   try {
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     if (sessionError) throw sessionError;
-
     if (!session) {
       userArea.innerHTML = `
         <a href="Criacao.html" style="color:white;">
           <i class="fas fa-user"></i> Login
         </a>`;
-      userArea.onclick = null;
       return;
     }
-
     const userId = session.user.id;
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('username')
       .eq('id', userId)
       .single();
-
-    let username = session.user.email;
-    if (!profileError && profile && profile.username) {
-      username = profile.username;
-    }
-
+    const username = (!profileError && profile && profile.username)
+      ? profile.username
+      : session.user.email;
     userArea.textContent = username;
     userArea.onclick = () => {
       if (confirm('Deseja fazer logout?')) {
@@ -47,12 +41,11 @@ export async function exibirUsuarioLogado() {
       <a href="Criacao.html" style="color:white;">
         <i class="fas fa-user"></i> Login
       </a>`;
-    userArea.onclick = null;
   }
 }
 
 /************************************************************
- * [2] TOAST (notificação)
+ * [2] TOAST
  ************************************************************/
 function showToast(message, duration = 2000) {
   const toast = document.createElement('div');
@@ -85,11 +78,11 @@ const warningOverlay = document.getElementById('warningOverlay');
 const warningYes     = document.getElementById('warningYes');
 const warningNo      = document.getElementById('warningNo');
 
-let isModalOpen = false;
+let isModalOpen    = false;
 let currentStoryId = null;
 
 /************************************************************
- * [4] CARREGAR HISTÓRIAS do localStorage
+ * [4] CARREGAR HISTÓRIAS (localStorage)
  ************************************************************/
 function loadAllStories() {
   const raw = JSON.parse(localStorage.getItem('historias')) || [];
@@ -109,7 +102,7 @@ function loadAllStories() {
 }
 
 /************************************************************
- * [5] FORMATADORES
+ * [5] FORMATADORES E MARCAÇÃO
  ************************************************************/
 function formatarPor4Linhas(text) {
   const lines = text.split('\n');
@@ -147,18 +140,12 @@ function formatarTextoParaLeitura(text) {
   return paras.join('');
 }
 
-/************************************************************
- * [5.3] MARCAR posição de leitura
- ************************************************************/
 function markReadingPosition(el) {
   const idx = el.getAttribute('data-index');
   localStorage.setItem('readingPosition_' + currentStoryId, idx);
   showToast(`Posição de leitura salva (palavra ${idx})`);
 }
 
-/************************************************************
- * [5.4] DESTACAR palavra salva
- ************************************************************/
 function destacarPalavra() {
   const saved = localStorage.getItem('readingPosition_' + currentStoryId);
   if (saved !== null) {
@@ -171,7 +158,7 @@ function destacarPalavra() {
 }
 
 /************************************************************
- * [6] CRIAR cartão placeholder
+ * [6] CRIAR PLACEHOLDER
  ************************************************************/
 function createPlaceholderCard() {
   const div = document.createElement('div');
@@ -206,15 +193,15 @@ function showBatch(count) {
   const filtered = allStories.filter(s => matchesSearch(s, term));
   if (filtered.length === 0) {
     container.appendChild(createPlaceholderCard());
-    return;
+  } else {
+    filtered.slice(currentOffset, currentOffset + count)
+      .forEach(st => container.appendChild(createStoryCard(st)));
+    currentOffset += count;
   }
-  filtered.slice(currentOffset, currentOffset + count)
-          .forEach(s => container.appendChild(createStoryCard(s)));
-  currentOffset += count;
 }
 
 /************************************************************
- * [8] ABRIR MODAL com Ler / Continuar
+ * [8] ABRIR MODAL com Ler/Continuar
  ************************************************************/
 function abrirModal(story) {
   isModalOpen    = true;
@@ -223,7 +210,6 @@ function abrirModal(story) {
   modalTitle.textContent  = story.cartao.tituloCartao;
   modalFullText.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao);
 
-  // configurar Continuar
   const hasSaved = localStorage.getItem('readingPosition_' + story.id) !== null;
   continuarBtn.style.display = hasSaved ? 'inline-block' : 'none';
   continuarBtn.onclick = () => {
@@ -232,10 +218,9 @@ function abrirModal(story) {
     setTimeout(destacarPalavra, 0);
   };
 
-  // botão Ler
   const lerBtn = document.createElement('button');
   lerBtn.textContent = 'Ler';
-  lerBtn.onclick = () => {
+  lerBtn.onclick     = () => {
     modalTitle.textContent  = story.titulo;
     modalFullText.innerHTML = formatarTextoParaLeitura(story.cartao.historiaCompleta);
     continuarBtn.style.display = hasSaved ? 'inline-block' : 'none';
@@ -246,7 +231,7 @@ function abrirModal(story) {
 }
 
 /************************************************************
- * [9] PESQUISA e SUGESTÕES
+ * [9] PESQUISA E SUGESTÕES
  ************************************************************/
 function matchesSearch(story, term) {
   if (!term) return true;
@@ -255,13 +240,15 @@ function matchesSearch(story, term) {
 }
 
 function exibirSugestoes(list) {
-  searchResults.innerHTML = list.length
-    ? list.map(s => `
+  if (!list.length) {
+    searchResults.innerHTML = `<div style="padding:6px;">Nenhuma história encontrada</div>`;
+  } else {
+    searchResults.innerHTML = list.map(s => `
       <div class="suggestion-item" data-id="${s.id}" style="padding:6px;border-bottom:1px solid #ccc;cursor:pointer">
         <strong>${s.cartao.tituloCartao}</strong><br>
         <em>Autor: ${s.cartao.autorCartao || 'Desconhecido'}</em>
-      </div>`).join('')
-    : `<div style="padding:6px;">Nenhuma história encontrada</div>`;
+      </div>`).join('');
+  }
   searchResults.style.display = 'block';
   searchResults.querySelectorAll('.suggestion-item').forEach(el => {
     el.onclick = () => {
@@ -273,12 +260,12 @@ function exibirSugestoes(list) {
 }
 
 /************************************************************
- * [10] EVENTOS e INICIALIZAÇÃO
+ * [10] EVENTOS E INICIALIZAÇÃO
  ************************************************************/
 modalClose.onclick   = () => { modalOverlay.style.display = 'none'; isModalOpen = false; };
-modalOverlay.onclick = e => { if (e.target===modalOverlay&&isModalOpen) warningOverlay.style.display='flex'; };
-warningYes.onclick   = () => { modalOverlay.style.display='none'; warningOverlay.style.display='none'; isModalOpen=false; };
-warningNo.onclick    = () => { warningOverlay.style.display='none'; };
+modalOverlay.onclick = e => { if (e.target === modalOverlay && isModalOpen) warningOverlay.style.display = 'flex'; };
+warningYes.onclick   = () => { modalOverlay.style.display = 'none'; warningOverlay.style.display = 'none'; isModalOpen = false; };
+warningNo.onclick    = () => { warningOverlay.style.display = 'none'; };
 
 searchBar.oninput = () => {
   currentOffset = 0;
