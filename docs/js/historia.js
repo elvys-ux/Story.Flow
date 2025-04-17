@@ -102,7 +102,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (novaHistoriaBtn) {
         novaHistoriaBtn.addEventListener('click', function () {
             if (confirm("Tem certeza de que deseja começar uma nova história?")) {
-              
+
+                // Remove exibição da história no container
+                removerExibicaoHistoria();
             }
         });
     }
