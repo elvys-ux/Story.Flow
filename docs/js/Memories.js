@@ -178,128 +178,24 @@ function destacarPalavra() {
  ************************************************************/
 function createStoryCard(story) {
   const div = document.createElement('div');
-  div.className = 'sheet';
-
-  // Título
-  const titleEl = document.createElement('div');
-  titleEl.className = 'sheet-title';
-  titleEl.textContent = story.cartao.tituloCartao || 'Sem Título';
-  div.appendChild(titleEl);
-
-  // Sinopse: utiliza a função formatarPor4Linhas
-  const sinopseEl = document.createElement('div');
-  sinopseEl.className = 'sheet-sinopse';
-  sinopseEl.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao || '(sem sinopse)');
-  div.appendChild(sinopseEl);
-
-  // “mais...” – abre o modal com os detalhes da história
-  const verMais = document.createElement('span');
-  verMais.className = 'ver-mais';
-  verMais.textContent = 'mais...';
-  verMais.style.cursor = 'pointer';
-  verMais.addEventListener('click', () => {
-    isModalOpen = true;
-    currentStoryId = story.id;
-    modalTitle.textContent = story.cartao.tituloCartao || "Sem Título";
-    // Exibe a sinopse formatada inicialmente
-    modalFullText.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao || '(sem sinopse)');
-    modalInfo.innerHTML = '';
-
-    // Botão “Ler” – carrega a história completa com palavras clicáveis
-    const lerBtn = document.createElement('button');
-    lerBtn.textContent = 'Ler';
-    lerBtn.addEventListener('click', () => {
-      modalTitle.textContent = story.titulo || "História Completa";
-      originalText = story.cartao.historiaCompleta || '(sem história completa)';
-      modalFullText.innerHTML = formatarTextoParaLeitura(originalText);
-    });
-    modalFullText.appendChild(lerBtn);
-
-    // Verifica se há posição salva; usa o botão "Continuar" já presente no HTML
-    const savedPosition = localStorage.getItem('readingPosition_' + story.id);
-    const continuarBtn = document.getElementById('continuarBtn');
-    if (savedPosition !== null) {
-      continuarBtn.style.display = 'inline-block'; // Exibe o botão
-    } else {
-      continuarBtn.style.display = 'none'; // Oculta se não houver posição salva
-    }
-
-    // Informações adicionais: data, autor, categorias, likes
-    let infoHtml = '';
-    infoHtml += `<p><strong>Data:</strong> ${story.cartao.dataCartao || '??'}</p>`;
-    infoHtml += `<p><strong>Autor:</strong> ${story.cartao.autorCartao || 'Desconhecido'}</p>`;
-    if (story.cartao.categorias && story.cartao.categorias.length > 0) {
-      infoHtml += `<p><strong>Categorias:</strong> ${story.cartao.categorias.join(', ')}</p>`;
-    }
-    infoHtml += `<p><strong>Likes:</strong> ${story.cartao.likes || 0}</p>`;
-    modalInfo.innerHTML = infoHtml;
-
-    modalOverlay.style.display = 'flex';
-  });
-  div.appendChild(verMais);
-
-  // Botão Curtir
-  const likeContainer = document.createElement('div');
-  likeContainer.style.marginTop = '10px';
-  const likeBtn = document.createElement('button');
-  likeBtn.style.fontSize = '24px';
-  likeBtn.style.border = 'none';
-  likeBtn.style.background = 'none';
-  likeBtn.style.cursor = 'pointer';
-  const likeCount = document.createElement('span');
-  likeCount.style.marginLeft = '8px';
-  if (typeof story.cartao.likes !== 'number') {
-    story.cartao.likes = 0;
-  }
-  let userLiked = likedStories.includes(story.id);
-  function updateLikeUI() {
-    likeBtn.textContent = userLiked ? '❤️' : '🤍';
-    likeCount.textContent = `${story.cartao.likes} curtidas`;
-  }
-  updateLikeUI();
-  likeBtn.addEventListener('click', () => {
-    if (userLiked) {
-      story.cartao.likes = Math.max(story.cartao.likes - 1, 0);
-      userLiked = false;
-      likedStories = likedStories.filter(id => id !== story.id);
-    } else {
-      story.cartao.likes++;
-      userLiked = true;
-      likedStories.push(story.id);
-    }
-    localStorage.setItem('likedStories', JSON.stringify(likedStories));
-    const all = JSON.parse(localStorage.getItem('historias')) || [];
-    const foundIndex = all.findIndex(h => h.id === story.id);
-    if (foundIndex >= 0) {
-      all[foundIndex] = story;
-      localStorage.setItem('historias', JSON.stringify(all));
-    }
-    updateLikeUI();
-  });
-  likeContainer.appendChild(likeBtn);
-  likeContainer.appendChild(likeCount);
-  div.appendChild(likeContainer);
-
-  // Categorias
-  const catContainer = document.createElement('div');
-  catContainer.className = 'sheet-categories';
-  if (story.cartao.categorias && story.cartao.categorias.length) {
-    story.cartao.categorias.forEach(cat => {
-      const badge = document.createElement('span');
-      badge.className = 'badge';
-      badge.textContent = cat;
-      catContainer.appendChild(badge);
-    });
-  } else {
-    const noCat = document.createElement('span');
-    noCat.className = 'badge';
-    noCat.textContent = 'Sem Categoria';
-    catContainer.appendChild(noCat);
-  }
-  div.appendChild(catContainer);
-
+  div.className = 'featured-sheet';
+  div.innerHTML = `
+    <div class="sheet-title">${story.cartao.tituloCartao}</div>
+    <div class="sheet-sinopse">${formatarPor4Linhas(story.cartao.sinopseCartao)}</div>
+  `;
+  div.onclick = () => abrirModal(story);
   return div;
-    }
+}
+
+function showBatch(count) {
+  const term     = searchBar.value.trim().toLowerCase();
+  const filtered = allStories.filter(s => matchesSearch(s, term));
+  container.innerHTML = '';
+  filtered.slice(currentOffset, currentOffset + count)
+          .forEach(s => container.appendChild(createStoryCard(s)));
+  currentOffset += count;
+}
+
 /************************************************************
  * [7] ABRIR MODAL COM “Ler” E “Continuar”
  ************************************************************/
