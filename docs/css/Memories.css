@@ -1,71 +1,61 @@
-/* Estilo para a barra de navegação fixa */
+/* =================== NAVBAR =================== */
 .navbar {
-    position: fixed;
-    top: 0;
-    width: 100%;
-    background-color: rgba(0, 0, 0, 0.9);
-    padding: 12px;
-    z-index: 1000;
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  position: fixed;
+  top: 0;
+  width: 100%;
+  background-color: rgba(0, 0, 0, 0.9);
+  padding: 10px;
+  z-index: 1000;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.5);
 }
 
 .navbar a {
-    font-family: Arial, sans-serif;
-    color: white;
-    text-decoration: none;
-    padding: 10px;
-    transition: background-color 0.3s, transform 0.3s;
-    border-radius: 5px;
+  font-family: Arial, sans-serif;
+  color: white;
+  text-decoration: none;
+  padding: 10px;
+  transition: background-color 0.3s, transform 0.3s;
+  border-radius: 5px;
 }
-
 .navbar a:hover {
-    background-color: rgba(0, 0, 0, 0.7);
-    transform: scale(1.1);
+  background-color: rgba(0,0,0,0.7);
+  transform: scale(1.1);
 }
-
 .navbar a i {
-    margin-right: 8px;
+  margin-right: 8px;
 }
-
 .dropdown {
-    position: relative;
-    display: inline-block;
+  position: relative;
+  display: inline-block;
 }
-
 .dropdown-content {
-    display: none;
-    position: absolute;
-    background-color: rgba(0, 0, 0, 0.5);
-    min-width: 150px;
-    box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.3);
-    z-index: 1;
+  display: none;
+  position: absolute;
+  background-color: rgba(0,0,0,0.5);
+  min-width: 150px;
+  box-shadow: 0px 8px 16px rgba(0,0,0,0.3);
+  z-index: 1;
 }
-
 .dropdown-content a {
-    color: white;
-    padding: 12px 16px;
-    text-decoration: none;
-    display: block;
+  color: white;
+  padding: 12px 16px;
+  text-decoration: none;
+  display: block;
 }
-
 .dropdown-content a:hover {
-    background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(255,255,255,0.2);
 }
-
 .dropdown:hover .dropdown-content {
-    display: block;
+  display: block;
 }
-
-/* Área para mostrar o usuário (nome ou "Login") */
 #userMenuArea {
-    font-family: Arial, sans-serif;
-    color: white;
-    cursor: pointer;
+  font-family: Arial, sans-serif;
+  color: white;
+  cursor: pointer;
 }
-
 
 /* =================== SEARCH BOX =================== */
 .search-box {
@@ -132,14 +122,13 @@ h1 {
 h2 {
   font-size: 18pt;
   color: #333;
-  margin-bottom: 10px; /* Antes era 40px */
+  margin-bottom: 40px;
   max-width: 80%;
 }
 h3 {
   margin-top: 0; /* Reduz ou remove a distância entre o h2 e o h3 */
   font-size: 14pt;
-  color: #555;
-}
+  color: #333;
 footer {
   background-color: rgba(0,0,0,0.9);
   color: white;
