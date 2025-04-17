@@ -243,9 +243,7 @@ function salvarHistoria(titulo, descricao) {
         localStorage.setItem('historias', JSON.stringify(historias));
 
         alert("História salva com sucesso (nova)!");
-        // Limpamos, pois é nova => não exibimos no container:
-        limparFormulario();
-        removerExibicaoHistoria(); 
+         
     }
 
     mostrarHistorias(); // Atualiza lista lateral
