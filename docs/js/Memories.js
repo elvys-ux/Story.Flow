@@ -1,292 +1,433 @@
-// userDisplay.js
-import { supabase } from "./supabase.js";
+import { supabase } from './supabase.js';
 
+/************************************************************
+ * [1] LOGIN/LOGOUT com Supabase
+ ************************************************************/
 async function exibirUsuarioLogado() {
-  const userArea = document.getElementById("userMenuArea");
-  if (!userArea) {
-    console.error("Elemento 'userMenuArea' não encontrado no HTML.");
-    return;
-  }
-
-  // Obtém a sessão atual do Supabase
-  const {
-    data: { session },
-    error: sessionError,
-  } = await supabase.auth.getSession();
-  console.log("Sessão retornada:", session, "Erro na sessão:", sessionError);
-
-  // Se não houver sessão, exibe um link para login
-  if (!session) {
-    userArea.innerHTML = `
-      <a href="Criacao.html" style="color:white;">
+  const userArea = document.getElementById('userMenuArea');
+  if (!userArea) return;
+  try {
+    // Obtém a sessão atual do Supabase.
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+      console.error("Erro ao obter a sessão:", sessionError);
+      userArea.innerHTML = `<a href="Criacao.html" style="color:white;">
         <i class="fas fa-user"></i> Login
       </a>`;
-    return;
-  }
+      return;
+    }
+    // Se não houver sessão ativa, exibe o link para login.
+    if (!session) {
+      userArea.innerHTML = `<a href="Criacao.html" style="color:white;">
+        <i class="fas fa-user"></i> Login
+      </a>`;
+      userArea.onclick = null;
+      return;
+    }
+    const userId = session.user.id;
+    // Consulta a tabela "profiles" para obter o campo "username".
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", userId)
+      .single();
 
-  // Se houver sessão, usa o ID do usuário para consultar a tabela 'profiles'
-  const userId = session.user.id;
-  console.log("Usuário autenticado. ID:", userId);
-
-  // Consulta o campo 'username' na tabela 'profiles'
-  const { data: profileData, error: profileError } = await supabase
-    .from("profiles")
-    .select("username")
-    .eq("id", userId)
-    .single();
-
-  console.log("Dados do perfil:", profileData, "Erro no perfil:", profileError);
-
-  // Define o nome a exibir
-  let displayName = "";
-  if (profileError || !profileData || !profileData.username) {
-    displayName = session.user.email;
-    console.warn("Não foi possível recuperar o nome de usuário. Usando e-mail:", displayName);
-  } else {
-    displayName = profileData.username;
-  }
-
-  // Atualiza a interface – exibe o nome do usuário e um menu para logout
-  userArea.innerHTML = `
-    <span id="user-name" style="cursor: pointer;">${displayName}</span>
-    <div id="logout-menu" style="display: none; margin-top: 5px;">
-      <button id="logout-btn">Deslogar</button>
-    </div>
-  `;
-
-  // Ao clicar no nome do usuário, alterna a visibilidade do menu de logout
-  const userNameEl = document.getElementById("user-name");
-  const logoutMenu = document.getElementById("logout-menu");
-  userNameEl.addEventListener("click", () => {
-    logoutMenu.style.display = (logoutMenu.style.display === "none" ? "block" : "none");
-  });
-
-  // Configura o botão de logout para redirecionar para a página inicial após sair
-  const logoutBtn = document.getElementById("logout-btn");
-  logoutBtn.addEventListener("click", async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      alert("Erro ao deslogar: " + error.message);
+    let username = "";
+    if (profileError || !profile || !profile.username) {
+      // Se não encontrar o username, utiliza o email do usuário.
+      username = session.user.email;
+      console.warn("Não foi possível recuperar o username; utilizando email:", username);
     } else {
+      username = profile.username;
+    }
+    
+    // Exibe o username na área destinada.
+    userArea.innerHTML = username;
+    // Ao clicar no nome do usuário, oferece a opção para logout.
+    userArea.onclick = () => {
+      if (confirm("Deseja fazer logout?")) {
+        supabase.auth.signOut().then(({ error }) => {
+          if (error) {
+            alert("Erro ao deslogar: " + error.message);
+          } else {
       window.location.href = "Criacao.html"; // Redireciona para a página inicial
     }
-  });
+        });
+      }
+    };
+  } catch (ex) {
+    console.error("Exceção em exibirUsuarioLogado:", ex);
+  }
 }
 
-// Chama a função assim que o DOM for carregado
-document.addEventListener("DOMContentLoaded", exibirUsuarioLogado);
+
+/************************************************************
+ * [2] TOAST (Notificação)
+ ************************************************************/
+function showToast(message, duration = 2000) {
+  const toast = document.createElement('div');
+  toast.className = 'my-toast';
+  toast.innerText = message;
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    if (toast.parentNode) {
+      toast.parentNode.removeChild(toast);
+    }
+  }, duration);
+}
 
 /************************************************************
  * [3] VARIÁVEIS GLOBAIS
  ************************************************************/
 let allStories = [];
 let currentOffset = 0;
-const initialCount = 4;
+const initialCount = 4; // exibir 4 cartões de destaque
 const increment = 4;
+const container = document.getElementById('featuredStories');
 
-const container      = document.getElementById('featuredStories');
-const loadMoreBtn    = document.getElementById('loadMoreBtn');
-const searchBar      = document.getElementById('searchBar');
-const searchResults  = document.getElementById('searchResults');
-const modalOverlay   = document.getElementById('modalOverlay');
-const modalClose     = document.getElementById('modalClose');
-const modalTitle     = document.getElementById('modalTitle');
-const modalFullText  = document.getElementById('modalFullText');
-const continuarBtn   = document.getElementById('continuarBtn');
+const modalOverlay = document.getElementById('modalOverlay');
+const modalClose = document.getElementById('modalClose');
+const modalTitle = document.getElementById('modalTitle');
+const modalFullText = document.getElementById('modalFullText');
+const modalInfo = document.getElementById('modalInfo');
 const warningOverlay = document.getElementById('warningOverlay');
-const warningYes     = document.getElementById('warningYes');
-const warningNo      = document.getElementById('warningNo');
+const warningYes = document.getElementById('warningYes');
+const warningNo = document.getElementById('warningNo');
 
-let isModalOpen    = false;
+let isModalOpen = false;
 let currentStoryId = null;
+let originalText = "";
+
+let likedStories = JSON.parse(localStorage.getItem('likedStories') || '[]');
 
 /************************************************************
- * [4] CARREGAR HISTÓRIAS
+ * [4] Carregar Histórias
  ************************************************************/
 function loadAllStories() {
+  // Obtém as histórias do localStorage; se estiver vazio, retorna um array vazio
   const raw = JSON.parse(localStorage.getItem('historias')) || [];
-  allStories = raw.map(st => {
+  const transformed = raw.map(st => {
     if (!st.cartao) {
       st.cartao = {
-        tituloCartao:     st.titulo || "Sem Título",
-        sinopseCartao:    (st.descricao || "").substring(0,150) || "(sem sinopse)",
+        tituloCartao: st.titulo || "Sem Título",
+        sinopseCartao: (st.descricao || "").substring(0, 150) || "(sem sinopse)",
         historiaCompleta: st.descricao || "",
-        dataCartao:       "",
-        autorCartao:      "",
-        categorias:       [],
-        likes:            0
+        dataCartao: "",
+        autorCartao: "",
+        categorias: [],
+        likes: 0
       };
     }
     return st;
   });
+  allStories = transformed;
 }
 
 /************************************************************
- * [5] FORMATADORES E MARCAÇÃO
+ * [5.1] Formatador para sinopse (4 linhas por parágrafo)
  ************************************************************/
 function formatarPor4Linhas(text) {
-  const lines = text.split('\n'), paras = [], buf = [];
-  lines.forEach(line => {
-    buf.push(line);
-    if (buf.length === 4) {
-      paras.push(buf.join('<br>'));
-      buf.length = 0;
+  const lines = text.split('\n');
+  let paragrafos = [];
+  let buffer = [];
+  for (let i = 0; i < lines.length; i++) {
+    buffer.push(lines[i]);
+    if (buffer.length === 4) {
+      paragrafos.push(buffer.join('<br>'));
+      buffer = [];
     }
-  });
-  if (buf.length) paras.push(buf.join('<br>'));
-  return paras.map(p => `<p style="text-align: justify;">${p}</p>`).join('');
+  }
+  if (buffer.length > 0) {
+    paragrafos.push(buffer.join('<br>'));
+  }
+  return paragrafos.map(p => `<p style="text-align: justify;">${p}</p>`).join('');
 }
 
+/************************************************************
+ * [5.2] Formatador para leitura completa com marcação
+ ************************************************************/
 function formatarTextoParaLeitura(text) {
-  const lines = text.split('\n'), paras = [];
-  let buf = [], wordIndex = 0;
-  lines.forEach(line => {
-    const spans = line.split(' ').map(word => {
-      const span = `<span class="reading-word" data-index="${wordIndex}" onclick="markReadingPosition(this)">${word}</span>`;
+  const lines = text.split('\n');
+  let paragrafos = [];
+  let buffer = [];
+  let wordIndex = 0;
+  for (let i = 0; i < lines.length; i++) {
+    let words = lines[i].split(' ').map(word => {
+      let span = `<span class="reading-word" data-index="${wordIndex}" onclick="markReadingPosition(this)">${word}</span>`;
       wordIndex++;
       return span;
     });
-    buf.push(spans.join(' '));
-    if (buf.length === 4) {
-      paras.push(`<p style="text-align: justify;">${buf.join('<br>')}</p>`);
-      buf.length = 0;
+    buffer.push(words.join(' '));
+    if (buffer.length === 4) {
+      let paragraph = `<p style="text-align: justify;">${buffer.join('<br>')}</p>`;
+      paragrafos.push(paragraph);
+      buffer = [];
     }
-  });
-  if (buf.length) paras.push(`<p style="text-align: justify;">${buf.join('<br>')}</p>`);
-  return paras.join('');
+  }
+  if (buffer.length > 0) {
+    let paragraph = `<p style="text-align: justify;">${buffer.join('<br>')}</p>`;
+    paragrafos.push(paragraph);
+  }
+  return paragrafos.join('');
 }
 
-function markReadingPosition(el) {
-  const idx = el.getAttribute('data-index');
-  localStorage.setItem('readingPosition_' + currentStoryId, idx);
-  showToast("Posição de leitura salva (palavra " + idx + ")");
+/************************************************************
+ * [5.3] Marcar posição de leitura
+ ************************************************************/
+function markReadingPosition(element) {
+  const index = element.getAttribute('data-index');
+  localStorage.setItem('readingPosition_' + currentStoryId, index);
+  showToast("Posição de leitura salva (palavra " + index + ")");
 }
 
+/************************************************************
+ * [5.4] Destacar a palavra marcada
+ ************************************************************/
 function destacarPalavra() {
-  const saved = localStorage.getItem('readingPosition_' + currentStoryId);
-  if (saved !== null) {
-    const span = modalFullText.querySelector(`[data-index="${saved}"]`);
-    if (span) {
-      span.style.background = 'yellow';
-      span.scrollIntoView({ behavior: "smooth", block: "center" });
+  const savedIndex = localStorage.getItem('readingPosition_' + currentStoryId);
+  if (savedIndex !== null) {
+    const wordSpan = modalFullText.querySelector(`[data-index="${savedIndex}"]`);
+    if (wordSpan) {
+      wordSpan.style.background = 'yellow';
+      wordSpan.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }
 }
 
 /************************************************************
- * [6] CRIAR CARTÕES E MOSTRAR NO DOM
+ * [5.5] Criar o cartão da história
  ************************************************************/
 function createStoryCard(story) {
   const div = document.createElement('div');
   div.className = 'featured-sheet';
-  div.innerHTML = `
-    <div class="sheet-title">${story.cartao.tituloCartao}</div>
-    <div class="sheet-sinopse">${formatarPor4Linhas(story.cartao.sinopseCartao)}</div>
-  `;
-  div.onclick = () => abrirModal(story);
+
+  // Título
+  const titleEl = document.createElement('div');
+  titleEl.className = 'sheet-title';
+  titleEl.textContent = story.cartao.tituloCartao || 'Sem Título';
+  div.appendChild(titleEl);
+
+  // Sinopse (exibida no cartão – conforme o seu código anterior)
+  const sinopseEl = document.createElement('div');
+  sinopseEl.className = 'sheet-sinopse';
+  sinopseEl.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao || '(sem sinopse)');
+  div.appendChild(sinopseEl);
+
+  // Ao clicar no cartão, abre o modal
+  div.addEventListener('click', () => {
+    isModalOpen = true;
+    currentStoryId = story.id;
+    modalTitle.textContent = story.cartao.tituloCartao || "Sem Título";
+    modalFullText.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao || '(sem sinopse)');
+    modalInfo.innerHTML = '';
+
+    // Botão “Ler” para carregar a história completa com palavras clicáveis
+    const lerBtn = document.createElement('button');
+    lerBtn.textContent = 'Ler';
+    lerBtn.addEventListener('click', () => {
+      modalTitle.textContent = story.titulo || "História Completa";
+      originalText = story.cartao.historiaCompleta || '(sem história completa)';
+      modalFullText.innerHTML = formatarTextoParaLeitura(originalText);
+    });
+    modalFullText.appendChild(lerBtn);
+
+    // Verifica se há posição salva para exibir o botão "Continuar"
+    let continuarBtn = document.getElementById('continuarBtn');
+    // Se o botão não existir, cria-o dinamicamente e o adiciona ao modal
+    if (!continuarBtn) {
+      continuarBtn = document.createElement('button');
+      continuarBtn.id = 'continuarBtn';
+      continuarBtn.textContent = 'Continuar';
+      // Adiciona event listener ao botão "Continuar"
+      continuarBtn.addEventListener('click', () => {
+        const storyAtual = allStories.find(s => s.id == currentStoryId);
+        if (storyAtual) {
+          modalTitle.textContent = storyAtual.titulo || "História Completa";
+          originalText = storyAtual.cartao.historiaCompleta || '(sem história completa)';
+          modalFullText.innerHTML = formatarTextoParaLeitura(originalText);
+          setTimeout(destacarPalavra, 100);
+        }
+      });
+      modalFullText.appendChild(continuarBtn);
+    }
+    // Agora, exibe ou oculta o botão "Continuar" conforme a existência de uma posição salva
+    const savedPosition = localStorage.getItem('readingPosition_' + story.id);
+    if (savedPosition !== null) {
+      continuarBtn.style.display = 'inline-block';
+    } else {
+      continuarBtn.style.display = 'none';
+    }
+
+    modalOverlay.style.display = 'flex';
+  });
+
   return div;
 }
 
+/************************************************************
+ * [6] Cartão Placeholder
+ ************************************************************/
+function createPlaceholderCard() {
+  const div = document.createElement('div');
+  div.className = 'featured-sheet';
+  const titleEl = document.createElement('div');
+  titleEl.className = 'sheet-title';
+  titleEl.textContent = 'Placeholder';
+  div.appendChild(titleEl);
+  const sinopseEl = document.createElement('div');
+  sinopseEl.className = 'sheet-sinopse';
+  sinopseEl.textContent = '(sem história)';
+  div.appendChild(sinopseEl);
+  return div;
+}
+
+/************************************************************
+ * [7] Filtro, Ordenar, Pesquisa
+ ************************************************************/
+function matchesSearch(story, searchInput) {
+  const text = searchInput.trim().toLowerCase();
+  if (!text) return true;
+  const splitted = text.split(/\s+/);
+  const t = (story.cartao.tituloCartao || '').toLowerCase();
+  const a = (story.cartao.autorCartao || '').toLowerCase();
+  if (splitted.length === 1) {
+    return t.includes(splitted[0]) || a.includes(splitted[0]);
+  } else {
+    const lastToken = splitted[splitted.length - 1];
+    const firstTokens = splitted.slice(0, splitted.length - 1).join(' ');
+    return t.includes(firstTokens) && a.includes(lastToken);
+  }
+}
+
+function getFilteredStories() {
+  let arr = [...allStories];
+  const searchInput = (document.getElementById('searchBar')?.value || '').toLowerCase();
+  arr = arr.filter(story => matchesSearch(story, searchInput));
+  const cat = document.getElementById('category-filter') ? document.getElementById('category-filter').value : '';
+  if (cat) {
+    arr = arr.filter(h => h.cartao.categorias && h.cartao.categorias.includes(cat));
+  }
+  const sortFilter = document.getElementById('sort-filter') ? document.getElementById('sort-filter').value : '';
+  if (sortFilter === 'date') {
+    arr.sort((a, b) => {
+      const dataA = a.cartao.dataCartao || '1900-01-01';
+      const dataB = b.cartao.dataCartao || '1900-01-01';
+      return dataA.localeCompare(dataB);
+    });
+  } else if (sortFilter === 'popularity') {
+    arr.sort((a, b) => {
+      const popA = a.cartao.likes || 0;
+      const popB = b.cartao.likes || 0;
+      return popB - popA;
+    });
+  }
+  return arr;
+}
+
+/************************************************************
+ * [8] Exibir os Cartões (Batch)
+ ************************************************************/
 function showBatch(count) {
-  const term     = searchBar.value.trim().toLowerCase();
-  const filtered = allStories.filter(s => matchesSearch(s, term));
-  container.innerHTML = '';
-  filtered.slice(currentOffset, currentOffset + count)
-          .forEach(s => container.appendChild(createStoryCard(s)));
+  const filtered = getFilteredStories();
+  if (filtered.length === 0) {
+    // Se não houver histórias publicadas, não exibe nenhum cartão
+    return;
+  }
+  const end = currentOffset + count;
+  const realSlice = filtered.slice(currentOffset, end);
+  realSlice.forEach(story => {
+    container.appendChild(createStoryCard(story));
+  });
   currentOffset += count;
 }
 
 /************************************************************
- * [7] ABRIR MODAL COM “Ler” E “Continuar”
+ * [9] Inicialização
  ************************************************************/
-function abrirModal(story) {
-  isModalOpen    = true;
-  currentStoryId = story.id;
+function initialLoad() {
+  container.innerHTML = '';
+  currentOffset = 0;
+  showBatch(initialCount);
+}
 
-  modalTitle.textContent  = story.cartao.tituloCartao;
-  modalFullText.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao);
-  continuarBtn.style.display = 
-    localStorage.getItem('readingPosition_' + story.id) !== null
-      ? 'inline-block'
-      : 'none';
+function loadMore() {
+  showBatch(increment);
+}
 
-  // Ler
-  const lerBtn = document.createElement('button');
-  lerBtn.textContent = 'Ler';
-  lerBtn.onclick = () => {
-    modalTitle.textContent  = story.titulo;
-    modalFullText.innerHTML = formatarTextoParaLeitura(story.cartao.historiaCompleta);
-    // após recarregar, mantemos o botão Continuar
-    continuarBtn.style.display = 
-      localStorage.getItem('readingPosition_' + story.id) !== null
-        ? 'inline-block'
-        : 'none';
-  };
-  // limpa qualquer botão anterior e anexa
-  modalFullText.appendChild(lerBtn);
-
-  // Continuar (botão estático)
-  continuarBtn.onclick = () => {
-    modalTitle.textContent  = story.titulo;
-    modalFullText.innerHTML = formatarTextoParaLeitura(story.cartao.historiaCompleta);
-    setTimeout(destacarPalavra, 0);
-    // permanece visível
-  };
-
-  modalOverlay.style.display = 'flex';
+function handleFilterOrSort() {
+  container.innerHTML = '';
+  currentOffset = 0;
+  showBatch(initialCount);
 }
 
 /************************************************************
- * [8] PESQUISA E SUGESTÕES
+ * [10] Modal e Aviso de Clique Fora
  ************************************************************/
-function matchesSearch(story, term) {
-  if (!term) return true;
-  return story.cartao.tituloCartao.toLowerCase().includes(term)
-      || (story.cartao.autorCartao || '').toLowerCase().includes(term);
+if (modalClose) {
+  modalClose.addEventListener('click', () => {
+    modalOverlay.style.display = 'none';
+    isModalOpen = false;
+  });
 }
-
-function exibirSugestoes(list) {
-  if (!list.length) {
-    searchResults.innerHTML = `<div style="padding:6px;">Nenhuma história encontrada</div>`;
-  } else {
-    searchResults.innerHTML = list.map(s => `
-      <div class="suggestion-item" data-id="${s.id}" style="padding:6px;border-bottom:1px solid #ccc;cursor:pointer">
-        <strong>${s.cartao.tituloCartao}</strong><br>
-        <em>Autor: ${s.cartao.autorCartao || 'Desconhecido'}</em>
-      </div>
-    `).join('');
-  }
-  searchResults.style.display = 'block';
-  searchResults.querySelectorAll('.suggestion-item')
-    .forEach(el => el.onclick = () => {
-      const s = allStories.find(x => x.id == el.dataset.id);
-      searchResults.style.display = 'none';
-      abrirModal(s);
-    });
+if (modalOverlay) {
+  modalOverlay.addEventListener('click', (e) => {
+    if (e.target === modalOverlay && isModalOpen) {
+      warningOverlay.style.display = 'flex';
+    }
+  });
+}
+if (warningYes && warningNo) {
+  warningYes.addEventListener('click', () => {
+    modalOverlay.style.display = 'none';
+    warningOverlay.style.display = 'none';
+    isModalOpen = false;
+  });
+  warningNo.addEventListener('click', () => {
+    warningOverlay.style.display = 'none';
+  });
 }
 
 /************************************************************
- * [9] EVENTOS E INICIALIZAÇÃO
+ * [11] Evento DOMContentLoaded
  ************************************************************/
-modalClose.onclick     = () => { modalOverlay.style.display = 'none'; isModalOpen = false; };
-modalOverlay.onclick   = e => { if (e.target === modalOverlay && isModalOpen) warningOverlay.style.display = 'flex'; };
-warningYes.onclick     = () => { modalOverlay.style.display = 'none'; warningOverlay.style.display = 'none'; isModalOpen = false; };
-warningNo.onclick      = () => { warningOverlay.style.display = 'none'; };
-loadMoreBtn.onclick    = () => showBatch(increment);
-searchBar.oninput      = () => {
-  const v = searchBar.value.trim().toLowerCase();
-  if (!v) {
-    searchResults.style.display = 'none';
-    currentOffset = 0;
-    showBatch(initialCount);
-  } else {
-    exibirSugestoes(allStories.filter(s => matchesSearch(s, v)));
-  }
-};
-
 document.addEventListener('DOMContentLoaded', () => {
   exibirUsuarioLogado();
   loadAllStories();
-  currentOffset = 0;
-  showBatch(initialCount);
+  initialLoad();
+
+  const searchBar = document.getElementById('searchBar');
+  const categoryFilter = document.getElementById('category-filter');
+  const sortFilter = document.getElementById('sort-filter');
+  const loadMoreBtn = document.getElementById('loadMoreBtn');
+
+  if (categoryFilter) {
+    categoryFilter.addEventListener('change', handleFilterOrSort);
+  }
+  if (sortFilter) {
+    sortFilter.addEventListener('change', handleFilterOrSort);
+  }
+  if (loadMoreBtn) {
+    loadMoreBtn.addEventListener('click', loadMore);
+  }
+  if (searchBar) {
+    searchBar.addEventListener('input', () => {
+      container.innerHTML = '';
+      currentOffset = 0;
+      showBatch(initialCount);
+    });
+  }
+
+  // Se o botão "Continuar" já existir (no HTML), adiciona seu event listener
+  const continuarBtn = document.getElementById('continuarBtn');
+  if (continuarBtn) {
+    continuarBtn.addEventListener('click', () => {
+      const story = allStories.find(s => s.id == currentStoryId);
+      if (story) {
+        modalTitle.textContent = story.titulo || "História Completa";
+        originalText = story.cartao.historiaCompleta || '(sem história completa)';
+        modalFullText.innerHTML = formatarTextoParaLeitura(originalText);
+        setTimeout(destacarPalavra, 100);
+      }
+    });
+  }
 });
