@@ -1,92 +1,74 @@
-// userDisplay.js
 import { supabase } from "./supabase.js";
 
-async function exibirUsuarioLogado() {
-  const userArea = document.getElementById("userMenuArea");
-  if (!userArea) {
-    console.error("Elemento 'userMenuArea' não encontrado no HTML.");
-    return;
-  }
-
-  // Obtém a sessão atual do Supabase
-  const {
-    data: { session },
-    error: sessionError,
-  } = await supabase.auth.getSession();
-  console.log("Sessão retornada:", session, "Erro na sessão:", sessionError);
-
-  // Se não houver sessão, exibe um link para login
-  if (!session) {
-    userArea.innerHTML = `
-      <a href="Criacao.html" style="color:white;">
-        <i class="fas fa-user"></i> Login
-      </a>`;
-    return;
-  }
-
-  // Se houver sessão, usa o ID do usuário para consultar a tabela 'profiles'
-  const userId = session.user.id;
-  console.log("Usuário autenticado. ID:", userId);
-
-  // Consulta o campo 'username' na tabela 'profiles'
-  const { data: profileData, error: profileError } = await supabase
-    .from("profiles")
-    .select("username")
-    .eq("id", userId)
-    .single();
-
-  console.log("Dados do perfil:", profileData, "Erro no perfil:", profileError);
-
-  // Define o nome a exibir
-  let displayName = "";
-  if (profileError || !profileData || !profileData.username) {
-    displayName = session.user.email;
-    console.warn("Não foi possível recuperar o nome de usuário. Usando e-mail:", displayName);
-  } else {
-    displayName = profileData.username;
-  }
-
-  // Atualiza a interface – exibe o nome do usuário e um menu para logout
-  userArea.innerHTML = `
-    <span id="user-name" style="cursor: pointer;">${displayName}</span>
-    <div id="logout-menu" style="display: none; margin-top: 5px;">
-      <button id="logout-btn">Deslogar</button>
-    </div>
-  `;
-
-  // Ao clicar no nome do usuário, alterna a visibilidade do menu de logout
-  const userNameEl = document.getElementById("user-name");
-  const logoutMenu = document.getElementById("logout-menu");
-  userNameEl.addEventListener("click", () => {
-    logoutMenu.style.display = (logoutMenu.style.display === "none" ? "block" : "none");
-  });
-
-  // Configura o botão de logout para redirecionar para a página inicial após sair
-  const logoutBtn = document.getElementById("logout-btn");
-  logoutBtn.addEventListener("click", async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      alert("Erro ao deslogar: " + error.message);
-    } else {
-      window.location.href = "Criacao.html"; // Redireciona para a página inicial
-    }
-  });
-}
-
-// Chama a função assim que o DOM for carregado
-document.addEventListener("DOMContentLoaded", exibirUsuarioLogado);
+/************************************************************
+ * HistoriasQueEuEscrevi.js
+ * - Lista Lateral
+ * - Salvar história (se não tiver cartao, cria)
+ * - Ler, Excluir
+ * - Modo de Leitura
+ * - Formatação a cada 5 pontos
+ * - Marcador de linha
+ * - Pesquisa por cartao.autorCartao ou cartao.tituloCartao
+ ************************************************************/
 
 /************************************************************
- * [2] TOAST (Notificação)
+ * [A] LOGIN/LOGOUT - Usando Supabase
  ************************************************************/
-function showToast(message, duration = 2000) {
-  const toast = document.createElement('div');
-  toast.className = 'my-toast';
-  toast.innerText = message;
-  document.body.appendChild(toast);
-  setTimeout(() => {
-    if (toast.parentNode) toast.parentNode.removeChild(toast);
-  }, duration);
+async function exibirUsuarioLogado() {
+  const userArea = document.getElementById('userMenuArea');
+  if (!userArea) return;
+
+  try {
+    // Obtém a sessão atual do Supabase
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+      console.error("Erro ao obter a sessão:", sessionError);
+      return;
+    }
+    // Se não houver sessão, exibe link para login
+    if (!session) {
+      userArea.innerHTML = `
+        <a href="Criacao.html" style="color:white;">
+          <i class="fas fa-user"></i> Login
+        </a>`;
+      userArea.onclick = null;
+      return;
+    }
+
+    const userId = session.user.id;
+    // Consulta a tabela "profiles" para obter o campo "username"
+    const { data: profileData, error: profileError } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", userId)
+      .single();
+
+    let displayName = "";
+    if (profileError || !profileData || !profileData.username) {
+      displayName = session.user.email;
+      console.warn("Não foi possível recuperar o username; utilizando email:", displayName);
+    } else {
+      displayName = profileData.username;
+    }
+
+    userArea.innerHTML = displayName;
+
+    // Ao clicar, pergunta se deseja fazer logout e redireciona para "Criacao.html"
+    userArea.onclick = () => {
+      if (confirm("Deseja fazer logout?")) {
+        supabase.auth.signOut().then(({ error }) => {
+          if (error) {
+            alert("Erro ao deslogar: " + error.message);
+          } else {
+            window.location.href = "Criacao.html";
+          }
+        });
+      }
+    };
+
+  } catch (ex) {
+    console.error("Exceção em exibirUsuarioLogado:", ex);
+  }
 }
 
 /************************************************************
