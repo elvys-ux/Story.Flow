@@ -4,91 +4,83 @@
   <meta charset="UTF-8">
   <title>StoryFlow - Memories</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  <!-- Ícones do Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <!-- CSS principal -->
-  <link rel="stylesheet" href="css/Memories.css">
-  <script type="module" src="js/supabase.js"></script>
-  <script type="module" src="js/userDisplay.js"></script>
 
+  <!-- Font Awesome -->
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <!-- Seu CSS -->
+  <link rel="stylesheet" href="css/Memories.css">
 </head>
 <body>
 
-
   <!-- BARRA DE NAVEGAÇÃO FIXA -->
   <div class="navbar">
-    <a href="index.html"><i class="fas fa-home"></i>Início</a>
+    <a href="index.html"><i class="fas fa-home"></i> Início</a>
+
     <div class="dropdown">
-      <a href="#"><i class="fas fa-pencil-alt"></i>Criar História</a>
+      <a href="#"><i class="fas fa-pencil-alt"></i> Criar História</a>
       <div class="dropdown-content">
         <a href="diario.html">Escrever Diário</a>
         <a href="historia.html">Escrever História</a>
       </div>
     </div>
+
     <div class="dropdown">
-      <a href="#"><i class="fas fa-book"></i>Histórias</a>
+      <a href="#"><i class="fas fa-book"></i> Histórias</a>
       <div class="dropdown-content">
-        <a href="hisotirasqueescrevi.html">Histórias escritas por mim</a>
+        <a href="historiasqueescrevi.html">Escritas por mim</a>
         <a href="VerHistorias.html">Ler Histórias</a>
       </div>
     </div>
-    
+
+    <!-- Área do usuário -->
     <div id="userMenuArea"></div>
-	
-  </div>
 
     <!-- Caixa de pesquisa -->
-    <div class="search-box" style="position: relative;">
+    <div class="search-box">
       <input type="text" id="searchBar" placeholder="Pesquisar...">
       <button id="searchBtn"><i class="fas fa-search"></i></button>
-      <!-- Div para sugestões (drop-down) -->
       <div id="searchResults"></div>
     </div>
-  </div>
   </div>
 
   <main>
     <h1>StoryFlow</h1>
     <h2>Crie e personalize as suas histórias no StoryFlow, com recursos para guardar, editar e adicionar música às suas memórias.</h2>
-    <!-- Container para exibir 4 cartões de destaque -->
+
+    <!-- Cartões -->
     <div id="featuredStories" style="margin-top: 30px;"></div>
+    <button id="loadMoreBtn">Carregar mais</button>
   </main>
 
-  <!-- Modal para leitura de história -->
+  <!-- Modal de leitura -->
   <div class="modal-overlay" id="modalOverlay">
     <div class="modal-content">
       <button class="modal-close" id="modalClose">Fechar</button>
-      <h2 id="modalTitle">Título da História</h2>
-      <!-- Texto completo (sinopse ou história completa) -->
-      <p id="modalFullText"></p>
-      <!-- Botão Continuar (inicialmente oculto) -->
+      <h2 id="modalTitle">Título</h2>
+      <div id="modalFullText"></div>
       <button id="continuarBtn" style="display: none;">Continuar</button>
       <div class="modal-info" id="modalInfo"></div>
     </div>
   </div>
 
-  <!-- Overlay de aviso para clique fora -->
+  <!-- Aviso de clique fora -->
   <div class="warning-overlay" id="warningOverlay">
     <div class="warning-box">
       <p>Deseja fechar a leitura?</p>
-      <div>
-        <button id="warningYes">Sim</button>
-        <button id="warningNo">Não</button>
-      </div>
+      <button id="warningYes">Sim</button>
+      <button id="warningNo">Não</button>
     </div>
   </div>
 
-  <!-- Overlay para avisos (ex: linha salva) -->
-  <div id="avisoOverlay" style="display: none;">
-    <div id="avisoMessage"></div>
-  </div>
-
-<footer>
-    ©Ano-2025 / Elvys / StoryFlow / 𝐓𝐮𝐫𝐦𝐚-Tis7 <a href="Sobre.html">Termos de uso</a>
+  <footer>
+    © 2025 / Elvys / StoryFlow / Turma‑Tis7 — <a href="Sobre.html">Termos de uso</a>
   </footer>
 
-  <!-- JavaScript principal -->
-     <script type="module" src="js/Memories.js"></script>
+  <!-- Scripts: Supabase e exibição de usuário -->
+  <script type="module" src="js/supabase.js"></script>
+  <script type="module" src="js/userDisplay.js"></script>
+  <!-- Script principal -->
+  <script type="module" src="js/Memories.js"></script>
 </body>
 </html>
