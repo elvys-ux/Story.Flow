@@ -36,11 +36,8 @@ export async function exibirUsuarioLogado() {
     userArea.onclick = () => {
       if (confirm('Deseja fazer logout?')) {
         supabase.auth.signOut().then(({ error }) => {
-          if (error) {
-            alert('Erro ao deslogar: ' + error.message);
-          } else {
-            window.location.href = 'Criacao.html';
-          }
+          if (error) alert('Erro ao deslogar: ' + error.message);
+          else window.location.href = 'Criacao.html';
         });
       }
     };
@@ -55,7 +52,7 @@ export async function exibirUsuarioLogado() {
 }
 
 /************************************************************
- * [2] TOAST (Notificação)
+ * [2] TOAST (notificação)
  ************************************************************/
 function showToast(message, duration = 2000) {
   const toast = document.createElement('div');
@@ -88,21 +85,21 @@ const warningOverlay = document.getElementById('warningOverlay');
 const warningYes     = document.getElementById('warningYes');
 const warningNo      = document.getElementById('warningNo');
 
-let isModalOpen    = false;
+let isModalOpen = false;
 let currentStoryId = null;
 
 /************************************************************
- * [4] CARREGAR HISTÓRIAS
+ * [4] CARREGAR HISTÓRIAS do localStorage
  ************************************************************/
 function loadAllStories() {
   const raw = JSON.parse(localStorage.getItem('historias')) || [];
   allStories = raw.map(st => {
     if (!st.cartao) {
       st.cartao = {
-        tituloCartao:     st.titulo || 'Sem Título',
+        tituloCartao:     st.titulo     || 'Sem Título',
         sinopseCartao:    (st.descricao || '').substring(0,150) || '(sem sinopse)',
-        historiaCompleta: st.descricao || '',
-        autorCartao:      st.autor || '',
+        historiaCompleta: st.descricao   || '',
+        autorCartao:      st.autor      || '',
         categorias:       [],
         likes:            0
       };
@@ -112,19 +109,19 @@ function loadAllStories() {
 }
 
 /************************************************************
- * [5] FORMATADORES E MARCAÇÃO
+ * [5] FORMATADORES
  ************************************************************/
 function formatarPor4Linhas(text) {
   const lines = text.split('\n');
   const paras = [];
   let buf = [];
-  lines.forEach(line => {
+  for (const line of lines) {
     buf.push(line);
     if (buf.length === 4) {
       paras.push(buf.join('<br>'));
       buf = [];
     }
-  });
+  }
   if (buf.length) paras.push(buf.join('<br>'));
   return paras.map(p => `<p style="text-align: justify;">${p}</p>`).join('');
 }
@@ -134,7 +131,7 @@ function formatarTextoParaLeitura(text) {
   const paras = [];
   let buf = [];
   let wordIndex = 0;
-  lines.forEach(line => {
+  for (const line of lines) {
     const spans = line.split(' ').map(word => {
       const span = `<span class="reading-word" data-index="${wordIndex}" onclick="markReadingPosition(this)">${word}</span>`;
       wordIndex++;
@@ -145,17 +142,23 @@ function formatarTextoParaLeitura(text) {
       paras.push(`<p style="text-align: justify;">${buf.join('<br>')}</p>`);
       buf = [];
     }
-  });
+  }
   if (buf.length) paras.push(`<p style="text-align: justify;">${buf.join('<br>')}</p>`);
   return paras.join('');
 }
 
+/************************************************************
+ * [5.3] MARCAR posição de leitura
+ ************************************************************/
 function markReadingPosition(el) {
   const idx = el.getAttribute('data-index');
   localStorage.setItem('readingPosition_' + currentStoryId, idx);
   showToast(`Posição de leitura salva (palavra ${idx})`);
 }
 
+/************************************************************
+ * [5.4] DESTACAR palavra salva
+ ************************************************************/
 function destacarPalavra() {
   const saved = localStorage.getItem('readingPosition_' + currentStoryId);
   if (saved !== null) {
@@ -168,7 +171,23 @@ function destacarPalavra() {
 }
 
 /************************************************************
- * [6] CRIAR E EXIBIR CARTÕES
+ * [6] CRIAR cartão placeholder
+ ************************************************************/
+function createPlaceholderCard() {
+  const div = document.createElement('div');
+  div.className = 'featured-sheet';
+  const t = document.createElement('div');
+  t.className = 'sheet-title';
+  t.textContent = 'Sem histórias disponíveis';
+  const s = document.createElement('div');
+  s.className = 'sheet-sinopse';
+  s.textContent = 'Adicione memórias para vê-las aqui.';
+  div.append(t, s);
+  return div;
+}
+
+/************************************************************
+ * [7] CRIAR E EXIBIR CARTÕES
  ************************************************************/
 function createStoryCard(story) {
   const div = document.createElement('div');
@@ -185,14 +204,17 @@ function showBatch(count) {
   container.innerHTML = '';
   const term     = searchBar.value.trim().toLowerCase();
   const filtered = allStories.filter(s => matchesSearch(s, term));
-  filtered
-    .slice(currentOffset, currentOffset + count)
-    .forEach(s => container.appendChild(createStoryCard(s)));
+  if (filtered.length === 0) {
+    container.appendChild(createPlaceholderCard());
+    return;
+  }
+  filtered.slice(currentOffset, currentOffset + count)
+          .forEach(s => container.appendChild(createStoryCard(s)));
   currentOffset += count;
 }
 
 /************************************************************
- * [7] ABRIR MODAL
+ * [8] ABRIR MODAL com Ler / Continuar
  ************************************************************/
 function abrirModal(story) {
   isModalOpen    = true;
@@ -200,34 +222,31 @@ function abrirModal(story) {
 
   modalTitle.textContent  = story.cartao.tituloCartao;
   modalFullText.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao);
-  continuarBtn.style.display = localStorage.getItem('readingPosition_' + story.id)
-    ? 'inline-block'
-    : 'none';
 
-  // Botão Ler
-  const lerBtn = document.createElement('button');
-  lerBtn.textContent = 'Ler';
-  lerBtn.onclick = () => {
-    modalTitle.textContent  = story.titulo;
-    modalFullText.innerHTML = formatarTextoParaLeitura(story.cartao.historiaCompleta);
-    continuarBtn.style.display = localStorage.getItem('readingPosition_' + story.id)
-      ? 'inline-block'
-      : 'none';
-  };
-  modalFullText.appendChild(lerBtn);
-
-  // Botão Continuar
+  // configurar Continuar
+  const hasSaved = localStorage.getItem('readingPosition_' + story.id) !== null;
+  continuarBtn.style.display = hasSaved ? 'inline-block' : 'none';
   continuarBtn.onclick = () => {
     modalTitle.textContent  = story.titulo;
     modalFullText.innerHTML = formatarTextoParaLeitura(story.cartao.historiaCompleta);
     setTimeout(destacarPalavra, 0);
   };
 
+  // botão Ler
+  const lerBtn = document.createElement('button');
+  lerBtn.textContent = 'Ler';
+  lerBtn.onclick = () => {
+    modalTitle.textContent  = story.titulo;
+    modalFullText.innerHTML = formatarTextoParaLeitura(story.cartao.historiaCompleta);
+    continuarBtn.style.display = hasSaved ? 'inline-block' : 'none';
+  };
+  modalFullText.appendChild(lerBtn);
+
   modalOverlay.style.display = 'flex';
 }
 
 /************************************************************
- * [8] PESQUISA E SUGESTÕES
+ * [9] PESQUISA e SUGESTÕES
  ************************************************************/
 function matchesSearch(story, term) {
   if (!term) return true;
@@ -236,15 +255,13 @@ function matchesSearch(story, term) {
 }
 
 function exibirSugestoes(list) {
-  if (!list.length) {
-    searchResults.innerHTML = `<div style="padding:6px;">Nenhuma história encontrada</div>`;
-  } else {
-    searchResults.innerHTML = list.map(s => `
+  searchResults.innerHTML = list.length
+    ? list.map(s => `
       <div class="suggestion-item" data-id="${s.id}" style="padding:6px;border-bottom:1px solid #ccc;cursor:pointer">
         <strong>${s.cartao.tituloCartao}</strong><br>
         <em>Autor: ${s.cartao.autorCartao || 'Desconhecido'}</em>
-      </div>`).join('');
-  }
+      </div>`).join('')
+    : `<div style="padding:6px;">Nenhuma história encontrada</div>`;
   searchResults.style.display = 'block';
   searchResults.querySelectorAll('.suggestion-item').forEach(el => {
     el.onclick = () => {
@@ -256,27 +273,20 @@ function exibirSugestoes(list) {
 }
 
 /************************************************************
- * [9] EVENTOS E INICIALIZAÇÃO
+ * [10] EVENTOS e INICIALIZAÇÃO
  ************************************************************/
-modalClose.onclick     = () => { modalOverlay.style.display = 'none'; isModalOpen = false; };
-modalOverlay.onclick   = e => { if (e.target === modalOverlay && isModalOpen) warningOverlay.style.display = 'flex'; };
-warningYes.onclick     = () => { modalOverlay.style.display = 'none'; warningOverlay.style.display = 'none'; isModalOpen = false; };
-warningNo.onclick      = () => { warningOverlay.style.display = 'none'; };
-searchBar.oninput      = () => {
-  const v = searchBar.value.trim().toLowerCase();
-  if (!v) {
-    searchResults.style.display = 'none';
-    currentOffset = 0;
-    showBatch(initialCount);
-  } else {
-    exibirSugestoes(allStories.filter(s => matchesSearch(s, v)));
-  }
+modalClose.onclick   = () => { modalOverlay.style.display = 'none'; isModalOpen = false; };
+modalOverlay.onclick = e => { if (e.target===modalOverlay&&isModalOpen) warningOverlay.style.display='flex'; };
+warningYes.onclick   = () => { modalOverlay.style.display='none'; warningOverlay.style.display='none'; isModalOpen=false; };
+warningNo.onclick    = () => { warningOverlay.style.display='none'; };
+
+searchBar.oninput = () => {
+  currentOffset = 0;
+  showBatch(initialCount);
 };
 searchBtn.onclick = () => {
-  const v = searchBar.value.trim().toLowerCase();
-  if (v) {
-    exibirSugestoes(allStories.filter(s => matchesSearch(s, v)));
-  }
+  currentOffset = 0;
+  showBatch(initialCount);
 };
 
 document.addEventListener('DOMContentLoaded', () => {
