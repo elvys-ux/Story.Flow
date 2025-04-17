@@ -2,20 +2,22 @@
 <html lang="pt">
 <head>
   <meta charset="UTF-8">
-  <title>StoryFlow - Memories</title>
+  <title>StoryFlow - Histórias da Comunidade</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
+
   <!-- Ícones do Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <!-- CSS principal -->
-  <link rel="stylesheet" href="css/Memories.css">
-<script type="module" src="js/supabase.js"></script>
+  <!-- Arquivo CSS sem espaços -->
+  <link rel="stylesheet" href="css/VerHistorias.css">
+  
+  <!-- Scripts de módulo -->
+  <script type="module" src="js/supabase.js"></script>
   <script type="module" src="js/userDisplay.js"></script>
 </head>
 <body>
 
 
-  <!-- Barra de Navegação -->
+  <!-- NAVBAR -->
   <div class="navbar">
     <a href="index.html"><i class="fas fa-home"></i>Início</a>
     <div class="dropdown">
@@ -28,7 +30,7 @@
     <div class="dropdown">
       <a href="#"><i class="fas fa-book"></i>Histórias</a>
       <div class="dropdown-content">
-      <a href="hisotirasqueescrevi.html">Minhas Histórias</a>
+         <a href="hisotirasqueescrevi.html">Minhas Histórias</a>
         <a href="VerHistorias.html">Ler Histórias</a>
       </div>
     </div>
@@ -45,8 +47,7 @@
 
   <main>
     <h1>StoryFlow</h1>
-   <h2>Crie e personalize as suas histórias no StoryFlow.</h2>
-    <h3> Com recursos para guardar, editar e publicar histórias ao teu gosto.</h3>
+    <h2>Crie e personalize as suas histórias no StoryFlow, com recursos para guardar, editar e adicionar música às suas memórias.</h2>
     <!-- Container para exibir 4 cartões de destaque -->
     <div id="featuredStories" style="margin-top: 30px;"></div>
   </main>
@@ -80,11 +81,12 @@
     <div id="avisoMessage"></div>
   </div>
 
-  <footer>
-©Ano-2025 / Elvys / StoryFlow / 𝐓𝐮𝐫𝐦𝐚-Tis7 <a href="Sobre.html">Termos de uso</a>
+ <footer>
+    ©Ano-2025 / Elvys / StoryFlow / 𝐓𝐮𝐫𝐦𝐚-Tis7 <a href="Sobre.html">Termos de uso</a>
   </footer>
 
+
   <!-- JavaScript principal -->
-  <script type="module" src="js/Memories.js"></script>
+<script type="module" src="js/VerHistorias.js"></script>
 </body>
 </html>
