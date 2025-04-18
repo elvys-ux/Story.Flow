@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase.js';
 
 /*************************************************************
@@ -221,8 +220,6 @@ async function salvarHistoria(titulo, descricao) {
       .insert([{ titulo, descricao, user_id: userId, data_criacao: new Date().toISOString() }]);
     if (error) return alert('Erro ao salvar história: ' + error.message);
     alert('História salva!');
-    limparFormulario();
-    removerExibicaoHistoria();
   }
 
   await mostrarHistorias();
