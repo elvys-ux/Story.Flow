@@ -12,18 +12,34 @@ document.addEventListener('DOMContentLoaded', async () => {
   await exibirUsuarioLogado();
   await mostrarHistorias();
 
-  // Submit do formulário de história
+  // Submit do formulário de história + cartão
   const form = document.getElementById('storyForm');
   form.addEventListener('submit', async e => {
     e.preventDefault();
+
+    // Dados da história
     const titulo = document.getElementById('titulo').value.trim();
     const descricao = document.getElementById('descricao').value.trim();
+
+    // Dados do cartão
+    const cartaoTitulo = document.getElementById('cartaoTitulo')?.value.trim() || '';
+    const cartaoSinopse = document.getElementById('cartaoSinopse')?.value.trim() || '';
+    const cartaoAutor = document.getElementById('cartaoAutor')?.value.trim() || '';
+    const cartaoData = document.getElementById('cartaoData')?.value.trim() 
+      || new Date().toISOString().split('T')[0];
+
     if (!titulo || !descricao) {
       alert('Preencha o título e a descrição!');
       return;
     }
+
     try {
-      await salvarHistoria(titulo, descricao);
+      await salvarHistoria(titulo, descricao, {
+        titulo_cartao: cartaoTitulo,
+        sinopse_cartao: cartaoSinopse,
+        autor_cartao: cartaoAutor,
+        data_criacao: cartaoData
+      });
     } catch (err) {
       console.error(err);
       alert('Erro ao salvar história: ' + err.message);
@@ -75,7 +91,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 });
 
-// Função para mostrar/ocultar lista de títulos
+// Exibe/oculta lista de títulos
 function toggleTitleList(show) {
   const list = document.getElementById('titleListLeft');
   if (!list) return;
@@ -128,7 +144,7 @@ async function mostrarHistorias() {
   });
 }
 
-// Exibe o menu de ações (Cartão, Editar, Excluir) para cada item
+// Exibe o menu de ações para cada item da lista
 function toggleMenuOpcoes(li, storyID) {
   const existing = li.querySelector('.menu-opcoes');
   if (existing) return existing.remove();
@@ -148,35 +164,68 @@ function toggleMenuOpcoes(li, storyID) {
   li.appendChild(menu);
 }
 
-// Salva nova história ou atualiza existente
-async function salvarHistoria(titulo, descricao) {
+/**
+ * Salva ou atualiza história, categorias e cartão.
+ */
+async function salvarHistoria(titulo, descricao, cartao) {
   const form = document.getElementById('storyForm');
   const editID = form.dataset.editId;
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) { alert('Faça login para salvar histórias.'); return; }
 
+  // Coleta categorias selecionadas
+  const categorias = Array.from(
+    document.querySelectorAll('input[name="categoria"]:checked')
+  ).map(i => Number(i.value));
+
   if (!editID) {
-    // Inserção
+    // Inserção de história
     const { data: [newStory] } = await supabase
       .from('historias')
       .insert([{ titulo, descricao, user_id: user.id, data_criacao: new Date().toISOString() }])
       .select('id');
-    await vincularCategorias(newStory.id);
-    alert('História salva com sucesso (nova)!');
+
+    // Inserção de categorias
+    if (categorias.length) await supabase.from('historia_categorias').insert(
+      categorias.map(catId => ({ historia_id: newStory.id, categoria_id: catId }))
+    );
+
+    // Inserção de cartão
+    if (cartao.titulo_cartao && cartao.sinopse_cartao) await supabase.from('cartoes').insert([
+      { historia_id: newStory.id, ...cartao }
+    ]);
+
+    alert('História, Cartão e Categorias salvos com sucesso!');
     limparFormulario();
     removerExibicaoHistoria();
   } else {
-    // Atualização
+    // Atualização de história
     await supabase.from('historias').update({ titulo, descricao }).eq('id', editID);
+
+    // Atualização de categorias
     await supabase.from('historia_categorias').delete().eq('historia_id', editID);
-    await vincularCategorias(editID);
-    alert('História atualizada com sucesso!');
+    if (categorias.length) await supabase.from('historia_categorias').insert(
+      categorias.map(catId => ({ historia_id: editID, categoria_id: catId }))
+    );
+
+    // Upsert de cartão
+    const { data: existingCartao } = await supabase
+      .from('cartoes')
+      .select('id')
+      .eq('historia_id', editID)
+      .single();
+    const cartPayload = { historia_id: editID, ...cartao };
+    if (existingCartao) await supabase.from('cartoes').update(cartPayload).eq('id', existingCartao.id);
+    else if (cartao.titulo_cartao && cartao.sinopse_cartao) await supabase.from('cartoes').insert([cartPayload]);
+
+    alert('História, Cartão e Categorias atualizados com sucesso!');
     exibirHistoriaNoContainer(editID);
   }
+
   await mostrarHistorias();
 }
 
-// Exclui história e seus relacionamentos
+// Exclui história e relacionamentos
 async function excluirHistoria(id) {
   if (!confirm('Deseja excluir a história?')) return;
   await supabase.from('historia_categorias').delete().eq('historia_id', id);
@@ -188,26 +237,20 @@ async function excluirHistoria(id) {
   await mostrarHistorias();
 }
 
-// Associa categorias selecionadas à história
-async function vincularCategorias(historiaId) {
-  const checados = Array.from(document.querySelectorAll('input[name="categoria"]:checked'))
-    .map(i => i.value);
-  if (!checados.length) return;
-  await supabase.from('historia_categorias').insert(
-    checados.map(c => ({ historia_id: historiaId, categoria_id: c }))
-  );
-}
-
-// Limpa formulário de criação/edição de história
+// Limpa formulário de criação/edição
 function limparFormulario() {
   document.getElementById('titulo').value = '';
   document.getElementById('descricao').value = '';
+  document.getElementById('cartaoTitulo').value = '';
+  document.getElementById('cartaoSinopse').value = '';
+  document.getElementById('cartaoAutor').value = '';
+  document.getElementById('cartaoData').value = new Date().toISOString().split('T')[0];
   const f = document.getElementById('storyForm');
   f.dataset.editId = '';
   document.querySelector('.btn[type="submit"]').textContent = 'Salvar';
 }
 
-// Remove exibição atual da história no container
+// Remove exibição de história atual
 function removerExibicaoHistoria() {
   const c = document.getElementById('storyContainer');
   const o = c.querySelector('.exibicao-historia');
@@ -223,7 +266,8 @@ async function editarHistoria(id) {
   f.dataset.editId = data.id;
   document.querySelector('.btn[type="submit"]').textContent = 'Atualizar';
   exibirHistoriaNoContainer(id);
-  // Carrega categorias já associadas
+
+  // Carrega categorias associadas
   const { data: cats } = await supabase.from('historia_categorias')
     .select('categoria_id').eq('historia_id', id);
   document.querySelectorAll('input[name="categoria"]').forEach(chk => chk.checked = false);
@@ -233,7 +277,7 @@ async function editarHistoria(id) {
   });
 }
 
-// Exibe história no container abaixo do formulário
+// Exibe história no container
 async function exibirHistoriaNoContainer(id) {
   const { data: s } = await supabase.from('historias').select('titulo, descricao').eq('id', id).single();
   removerExibicaoHistoria();
@@ -247,11 +291,12 @@ async function exibirHistoriaNoContainer(id) {
   c.appendChild(d);
 }
 
-// Abre formulário de Cartão para a história selecionada
+// Abre formulário de Cartão
 async function mostrarCartaoForm(id) {
   document.getElementById('storyContainer').style.display = 'none';
   document.getElementById('cartaoContainer').style.display = 'block';
-  // Carrega dados da história e cartão
+
+  // Carrega história e cartão
   const { data: hist } = await supabase.from('historias')
     .select('*, cartoes(*)').eq('id', id).single();
   const cart = hist.cartoes?.[0] || {};
@@ -264,7 +309,7 @@ async function mostrarCartaoForm(id) {
     : new Date().toISOString().split('T')[0];
   document.getElementById('cartaoAutor').value = cart.autor_cartao || '';
 
-  // Carrega e marca categorias associadas
+  // Carrega categorias associadas
   const { data: cats } = await supabase.from('historia_categorias')
     .select('categoria_id').eq('historia_id', id);
   document.querySelectorAll('input[name="categoria"]').forEach(chk => chk.checked = false);
@@ -282,7 +327,7 @@ async function mostrarCartaoForm(id) {
   };
 }
 
-// Publica ou atualiza Cartão na tabela 'cartoes'
+// Publica ou atualiza Cartão
 async function publicarCartao(id) {
   if (!confirm(
     'Aviso: Ao publicar o cartão, o conteúdo fica definitivo.\nEdições futuras não serão refletidas no cartão.\n\nContinuar?'
@@ -295,14 +340,16 @@ async function publicarCartao(id) {
   const d = document.getElementById('cartaoData').value.trim();
   const a = document.getElementById('cartaoAutor').value.trim();
   if (!t || !s) { alert('Preencha título e sinopse do Cartão!'); return; }
+
   const { data: ex } = await supabase.from('cartoes').select('id').eq('historia_id', id).single();
   const payload = { historia_id: id, titulo_cartao: t, sinopse_cartao: s, autor_cartao: a, data_criacao: d };
   if (ex) await supabase.from('cartoes').update(payload).eq('id', ex.id);
   else await supabase.from('cartoes').insert([payload]);
+
   alert('Cartão publicado com sucesso!');
 }
 
-// Exibe modal com detalhes completos da história e do cartão
+// Exibe modal com detalhes da história e do cartão
 async function lerMais(id) {
   const m = document.getElementById('modalOverlay');
   m.style.display = 'flex';
