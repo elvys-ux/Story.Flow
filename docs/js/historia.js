@@ -130,6 +130,37 @@ function toggleMenuOpcoes(li, id) {
     existing.remove();
     return;
   }
+  // Garante que o li seja o contêiner posicionado
+  li.style.position = 'relative';
+
+  const menu = document.createElement('div');
+  menu.classList.add('menu-opcoes');
+  // Estilização básica via JS para garantir visibilidade
+  menu.style.position = 'absolute';
+  menu.style.left = '100%';
+  menu.style.top = '0';
+  menu.style.background = '#fff';
+  menu.style.border = '1px solid #ccc';
+  menu.style.padding = '5px';
+  menu.style.zIndex = '1000';
+
+  ['Cartão', 'Editar', 'Excluir'].forEach(text => {
+    const btn = document.createElement('button');
+    btn.textContent = text;
+    btn.style.display = 'block';
+    btn.style.margin = '2px 0';
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      if (text === 'Cartão') mostrarCartaoForm(id);
+      if (text === 'Editar') editarHistoria(id);
+      if (text === 'Excluir') excluirHistoria(id);
+      menu.remove();
+    });
+    menu.appendChild(btn);
+  });
+
+  li.appendChild(menu);
+}
 
   const menu = document.createElement('div');
   menu.classList.add('menu-opcoes');
