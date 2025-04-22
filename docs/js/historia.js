@@ -202,7 +202,7 @@ async function salvarHistoria(titulo, descricao) {
     removerExibicaoHistoria();
   }
 
-  limparFormulario();
+ 
   await mostrarHistorias();
 }
 
