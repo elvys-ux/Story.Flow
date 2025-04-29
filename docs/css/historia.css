@@ -141,7 +141,7 @@ footer {
   background-color: #333;
   padding: 10px;
   overflow-y: auto;
-  overflow-x: visible !important;  /* permite que o menu flutuante extrapole */
+  overflow-x: visible !important;  /* permite menu extrapolar */
   transition: transform 0.3s ease;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
   z-index: 10;
@@ -167,15 +167,16 @@ footer {
 
 /* ====== MENU DE 3 OPÇÕES (Cartão, Editar, Excluir) ====== */
 .menu-opcoes {
-  display: block;                   /* visível por padrão */
+  display: block;               /* sempre visível ao anexar */
   position: absolute;
-  top: 0;
-  left: 100%;                       /* posiciona à direita do li */
-  margin-left: 8px;                 /* pequeno espaçamento */
-  background: #222;                 /* preto bem escuro */
+  top: 50%;                     /* centraliza verticalmente */
+  transform: translateY(-50%);
+  left: 100%;                   /* posiciona à direita do li */
+  margin-left: 8px;             /* espaçamento */
+  background: #222;             /* fundo escuro */
   border-radius: 5px;
   padding: 5px 0;
-  min-width: 140px;                 /* largura mínima */
+  min-width: 140px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.6);
   z-index: 1000;
 }
@@ -183,23 +184,23 @@ footer {
   display: flex;
   align-items: center;
   width: 100%;
-  padding: 8px 12px;                /* espaçamento interno */
+  padding: 8px 12px;
   background: none;
   border: none;
-  border-bottom: 1px solid #444;    /* separador */
+  border-bottom: 1px solid #444;
   color: #fff;
   font-size: 14px;
   cursor: pointer;
 }
 .menu-opcoes button:last-child {
-  border-bottom: none;              /* último sem separador */
+  border-bottom: none;
 }
 .menu-opcoes button i {
   margin-right: 8px;
-  color: #ffcc00;                   /* ícone dourado */
+  color: #ffcc00;
 }
 .menu-opcoes button:hover {
-  background: #444;                 /* hover */
+  background: #444;
 }
 
 /* ====== CONTAINER PRINCIPAL: HISTÓRIA ====== */
