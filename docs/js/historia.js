@@ -62,7 +62,7 @@ async function exibirUsuarioLogado() {
   area.innerHTML = '';
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
-    area.innerHTML = `<a href=\"Criacao.html\" style=\"color:white;\"><i class=\"fas fa-user\"></i> Login</a>`;
+    area.innerHTML = `<a href="Criacao.html" style="color:white;"><i class="fas fa-user"></i> Login</a>`;
     return;
   }
   const { data: profile } = await supabase
@@ -72,9 +72,9 @@ async function exibirUsuarioLogado() {
     .single();
   const displayName = profile?.username || user.email;
   area.innerHTML = `
-    <span id=\"user-name\" style=\"cursor:pointer;\">${displayName}</span>
-    <div id=\"logout-menu\" style=\"display:none; margin-top:5px;\">
-      <button id=\"logout-btn\">Deslogar</button>
+    <span id="user-name" style="cursor:pointer;">${displayName}</span>
+    <div id="logout-menu" style="display:none; margin-top:5px;">
+      <button id="logout-btn">Deslogar</button>
     </div>
   `;
   document.getElementById('user-name').addEventListener('click', () => {
@@ -125,6 +125,14 @@ function toggleTitleList(show) {
   if (!list) return;
   list.classList.toggle('visible', show);
   isTitleListVisible = show;
+  // fecha menus abertos quando oculta a lista
+  if (!show) {
+    document.querySelectorAll('#titleListUl li.menu-open').forEach(item => {
+      item.classList.remove('menu-open');
+      const m = item.querySelector('.menu-opcoes');
+      if (m) m.remove();
+    });
+  }
 }
 
 // --------------------------------------------------
@@ -145,7 +153,6 @@ async function mostrarHistorias() {
     const li = document.createElement('li');
     li.textContent = h.titulo || '(sem título)';
     li.dataset.id = h.id;
-    li.style.position = 'relative';
     li.addEventListener('click', e => {
       e.stopPropagation();
       toggleMenuOpcoes(li, h.id);
@@ -158,57 +165,43 @@ async function mostrarHistorias() {
 // Menu de ações (Cartão, Editar, Excluir)
 // --------------------------------------------------
 function toggleMenuOpcoes(li, id) {
-  // Remove menu anterior
-  document
-    .querySelectorAll('.menu-opcoes')
-    .forEach(m => m.remove());
+  const alreadyOpen = li.classList.contains('menu-open');
 
-  // Cria novo menu
+  // fecha qualquer menu aberto
+  document.querySelectorAll('#titleListUl li.menu-open').forEach(item => {
+    item.classList.remove('menu-open');
+    const m = item.querySelector('.menu-opcoes');
+    if (m) m.remove();
+  });
+
+  // se já estava aberto, encerra aqui
+  if (alreadyOpen) return;
+
+  // abre este
+  li.classList.add('menu-open');
   const menu = document.createElement('div');
   menu.classList.add('menu-opcoes');
-  Object.assign(menu.style, {
-    display: 'block',
-    position: 'absolute',
-    top: '0',
-    left: '100%',
-    background: '#333',
-    borderRadius: '5px',
-    padding: '5px 0',
-    minWidth: '120px',
-    boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
-    zIndex: '1000'
-  });
-
-  const actions = [
-    { text: 'Cartão', icon: 'fas fa-credit-card', fn: () => mostrarCartaoForm(id) },
-    { text: 'Editar', icon: 'fas fa-edit', fn: () => editarHistoria(id) },
-    { text: 'Excluir', icon: 'fas fa-trash', fn: () => excluirHistoria(id) }
-  ];
-
-  actions.forEach(({ text, icon, fn }) => {
-    const btn = document.createElement('button');
-    btn.innerHTML = `<i class="${icon}" style="margin-right:8px;"></i>${text}`;
-    Object.assign(btn.style, {
-      display: 'flex',
-      alignItems: 'center',
-      width: '100%',
-      padding: '6px 12px',
-      background: 'none',
-      border: 'none',
-      color: '#fff',
-      cursor: 'pointer',
-      fontSize: '14px',
-      textAlign: 'left'
-    });
-    btn.addEventListener('mouseover', () => btn.style.background = '#444');
-    btn.addEventListener('mouseout', () => btn.style.background = 'transparent');
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      menu.remove();
-      fn();
-    });
-    menu.appendChild(btn);
-  });
+  menu.innerHTML = `
+    <button data-action="cartao"><i class="fas fa-credit-card"></i> Cartão</button>
+    <button data-action="editar"><i class="fas fa-edit"></i> Editar</button>
+    <button data-action="excluir"><i class="fas fa-trash"></i> Excluir</button>
+  `;
+  // mapeia ações
+  menu.querySelector('[data-action="cartao"]').onclick = e => {
+    e.stopPropagation();
+    menu.remove();
+    mostrarCartaoForm(id);
+  };
+  menu.querySelector('[data-action="editar"]').onclick = e => {
+    e.stopPropagation();
+    menu.remove();
+    editarHistoria(id);
+  };
+  menu.querySelector('[data-action="excluir"]').onclick = e => {
+    e.stopPropagation();
+    menu.remove();
+    excluirHistoria(id);
+  };
 
   li.appendChild(menu);
 }
@@ -221,7 +214,6 @@ async function salvarHistoria(titulo, descricao) {
   const editId = form.dataset.editId;
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return alert('Faça login para salvar.');
-
   const categorias = Array.from(
     document.querySelectorAll('input[name="categoria"]:checked')
   ).map(c => Number(c.value));
@@ -311,8 +303,9 @@ async function mostrarCartaoForm(id) {
   const cart = h.cartoes?.[0] || {};
   document.getElementById('titulo_cartao').value = cart.titulo_cartao || '';
   document.getElementById('sinopse_cartao').value = cart.sinopse_cartao || '';
-  document.getElementById('data_criacao').value = cart.data_criacao?
-    cart.data_criacao.split('T')[0]: new Date().toISOString().split('T')[0];
+  document.getElementById('data_criacao').value = cart.data_criacao
+    ? cart.data_criacao.split('T')[0]
+    : new Date().toISOString().split('T')[0];
   document.getElementById('autor_cartao').value = cart.autor_cartao || '';
   const { data: cats } = await supabase.from('historia_categorias').select('categoria_id').eq('historia_id', id);
   document.querySelectorAll('input[name="categoria"]').forEach(c => c.checked = false);
