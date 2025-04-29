@@ -362,7 +362,7 @@ footer {
   transform: scale(1.05);
 }
 
-/* ====== RESPONSIVO DO CARTÃO ====== */
+/* Responsivo do Cartão */
 @media (max-width: 500px) {
   .cartao-container {
     width: 90%;
@@ -370,7 +370,7 @@ footer {
   }
 }
 
-/* ====== HISTÓRIA EXIBIDA ====== */
+/* Texto justificado na exibição */
 .exibicao-historia p {
   text-align: justify;
 }
