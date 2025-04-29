@@ -165,33 +165,45 @@
       background-color: #444;
     }
 
-    /* ====== MENU DE 3 OPÇÕES (Cartão, Editar, Excluir) ====== */
+   /* ====== MENU DE 3 OPÇÕES (Cartão, Editar, Excluir) ====== */
 .menu-opcoes {
-  /* retire o display: none; e deixe visível por padrão */
-  display: block;
+  display: block;               /* já fica visível por padrão */
   position: absolute;
-  right: 10px;
-  top: 10px;
-  background-color: #555;
+  top: 0;
+  left: 100%;
+  background: #222;             /* preto bem escuro */
   border-radius: 5px;
-  padding: 5px;
-  z-index: 20;
+  padding: 5px 0;
+  min-width: 140px;             /* largura mínima maior */
+  box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+  z-index: 1000;
 }
+
 .menu-opcoes button {
-  background-color: transparent;
-  color: white;
-  border: none;
-  margin: 2px 0;
-  display: block;
-  text-align: left;
+  display: flex;
+  align-items: center;
   width: 100%;
+  padding: 8px 12px;            /* mais espaçamento interno */
+  background: none;
+  border: none;
+  border-bottom: 1px solid #444;/* separador entre itens */
+  color: #fff;
+  font-size: 14px;
   cursor: pointer;
 }
-.menu-opcoes button:hover {
-  background-color: #666;
+
+.menu-opcoes button:last-child {
+  border-bottom: none;          /* sem separador após o último */
 }
 
+.menu-opcoes button i {
+  margin-right: 8px;
+  color: #ffcc00;               /* ícones em dourado para contraste */
+}
 
+.menu-opcoes button:hover {
+  background: #444;             /* hover mais claro */
+}
     /* ====== CONTAINER PRINCIPAL: HISTÓRIA ===== */
     .story-container {
       width: 80%;
