@@ -1,3 +1,4 @@
+
  /* ====== CSS da Barra de Navegação ====== */
     .navbar {
       position: fixed;
@@ -165,10 +166,10 @@
     }
 
     /* MENU DE 3 OPÇÕES (Cartão, Editar, Excluir) */
- - .menu-opcoes {
--   display: none;
-+ .menu-opcoes {
-+   display: block;
+     .menu-opcoes {
+   display: none;
+ .menu-opcoes {
+   display: block;
     position: absolute;
     right: 10px; 
     top: 10px;
@@ -177,19 +178,19 @@
     padding: 5px;
     z-index: 20;
   }
-.menu-opcoes button {
-  background-color: transparent;
-  color: white;
-  border: none;
-  margin: 2px 0;
-  display: block;
-  text-align: left;
-  width: 100%;
-  cursor: pointer;
-}
-.menu-opcoes button:hover {
-  background-color: #666;
-}
+    .menu-opcoes button {
+      background-color: transparent;
+      color: white;
+      border: none;
+      margin: 2px 0;
+      display: block;
+      text-align: left;
+      width: 100%;
+      cursor: pointer;
+    }
+    .menu-opcoes button:hover {
+      background-color: #666;
+    }
 
     /* ====== CONTAINER PRINCIPAL: HISTÓRIA ===== */
     .story-container {
