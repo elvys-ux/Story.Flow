@@ -47,6 +47,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (isTitleListVisible && list && !list.contains(e.target)) {
       toggleTitleList(false);
     }
+    // fechar menu de opções ao clicar fora
+    document.querySelectorAll('li.menu-open').forEach(li => {
+      if (!li.contains(e.target)) {
+        li.classList.remove('menu-open');
+      }
+    });
   });
 
   // Estado inicial dos containers
@@ -125,14 +131,6 @@ function toggleTitleList(show) {
   if (!list) return;
   list.classList.toggle('visible', show);
   isTitleListVisible = show;
-  // fecha menus abertos quando oculta a lista
-  if (!show) {
-    document.querySelectorAll('#titleListUl li.menu-open').forEach(item => {
-      item.classList.remove('menu-open');
-      const m = item.querySelector('.menu-opcoes');
-      if (m) m.remove();
-    });
-  }
 }
 
 // --------------------------------------------------
@@ -165,45 +163,34 @@ async function mostrarHistorias() {
 // Menu de ações (Cartão, Editar, Excluir)
 // --------------------------------------------------
 function toggleMenuOpcoes(li, id) {
-  const alreadyOpen = li.classList.contains('menu-open');
-
-  // fecha qualquer menu aberto
-  document.querySelectorAll('#titleListUl li.menu-open').forEach(item => {
-    item.classList.remove('menu-open');
-    const m = item.querySelector('.menu-opcoes');
-    if (m) m.remove();
-  });
-
-  // se já estava aberto, encerra aqui
-  if (alreadyOpen) return;
-
-  // abre este
-  li.classList.add('menu-open');
+  // se já estava aberto, fecha
+  if (li.classList.contains('menu-open')) {
+    li.classList.remove('menu-open');
+    return;
+  }
+  // fecha outros
+  document.querySelectorAll('li.menu-open').forEach(el => el.classList.remove('menu-open'));
+  // cria novo menu
   const menu = document.createElement('div');
   menu.classList.add('menu-opcoes');
-  menu.innerHTML = `
-    <button data-action="cartao"><i class="fas fa-credit-card"></i> Cartão</button>
-    <button data-action="editar"><i class="fas fa-edit"></i> Editar</button>
-    <button data-action="excluir"><i class="fas fa-trash"></i> Excluir</button>
-  `;
-  // mapeia ações
-  menu.querySelector('[data-action="cartao"]').onclick = e => {
-    e.stopPropagation();
-    menu.remove();
-    mostrarCartaoForm(id);
-  };
-  menu.querySelector('[data-action="editar"]').onclick = e => {
-    e.stopPropagation();
-    menu.remove();
-    editarHistoria(id);
-  };
-  menu.querySelector('[data-action="excluir"]').onclick = e => {
-    e.stopPropagation();
-    menu.remove();
-    excluirHistoria(id);
-  };
-
+  const actions = [
+    { text: 'Cartão', icon: 'fas fa-credit-card', fn: () => mostrarCartaoForm(id) },
+    { text: 'Editar', icon: 'fas fa-edit', fn: () => editarHistoria(id) },
+    { text: 'Excluir', icon: 'fas fa-trash', fn: () => excluirHistoria(id) }
+  ];
+  actions.forEach(({ text, icon, fn }) => {
+    const btn = document.createElement('button');
+    btn.innerHTML = `<i class="${icon}"></i> ${text}`;
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      fn();
+      li.classList.remove('menu-open');
+    });
+    menu.appendChild(btn);
+  });
+  // anexa e marca como aberto
   li.appendChild(menu);
+  li.classList.add('menu-open');
 }
 
 // --------------------------------------------------
@@ -214,6 +201,7 @@ async function salvarHistoria(titulo, descricao) {
   const editId = form.dataset.editId;
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return alert('Faça login para salvar.');
+
   const categorias = Array.from(
     document.querySelectorAll('input[name="categoria"]:checked')
   ).map(c => Number(c.value));
@@ -296,6 +284,9 @@ async function exibirHistoriaNoContainer(id) {
   cont.appendChild(div);
 }
 
+// --------------------------------------------------
+// Cartão e Modal “Ler Mais”
+// --------------------------------------------------
 async function mostrarCartaoForm(id) {
   document.getElementById('storyContainer').style.display = 'none';
   document.getElementById('cartaoContainer').style.display = 'block';
@@ -307,7 +298,9 @@ async function mostrarCartaoForm(id) {
     ? cart.data_criacao.split('T')[0]
     : new Date().toISOString().split('T')[0];
   document.getElementById('autor_cartao').value = cart.autor_cartao || '';
-  const { data: cats } = await supabase.from('historia_categorias').select('categoria_id').eq('historia_id', id);
+  const { data: cats } = await supabase.from('historia_categorias')
+    .select('categoria_id')
+    .eq('historia_id', id);
   document.querySelectorAll('input[name="categoria"]').forEach(c => c.checked = false);
   cats.forEach(ca => {
     const chk = document.querySelector(`input[value="${ca.categoria_id}"]`);
