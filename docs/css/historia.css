@@ -41,8 +41,8 @@
 .dropdown-content a {
   color: white;
   padding: 12px 16px;
-  text-decoration: none;
   display: block;
+  text-decoration: none;
 }
 .dropdown-content a:hover {
   background-color: rgba(255, 255, 255, 0.2);
@@ -141,7 +141,7 @@ footer {
   background-color: #333;
   padding: 10px;
   overflow-y: auto;
-  overflow-x: visible !important; /* permite o menu extrapolar */
+  overflow-x: visible !important;  /* permite que o menu flutuante extrapole */
   transition: transform 0.3s ease;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
   z-index: 10;
@@ -167,15 +167,15 @@ footer {
 
 /* ====== MENU DE 3 OPÇÕES (Cartão, Editar, Excluir) ====== */
 .menu-opcoes {
-  display: block;            /* visível por padrão */
+  display: block;                   /* visível por padrão */
   position: absolute;
   top: 0;
-  right: 100% !important;    /* posiciona à esquerda do LI */
-  left: auto !important;
-  background: #222;          /* preto bem escuro */
+  left: 100%;                       /* posiciona à direita do li */
+  margin-left: 8px;                 /* pequeno espaçamento */
+  background: #222;                 /* preto bem escuro */
   border-radius: 5px;
   padding: 5px 0;
-  min-width: 140px;          /* largura mínima maior */
+  min-width: 140px;                 /* largura mínima */
   box-shadow: 0 2px 6px rgba(0,0,0,0.6);
   z-index: 1000;
 }
@@ -183,23 +183,23 @@ footer {
   display: flex;
   align-items: center;
   width: 100%;
-  padding: 8px 12px;         /* mais espaçamento interno */
+  padding: 8px 12px;                /* espaçamento interno */
   background: none;
   border: none;
-  border-bottom: 1px solid #444; /* separador entre itens */
+  border-bottom: 1px solid #444;    /* separador */
   color: #fff;
   font-size: 14px;
   cursor: pointer;
 }
 .menu-opcoes button:last-child {
-  border-bottom: none;       /* sem separador após o último */
+  border-bottom: none;              /* último sem separador */
 }
 .menu-opcoes button i {
   margin-right: 8px;
-  color: #ffcc00;            /* ícones em dourado para contraste */
+  color: #ffcc00;                   /* ícone dourado */
 }
 .menu-opcoes button:hover {
-  background: #444;          /* hover mais claro */
+  background: #444;                 /* hover */
 }
 
 /* ====== CONTAINER PRINCIPAL: HISTÓRIA ====== */
@@ -372,6 +372,7 @@ footer {
   }
 }
 
+/* Texto justificado na exibição */
 .exibicao-historia p {
   text-align: justify;
 }
