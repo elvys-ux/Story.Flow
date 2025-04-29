@@ -141,8 +141,9 @@ footer {
   width: 250px;
   background-color: #333;
   padding: 10px;
+  /* overflow-y para rolar, overflow-x sempre visível */
   overflow-y: auto;
-  overflow-x: visible;   /* permite que o menu flutuante extrapole */
+  overflow-x: visible !important;
   transition: transform 0.3s ease;
   box-shadow: 2px 0 10px rgba(0,0,0,0.5);
   z-index: 10;
@@ -152,35 +153,38 @@ footer {
 }
 .title-list ul {
   list-style: none;
-  margin: 0; padding: 0;
+  margin: 0;
+  padding: 0;
 }
 .title-list li {
   padding: 10px;
   color: white;
   border-bottom: 1px solid #444;
   cursor: pointer;
-  position: relative; /* para posicionar o menu */
+  position: relative; /* pra posicionar o menu em relação a este <li> */
 }
 .title-list li:hover {
   background-color: #444;
 }
 
-/* ====== MENU DE 3 OPÇÕES ====== */
-/* oculto por padrão; só aparece se <li> ganhar a classe .menu-open */
+/* ====== MENU DE 3 OPÇÕES (Cartão, Editar, Excluir) ====== */
+/* escondido por padrão */
 .menu-opcoes {
   display: none;
   position: absolute;
   top: 50%;
+  left: 100%;            /* sempre à direita do <li> */
   transform: translateY(-50%);
-  left: 100%;       /* flutua à direita do <li> */
-  margin-left: 8px;
+  margin-left: 8px;      /* espaçamento da lista */
   background: #222;
   border-radius: 5px;
   padding: 5px 0;
   min-width: 140px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.6);
-  z-index: 1000;
+  /* garante que fique na frente de tudo */
+  z-index: 2000 !important;
 }
+/* só mostra quando o JS adicionar a classe .menu-open ao <li> */
 .title-list li.menu-open > .menu-opcoes {
   display: block;
 }
@@ -206,7 +210,6 @@ footer {
 .menu-opcoes button:hover {
   background: #444;
 }
-
 /* ====== CONTAINER PRINCIPAL: HISTÓRIA ====== */
 .story-container {
   width: 80%;
