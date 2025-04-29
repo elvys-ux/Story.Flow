@@ -1,4 +1,11 @@
-/* ====== CSS da Barra de Navegação ====== */
+/* ====== RESET BÁSICO ====== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* ====== BARRA DE NAVEGAÇÃO ====== */
 .navbar {
   position: fixed;
   top: 0;
@@ -16,11 +23,11 @@
   color: white;
   text-decoration: none;
   padding: 10px;
-  transition: background-color 0.3s, transform 0.3s;
   border-radius: 5px;
+  transition: background-color .3s, transform .3s;
 }
 .navbar a:hover {
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: rgba(255, 255, 255, 0.1);
   transform: scale(1.1);
 }
 
@@ -39,12 +46,13 @@
   background-color: white;
   border-radius: 5px;
 }
-.search-box input[type="text"] {
+.search-box input {
   border: none;
   padding: 5px;
+  outline: none;
 }
 .search-box button {
-  background-color: black;
+  background: black;
   color: white;
   border: none;
   padding: 5px 10px;
@@ -54,11 +62,10 @@
 /* ====== BODY e MAIN ====== */
 body {
   font-family: 'Cinzel Decorative', serif;
-  margin: 0;
   padding-top: 60px;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
 }
 main {
   flex: 1;
@@ -69,22 +76,21 @@ main {
   text-align: center;
 }
 h1 {
-  font-size: 50pt;
-  color: #000;
+  font-size: 4rem;
+  margin-bottom: 1rem;
 }
 h2 {
-  font-size: 18pt;
+  font-size: 1.5rem;
   color: #333;
-  margin-bottom: 40px;
-  max-width: 80%;
+  margin-bottom: 2rem;
 }
 
 /* ====== RODAPÉ ====== */
 footer {
-  background-color: rgba(0, 0, 0, 0.9);
+  background: rgba(0, 0, 0, 0.9);
   color: white;
   text-align: center;
-  padding: 5px 0;
+  padding: 0.5rem;
 }
 
 /* ====== RESPONSIVO ====== */
@@ -92,26 +98,22 @@ footer {
   .navbar {
     flex-direction: column;
   }
-  h1 {
-    font-size: 40pt;
-  }
-  h2 {
-    font-size: 14pt;
-  }
+  h1 { font-size: 2.5rem; }
+  h2 { font-size: 1rem; }
 }
 
-/* ====== LISTA LATERAL (on hover) ====== */
+/* ====== LISTA LATERAL ====== */
 .title-list {
   position: fixed;
   top: 60px;
   bottom: 0;
   left: -250px;
   width: 250px;
-  background-color: #333;
-  padding: 10px;
+  background: #333;
+  padding: 0.5rem;
   overflow-y: auto;
-  overflow-x: visible;    /* deixa o menu flutuante aparecer */
-  transition: transform 0.3s ease;
+  overflow-x: visible;          /* deixa o menu de opções vazar pra fora */
+  transition: transform .3s ease;
   z-index: 10;
 }
 .title-list.visible {
@@ -119,106 +121,99 @@ footer {
 }
 .title-list ul {
   list-style: none;
-  margin: 0;
-  padding: 0;
 }
 .title-list li {
-  padding: 10px;
+  position: relative;
+  padding: 0.75rem;
   color: white;
   border-bottom: 1px solid #444;
   cursor: pointer;
-  position: relative;
 }
 .title-list li:hover {
-  background-color: #444;
+  background: #444;
 }
 
-/* ====== MENU DE 3 OPÇÕES (Cartão, Editar, Excluir) ====== */
+/* ====== MENU DE 3 OPÇÕES ====== */
 .menu-opcoes {
-  display: block;            /* sempre visível ao clicar */
   position: absolute;
   top: 50%;
-  left: 100%;                /* flutuando para a direita do <li> */
+  left: 100%;                 /* flutua à direita do <li> */
   transform: translateY(-50%);
-  margin-left: 8px;          /* pequeno espaçamento */
-  background: #222;          /* fundo escuro */
+  margin-left: 0.5rem;
+  background: #222;
   border-radius: 5px;
-  padding: 5px 0;
+  padding: 0.5rem 0;
   min-width: 140px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.6);
-  z-index: 1000;
+  z-index: 1001;
+  display: block;             /* o JS vai inserir/remover este elemento */
 }
 .menu-opcoes button {
-  display: flex;
-  align-items: center;
   width: 100%;
-  padding: 8px 12px;
+  padding: 0.5rem 1rem;
   background: none;
   border: none;
   border-bottom: 1px solid #444;
   color: #fff;
-  font-size: 14px;
+  font-size: 0.9rem;
+  text-align: left;
   cursor: pointer;
+  display: flex;
+  align-items: center;
 }
 .menu-opcoes button:last-child {
   border-bottom: none;
 }
 .menu-opcoes button i {
-  margin-right: 8px;
-  color: #ffcc00;            /* ícone dourado */
+  margin-right: 0.5rem;
+  color: #ffcc00;
 }
 .menu-opcoes button:hover {
   background: #444;
 }
 
-/* ====== CONTAINER PRINCIPAL: HISTÓRIA ====== */
+/* ====== FORMULÁRIO DE HISTÓRIA ====== */
 .story-container {
-  width: 80%;
+  width: 90%;
   max-width: 600px;
-  background-color: white;
+  background: #fff;
   border-radius: 8px;
   box-shadow: 0 0 10px rgba(0,0,0,0.1);
-  padding: 20px;
-  margin: 40px 0;
+  padding: 2rem;
+  margin-bottom: 2rem;
 }
 .story-container label {
   display: block;
-  margin: 8px 0 4px;
+  margin: 1rem 0 0.5rem;
   font-weight: bold;
 }
 .story-container input,
 .story-container textarea {
   width: 100%;
-  padding: 10px;
-  margin-bottom: 10px;
-  border-radius: 4px;
+  padding: 0.75rem;
   border: 1px solid #ccc;
-  font-size: 14px;
+  border-radius: 4px;
+  font-size: 1rem;
 }
 .button-container {
+  margin-top: 1rem;
   display: flex;
-  gap: 10px;
+  gap: 1rem;
   justify-content: center;
 }
-.btn-nova-historia {
-  background-color: #008cba;
-}
-.btn-nova-historia:hover {
-  background-color: #005f73;
-}
-.btn {
-  background-color: #000;
-  color: white;
+.btn, .btn-nova-historia {
+  padding: 0.75rem 1.5rem;
   border: none;
-  padding: 10px 20px;
   border-radius: 4px;
+  color: #fff;
+  font-size: 1rem;
   cursor: pointer;
-  transition: background-color 0.3s, transform 0.3s;
+  transition: background .3s, transform .3s;
 }
-.btn:hover {
-  background-color: #444;
-  transform: scale(1.05);
-}
+.btn { background: #000; }
+.btn-nova-historia { background: #008cba; }
+.btn:hover { background: #444; transform: scale(1.05); }
+.btn-nova-historia:hover { background: #005f73; }
 
 /* ====== CARTÃO ====== */
 .cartao-container {
@@ -226,44 +221,44 @@ footer {
   background: #fffaf0;
   border: 2px solid #a67c52;
   border-radius: 15px;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
-  padding: 25px 35px;
-  width: 500px;
-  margin: 40px 0;
+  box-shadow: 0 0 20px rgba(0,0,0,0.2);
+  padding: 2rem;
+  width: 90%;
+  max-width: 500px;
+  margin-bottom: 2rem;
 }
 .form-field {
-  margin-bottom: 15px;
+  margin-bottom: 1rem;
 }
 .form-field label {
-  display: block;
   font-weight: bold;
-  margin-bottom: 5px;
+  margin-bottom: 0.5rem;
+  display: block;
   color: #5a3e2b;
 }
 .form-field input,
 .form-field textarea {
   width: 100%;
-  padding: 10px;
+  padding: 0.75rem;
   border: 1px solid #a67c52;
   border-radius: 8px;
-  background-color: #fcf9f0;
-  transition: 0.3s;
+  background: #fcf9f0;
 }
 .cartao-buttons {
   display: flex;
   justify-content: space-between;
-  margin-top: 20px;
+  margin-top: 1rem;
 }
 .cartao-buttons button {
-  background-color: #8b5a2b;
-  color: white;
+  padding: 0.75rem 1.5rem;
   border: none;
   border-radius: 8px;
-  padding: 10px 18px;
+  background: #8b5a2b;
+  color: #fff;
   cursor: pointer;
 }
 .cartao-buttons button:hover {
-  background-color: #5a3e2b;
+  background: #5a3e2b;
 }
 
 /* ====== MODAL ====== */
@@ -279,27 +274,29 @@ footer {
 }
 .modal-content {
   background: white;
-  padding: 20px;
+  padding: 2rem;
   border-radius: 8px;
   max-width: 500px;
-  width: 80%;
+  width: 90%;
+  max-height: 80vh;
   overflow-y: auto;
   position: relative;
 }
 .close-modal {
   position: absolute;
-  top: 10px; right: 10px;
+  top: 1rem; right: 1rem;
   background: #000;
   color: #fff;
   border: none;
-  padding: 8px 16px;
+  padding: 0.5rem 1rem;
   cursor: pointer;
+  transition: transform .2s;
 }
 .close-modal:hover {
   transform: scale(1.05);
 }
 
-/* Texto justificado na exibição */
+/* ====== EXIBIÇÃO DE HISTÓRIA ====== */
 .exibicao-historia p {
   text-align: justify;
 }
