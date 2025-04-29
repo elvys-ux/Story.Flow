@@ -5,18 +5,18 @@
   box-sizing: border-box;
 }
 
-/* ====== CSS da Barra de Navegação ====== */
+/* ====== NAVBAR ====== */
 .navbar {
   position: fixed;
   top: 0;
   width: 100%;
-  background-color: rgba(0, 0, 0, 0.9);
+  background-color: rgba(0,0,0,0.9);
   padding: 12px;
   z-index: 1000;
   display: flex;
   justify-content: space-around;
   align-items: center;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.5);
 }
 .navbar a {
   font-family: Arial, sans-serif;
@@ -27,14 +27,14 @@
   border-radius: 5px;
 }
 .navbar a:hover {
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: rgba(0,0,0,0.7);
   transform: scale(1.1);
 }
 .navbar a i {
   margin-right: 8px;
 }
 
-/* dropdown */
+/* ====== DROPDOWN MENU ====== */
 .dropdown {
   position: relative;
   display: inline-block;
@@ -42,10 +42,10 @@
 .dropdown-content {
   display: none;
   position: absolute;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0,0,0,0.5);
   min-width: 150px;
-  box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.3);
-  z-index: 1;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+  z-index: 1001;
 }
 .dropdown-content a {
   color: white;
@@ -54,13 +54,13 @@
   text-decoration: none;
 }
 .dropdown-content a:hover {
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(255,255,255,0.2);
 }
 .dropdown:hover .dropdown-content {
   display: block;
 }
 
-/* userMenuArea */
+/* ====== USER MENU AREA ====== */
 #userMenuArea {
   font-family: Arial, sans-serif;
   color: white;
@@ -92,7 +92,7 @@
 body {
   font-family: 'Cinzel Decorative', serif;
   margin: 0;
-  padding-top: 60px; /* espaço para a navbar fixa */
+  padding-top: 60px; /* para a navbar fixa */
   display: flex;
   flex-direction: column;
   min-height: 100vh;
@@ -118,7 +118,7 @@ h2 {
 
 /* ====== RODAPÉ ====== */
 footer {
-  background-color: rgba(0, 0, 0, 0.9);
+  background-color: rgba(0,0,0,0.9);
   color: white;
   text-align: center;
   padding: 5px 0;
@@ -132,12 +132,8 @@ footer {
   .navbar a {
     margin-bottom: 10px;
   }
-  h1 {
-    font-size: 40pt;
-  }
-  h2 {
-    font-size: 14pt;
-  }
+  h1 { font-size: 40pt; }
+  h2 { font-size: 14pt; }
 }
 
 /* ====== LISTA LATERAL (on hover) ====== */
@@ -150,10 +146,9 @@ footer {
   background-color: #333;
   padding: 10px;
   overflow-y: auto;
-  /* overflow-x oculto para não rolar */
   overflow-x: hidden;
   transition: transform 0.3s ease;
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
+  box-shadow: 2px 0 10px rgba(0,0,0,0.5);
   z-index: 10;
 }
 .title-list.visible {
@@ -169,27 +164,30 @@ footer {
   color: white;
   border-bottom: 1px solid #444;
   cursor: pointer;
-  position: relative; /* para posicionar o menu */
+  position: relative;
 }
 .title-list li:hover {
   background-color: #444;
 }
 
-/* ====== MENU DE 3 OPÇÕES (Cartão, Editar, Excluir) ====== */
-/* Oculto por padrão; só aparece quando o JS criar e anexar ao <li> */
+/* ====== MENU DE 3 OPÇÕES ====== */
+/* Oculto por padrão; só aparece quando <li> ganha .menu-open */
 .menu-opcoes {
   display: none;
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  left: 100%;              /* flutua logo à direita do <li> */
-  margin-left: 8px;        /* pequeno espaçamento */
+  left: 100%;       /* flutua à direita do <li> */
+  margin-left: 8px;
   background: #222;
   border-radius: 5px;
   padding: 5px 0;
   min-width: 140px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.6);
   z-index: 1000;
+}
+.title-list li.menu-open .menu-opcoes {
+  display: block;
 }
 .menu-opcoes button {
   display: flex;
@@ -212,11 +210,6 @@ footer {
 }
 .menu-opcoes button:hover {
   background: #444;
-}
-
-/* ====== Quando o JS anexa o menu dentro do <li>, mostramos o .menu-opcoes ====== */
-.title-list li.menu-open .menu-opcoes {
-  display: block;
 }
 
 /* ====== CONTAINER PRINCIPAL: HISTÓRIA ====== */
@@ -268,13 +261,13 @@ footer {
   transform: scale(1.05);
 }
 
-/* ====== CONTÊINER: CARTÃO FUNDO BEGE (Menor) ====== */
+/* ====== CARTÃO ====== */
 .cartao-container {
   display: none;
   background: #fffaf0;
   border: 2px solid #a67c52;
   border-radius: 15px;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0 20px rgba(0,0,0,0.2);
   padding: 25px 35px;
   width: 500px;
   margin: 40px 0;
@@ -289,8 +282,7 @@ footer {
   color: #5a3e2b;
   font-size: 15px;
 }
-.form-field input[type="text"],
-.form-field input[type="date"],
+.form-field input,
 .form-field textarea {
   width: 100%;
   padding: 10px;
@@ -313,13 +305,6 @@ footer {
   font-size: 14px;
   cursor: pointer;
   padding: 5px 0;
-}
-.subcategorias {
-  display: none;
-  margin-left: 20px;
-  padding: 5px 10px;
-  background: #f2e3d5;
-  border-radius: 8px;
 }
 .cartao-buttons {
   display: flex;
@@ -344,10 +329,8 @@ footer {
 /* ====== MODAL (LER MAIS) ====== */
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
   background-color: rgba(0,0,0,0.7);
   display: none;
   justify-content: center;
@@ -362,13 +345,11 @@ footer {
   width: 80%;
   max-height: 40em;
   position: relative;
-  line-height: 1.2;
   overflow-y: auto;
 }
 .close-modal {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 10px; right: 10px;
   background-color: #000;
   color: white;
   border: none;
@@ -381,7 +362,7 @@ footer {
   transform: scale(1.05);
 }
 
-/* Responsivo */
+/* ====== RESPONSIVO DO CARTÃO ====== */
 @media (max-width: 500px) {
   .cartao-container {
     width: 90%;
@@ -389,7 +370,7 @@ footer {
   }
 }
 
-/* Texto justificado na exibição */
+/* ====== HISTÓRIA EXIBIDA ====== */
 .exibicao-historia p {
   text-align: justify;
 }
