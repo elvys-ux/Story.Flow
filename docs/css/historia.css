@@ -34,7 +34,7 @@
   margin-right: 8px;
 }
 
-/* ====== DROPDOWN MENU ====== */
+/* ====== DROPDOWN NAVBAR ====== */
 .dropdown {
   position: relative;
   display: inline-block;
@@ -126,12 +126,8 @@ footer {
 
 /* ====== RESPONSIVO ====== */
 @media (max-width: 600px) {
-  .navbar {
-    flex-direction: column;
-  }
-  .navbar a {
-    margin-bottom: 10px;
-  }
+  .navbar { flex-direction: column; }
+  .navbar a { margin-bottom: 10px; }
   h1 { font-size: 40pt; }
   h2 { font-size: 14pt; }
 }
@@ -156,38 +152,33 @@ footer {
 }
 .title-list ul {
   list-style: none;
-  margin: 0;
-  padding: 0;
 }
 .title-list li {
   padding: 10px;
   color: white;
   border-bottom: 1px solid #444;
   cursor: pointer;
-  position: relative;
+  position: relative; /* para posicionar o menu */
 }
 .title-list li:hover {
   background-color: #444;
 }
 
 /* ====== MENU DE 3 OPÇÕES ====== */
-/* Oculto por padrão; só aparece quando <li> ganha .menu-open */
+/* agora sempre visível fora da lista, à direita do <li> */
 .menu-opcoes {
-  display: none;
+  display: block !important;
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  left: 100%;       /* flutua à direita do <li> */
-  margin-left: 8px;
+  left: 100%;           /* flutua à direita do <li> */
+  margin-left: 8px;     /* espaçamento */
   background: #222;
   border-radius: 5px;
   padding: 5px 0;
   min-width: 140px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.6);
   z-index: 1000;
-}
-.title-list li.menu-open .menu-opcoes {
-  display: block;
 }
 .menu-opcoes button {
   display: flex;
@@ -241,12 +232,8 @@ footer {
   gap: 10px;
   justify-content: center;
 }
-.btn-nova-historia {
-  background-color: #008cba;
-}
-.btn-nova-historia:hover {
-  background-color: #005f73;
-}
+.btn-nova-historia { background-color: #008cba; }
+.btn-nova-historia:hover { background-color: #005f73; }
 .btn {
   background-color: #000;
   color: white;
@@ -362,7 +349,7 @@ footer {
   transform: scale(1.05);
 }
 
-/* Responsivo do Cartão */
+/* ====== RESPONSIVO DO CARTÃO ====== */
 @media (max-width: 500px) {
   .cartao-container {
     width: 90%;
@@ -370,7 +357,7 @@ footer {
   }
 }
 
-/* Texto justificado na exibição */
+/* ====== HISTÓRIA EXIBIDA ====== */
 .exibicao-historia p {
   text-align: justify;
 }
