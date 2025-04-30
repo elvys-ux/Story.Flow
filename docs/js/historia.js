@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await salvarHistoria(titulo, descricao);
   });
 
-  // Nova História
+  // Botão Nova História
   document.getElementById('novaHistoriaBtn').addEventListener('click', () => {
     if (confirm('Tem certeza de que deseja começar uma nova história?')) {
       limparFormulario();
@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Fecha modal
+  // Fechar modal de “Ler Mais”
   document.getElementById('closeModal').addEventListener('click', () => {
     document.getElementById('modalOverlay').style.display = 'none';
   });
@@ -36,13 +36,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Hover na borda para abrir lista lateral
+  // Hover na borda esquerda para abrir lista lateral
   document.body.addEventListener('mousemove', e => {
     if (e.clientX < 50) toggleTitleList(true);
   });
   document.body.addEventListener('mouseleave', () => toggleTitleList(false));
 
-  // Clique geral: fecha menu e lista
+  // Clique geral: fecha menu e lista lateral
   document.addEventListener('click', e => {
     if (openMenu && !openMenu.menu.contains(e.target) && !openMenu.li.contains(e.target)) {
       hideMenu();
@@ -53,13 +53,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Estado inicial
-  document.getElementById('cartaoContainer').style.display  = 'none';
-  document.getElementById('modalOverlay').style.display    = 'none';
+  // Esconde containers inicialmente
+  document.getElementById('cartaoContainer').style.display = 'none';
+  document.getElementById('modalOverlay').style.display   = 'none';
 });
 
 
-// [1] Exibe usuário ou link de login
+// [1] Exibe nome de usuário ou link de login
 async function exibirUsuarioLogado() {
   const area = document.getElementById('userMenuArea');
   area.innerHTML = '';
@@ -87,7 +87,7 @@ async function exibirUsuarioLogado() {
 }
 
 
-// [2] Carrega categorias
+// [2] Carrega as categorias para checklist
 async function carregarCategorias() {
   const { data: cats, error } = await supabase.from('categorias').select('id,nome');
   if (error) { console.error(error); return; }
@@ -122,7 +122,7 @@ function toggleTitleList(show) {
 }
 
 
-// [4] Mostra títulos e monta menu de ações
+// [4] Monta a lista de histórias e o menu de ações
 async function mostrarHistorias() {
   const { data: historias, error } = await supabase
     .from('historias').select('id,titulo')
@@ -132,10 +132,10 @@ async function mostrarHistorias() {
   ul.innerHTML = '';
   historias.forEach(h => {
     const li = document.createElement('li');
-    li.textContent       = h.titulo || '(sem título)';
-    li.dataset.id        = h.id;
-    li.style.position    = 'relative';
-    li.onclick           = e => { e.stopPropagation(); showMenu(li, h.id); };
+    li.textContent    = h.titulo || '(sem título)';
+    li.dataset.id     = h.id;
+    li.style.position = 'relative';
+    li.onclick        = e => { e.stopPropagation(); showMenu(li, h.id); };
     ul.appendChild(li);
   });
 }
@@ -145,9 +145,14 @@ function showMenu(li, id) {
   const menu = document.createElement('div');
   menu.classList.add('menu-opcoes');
   Object.assign(menu.style, {
-    display:'block', position:'fixed', background:'#222',
-    borderRadius:'5px', padding:'5px 0', minWidth:'140px',
-    boxShadow:'0 2px 6px rgba(0,0,0,0.6)', zIndex:'2000'
+    display:      'block',
+    position:     'fixed',
+    background:   '#222',
+    borderRadius: '5px',
+    padding:      '5px 0',
+    minWidth:     '140px',
+    boxShadow:    '0 2px 6px rgba(0,0,0,0.6)',
+    zIndex:       '2000'
   });
   // posiciona fora da lista, ao lado do li clicado
   const r = li.getBoundingClientRect();
@@ -155,20 +160,26 @@ function showMenu(li, id) {
   menu.style.left      = `${r.right + 8}px`;
   menu.style.transform = 'translateY(-50%)';
 
-  const acoes = [
+  const ações = [
     { txt:'Cartão', ico:'fas fa-credit-card', fn:()=>mostrarCartaoForm(id) },
     { txt:'Editar', ico:'fas fa-edit',       fn:()=>editarHistoria(id) },
     { txt:'Excluir',ico:'fas fa-trash',      fn:()=>excluirHistoria(id) }
   ];
-  acoes.forEach((a,i) => {
+  ações.forEach((a,i) => {
     const btn = document.createElement('button');
     btn.innerHTML = `<i class="${a.ico}" style="margin-right:8px;color:#ffcc00"></i>${a.txt}`;
     Object.assign(btn.style,{
-      display:'flex',alignItems:'center',
-      width:'100%',padding:'8px 12px',
-      background:'none',border:'none',
-      borderBottom: i<acoes.length-1?'1px solid #444':'none',
-      color:'#fff',cursor:'pointer',fontSize:'14px',textAlign:'left'
+      display:     'flex',
+      alignItems:  'center',
+      width:       '100%',
+      padding:     '8px 12px',
+      background:  'none',
+      border:      'none',
+      borderBottom: i<ações.length-1?'1px solid #444':'none',
+      color:       '#fff',
+      cursor:      'pointer',
+      fontSize:    '14px',
+      textAlign:   'left'
     });
     btn.onmouseover = ()=>btn.style.background='#444';
     btn.onmouseout  = ()=>btn.style.background='transparent';
@@ -206,20 +217,20 @@ async function salvarHistoria(titulo, descricao) {
         categorias.map(cat=>({ historia_id: Number(editId), categoria_id: cat, user_id: user.id }))
       );
     }
-    alert('História atualizada com sucesso!');
+    alert('História atualizada!');
     exibirHistoriaNoContainer(editId);
   } else {
     const { data,error } = await supabase.from('historias')
       .insert([{ titulo, descricao, user_id: user.id }])
       .select('id');
-    if (error) return alert('Erro ao salvar história.');
+    if (error) return alert('Erro ao salvar.');
     const newId = data[0].id;
     if (categorias.length) {
       await supabase.from('historia_categorias').insert(
         categorias.map(cat=>({ historia_id: newId, categoria_id: cat, user_id: user.id }))
       );
     }
-    alert('História salva com sucesso!');
+    alert('História salva!');
     removerExibicaoHistoria();
   }
 
@@ -238,11 +249,11 @@ async function editarHistoria(id) {
 }
 
 async function excluirHistoria(id) {
-  if (!confirm('Deseja excluir a história?')) return;
+  if (!confirm('Deseja excluir?')) return;
   await supabase.from('historia_categorias').delete().eq('historia_id', id);
   await supabase.from('cartoes').delete().eq('historia_id', id);
   await supabase.from('historias').delete().eq('id', id);
-  alert('História excluída com sucesso!');
+  alert('Excluído com sucesso!');
   limparFormulario();
   removerExibicaoHistoria();
   await mostrarHistorias();
@@ -253,8 +264,8 @@ function removerExibicaoHistoria() {
 }
 
 function limparFormulario() {
-  document.getElementById('titulo').value     = '';
-  document.getElementById('descricao').value  = '';
+  document.getElementById('titulo').value    = '';
+  document.getElementById('descricao').value = '';
   const form = document.getElementById('storyForm');
   delete form.dataset.editId;
   form.querySelector('button[type="submit"]').textContent = 'Salvar';
@@ -275,20 +286,23 @@ async function exibirHistoriaNoContainer(id) {
 }
 
 
-// [6] Formulário de cartão + “Ler Mais”
+// [6] Abre o formulário de Cartão e configura os três botões
 async function mostrarCartaoForm(id) {
-  document.getElementById('storyContainer').style.display  = 'none';
-  document.getElementById('cartaoContainer').style.display= 'block';
-  const { data:h } = await supabase.from('historias').select('*,cartoes(*)').eq('id', id).single();
+  document.getElementById('storyContainer').style.display   = 'none';
+  document.getElementById('cartaoContainer').style.display = 'block';
+
+  // Carrega dados
+  const { data:h } = await supabase.from('historias')
+    .select('*,cartoes(*)').eq('id', id).single();
   const cart = h.cartoes?.[0] || {};
-  document.getElementById('titulo_cartao').value   = cart.titulo_cartao || '';
-  document.getElementById('sinopse_cartao').value  = cart.sinopse_cartao || '';
+  document.getElementById('titulo_cartao').value  = cart.titulo_cartao || '';
+  document.getElementById('sinopse_cartao').value = cart.sinopse_cartao || '';
   document.getElementById('data_criacao').value   = cart.data_criacao
     ? cart.data_criacao.split('T')[0]
     : new Date().toISOString().split('T')[0];
-  document.getElementById('autor_cartao').value    = cart.autor_cartao || '';
+  document.getElementById('autor_cartao').value   = cart.autor_cartao || '';
 
-  // reusa categorias da história
+  // Repõe categorias
   const { data:cats } = await supabase.from('historia_categorias')
     .select('categoria_id').eq('historia_id', id);
   document.querySelectorAll('input[name="categoria"]').forEach(c=>c.checked=false);
@@ -297,39 +311,59 @@ async function mostrarCartaoForm(id) {
     if (chk) chk.checked = true;
   });
 
-  // botoões do cartão
-  document.getElementById('btnPublicarCartao').onclick = async ()=>{
-    await publicarCartao(id);
-    // depois de publicar volta à lista principal
-    document.getElementById('cartaoContainer').style.display = 'none';
-    document.getElementById('storyContainer').style.display  = 'block';
-    await mostrarHistorias();
-  };
-  document.getElementById('btnLerMais').onclick = ()=> lerMais(id);
-  document.getElementById('btnVoltar').onclick = ()=>{
-    document.getElementById('cartaoContainer').style.display = 'none';
-    document.getElementById('storyContainer').style.display  = 'block';
-  };
+  // Botão Publicar Cartão
+  const btnPub = document.getElementById('btnPublicarCartao');
+  btnPub.replaceWith(btnPub.cloneNode(true));
+  document.getElementById('btnPublicarCartao')
+    .addEventListener('click', async e => {
+      e.preventDefault();
+      await publicarCartao(id);
+      // volta para lista principal
+      document.getElementById('cartaoContainer').style.display = 'none';
+      document.getElementById('storyContainer').style.display  = 'block';
+      await mostrarHistorias();
+    });
+
+  // Botão Ler Mais
+  const btnLer = document.getElementById('btnLerMais');
+  btnLer.replaceWith(btnLer.cloneNode(true));
+  document.getElementById('btnLerMais')
+    .addEventListener('click', e => {
+      e.preventDefault();
+      lerMais(id);
+    });
+
+  // Botão Voltar
+  const btnVol = document.getElementById('btnVoltar');
+  btnVol.replaceWith(btnVol.cloneNode(true));
+  document.getElementById('btnVoltar')
+    .addEventListener('click', e => {
+      e.preventDefault();
+      document.getElementById('cartaoContainer').style.display  = 'none';
+      document.getElementById('storyContainer').style.display = 'block';
+    });
 }
 
 async function publicarCartao(id) {
   if (!confirm('Aviso: Ao publicar o cartão, o conteúdo fica definitivo. Continuar?')) return;
-  const titulo  = document.getElementById('titulo_cartao').value.trim();
-  const sinopse = document.getElementById('sinopse_cartao').value.trim();
-  const dataCri = document.getElementById('data_criacao').value;
-  const autor   = document.getElementById('autor_cartao').value.trim();
-  const catsSel = Array.from(
+  const titulo   = document.getElementById('titulo_cartao').value.trim();
+  const sinopse  = document.getElementById('sinopse_cartao').value.trim();
+  const dataCri  = document.getElementById('data_criacao').value;
+  const autor    = document.getElementById('autor_cartao').value.trim();
+  const catsSel  = Array.from(
     document.querySelectorAll('input[name="categoria"]:checked')
   ).map(c=>+c.value);
-  if (!titulo||!sinopse||catsSel.length===0)
+
+  if (!titulo || !sinopse || catsSel.length === 0) {
     return alert('Preencha título, sinopse e selecione ao menos uma categoria.');
+  }
 
   await supabase.from('cartoes').upsert({
     historia_id: id,
-    titulo_cartao: titulo,
+    titulo_cartao:  titulo,
     sinopse_cartao: sinopse,
-    autor_cartao: autor,
-    data_criacao: dataCri
+    autor_cartao:   autor,
+    data_criacao:   dataCri
   });
 
   const { data:{user} } = await supabase.auth.getUser();
@@ -339,24 +373,27 @@ async function publicarCartao(id) {
       catsSel.map(cat=>({ historia_id: id, categoria_id: cat, user_id: user.id }))
     );
   }
+
   alert('Cartão publicado com sucesso!');
 }
 
 async function lerMais(id) {
   document.getElementById('modalOverlay').style.display = 'flex';
-  const { data:h } = await supabase.from('historias').select('titulo,descricao').eq('id', id).single();
+  const { data:h } = await supabase.from('historias')
+    .select('titulo,descricao').eq('id', id).single();
   document.getElementById('modalTitulo').textContent    = h.titulo;
   document.getElementById('modalDescricao').textContent = h.descricao;
 
-  const { data:c } = await supabase.from('cartoes').select('*').eq('historia_id', id).single();
+  const { data:c } = await supabase.from('cartoes')
+    .select('*').eq('historia_id', id).single();
   if (c) {
-    document.getElementById('modalCartaoTitulo').textContent    = c.titulo_cartao;
-    document.getElementById('modalCartaoSinopse').textContent   = c.sinopse_cartao;
-    document.getElementById('modalCartaoData').textContent      = c.data_criacao;
-    document.getElementById('modalCartaoAutor').textContent     = c.autor_cartao;
-    const { data:cats } = await supabase.from('historia_categorias')
+    document.getElementById('modalCartaoTitulo').textContent   = c.titulo_cartao;
+    document.getElementById('modalCartaoSinopse').textContent  = c.sinopse_cartao;
+    document.getElementById('modalCartaoData').textContent     = c.data_criacao;
+    document.getElementById('modalCartaoAutor').textContent    = c.autor_cartao;
+    const { data:cats2 } = await supabase.from('historia_categorias')
       .select('categoria_id').eq('historia_id', id);
     document.getElementById('modalCartaoCategorias').textContent =
-      cats.map(x=>x.categoria_id).join(', ');
+      cats2.map(x=>x.categoria_id).join(', ');
   }
 }
