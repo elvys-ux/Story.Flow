@@ -352,20 +352,22 @@ footer {
   text-align: justify;
 }
 
-
-/* ====== CATEGORIAS NO CARTÃO ====== */
+/* ====== CATEGORIAS NO CARTÃO (ajuste estético) ====== */
 .cartao-container .categorias {
   display: flex;
-  flex-wrap: wrap;           /* quebra em várias linhas se necessário */
-  gap: 12px;                 /* espaçamento entre os itens */
-  justify-content: center;   /* centraliza o grupo */
-  margin: 16px 0 24px;       /* dá um respiro acima e abaixo */
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-start; /* alinha tudo à esquerda */
+  margin: 16px 0 24px;
 }
 
+/* Opcional: limites de largura para cada item, pra não ficarem muito largos */
 .cartao-container .categoria-wrapper {
   display: flex;
   align-items: center;
-  gap: 6px;                  /* distância checkbox ↔ label */
+  gap: 6px;
+  min-width: 120px;     /* garante um tamanho mínimo */
+  max-width: 180px;     /* e um máximo, pra não esticar demais */
 }
 
 .cartao-container .categoria-wrapper input[type="checkbox"] {
@@ -378,5 +380,5 @@ footer {
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  white-space: nowrap;       /* evita que o texto quebre no meio */
+  white-space: nowrap;
 }
