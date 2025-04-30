@@ -84,26 +84,41 @@ async function exibirUsuarioLogado() {
 }
 
 
-// [2] Carrega categorias para formulários
+// --------------------------------------------------
+// [2] Carregar categorias (atualizado)
+// --------------------------------------------------
 async function carregarCategorias() {
-  const { data:cats, error } = await supabase.from('categorias').select('id,nome');
-  if (error) return console.error(error);
-  ['#categorias','.categorias'].forEach(sel => {
-    const ctn = document.querySelector(sel);
-    if (!ctn) return;
-    ctn.innerHTML = '';
+  const { data: cats, error } = await supabase
+    .from('categorias')
+    .select('id, nome');
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  // Seleciona TODOS os containers de categorias
+  document.querySelectorAll('#categorias, .categorias').forEach(container => {
+    container.innerHTML = '';
     cats.forEach(cat => {
-      const w = document.createElement('div');
-      w.classList.add('categoria-wrapper');
+      const wrapper = document.createElement('div');
+      wrapper.classList.add('categoria-wrapper');
+
       const chk = document.createElement('input');
-      chk.type = 'checkbox'; chk.name='categoria'; chk.value=cat.id; chk.id=`categoria_${cat.id}`;
+      chk.type = 'checkbox';
+      chk.name = 'categoria';
+      chk.value = cat.id;
+      chk.id = `categoria_${cat.id}`;
+
       const lbl = document.createElement('label');
-      lbl.htmlFor=chk.id; lbl.textContent=cat.nome;
-      w.append(chk,lbl);
-      ctn.appendChild(w);
+      lbl.htmlFor = chk.id;
+      lbl.textContent = cat.nome;
+
+      wrapper.append(chk, lbl);
+      container.appendChild(wrapper);
     });
   });
 }
+
 
 
 // [3] Toggle lista lateral
