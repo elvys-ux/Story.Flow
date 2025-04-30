@@ -7,7 +7,6 @@ let isTitleListVisible = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
   await exibirUsuarioLogado();
-  await carregarCategorias(['#categorias']);  // só checkboxes da criação de história
   await mostrarHistorias();
 
   // Submissão do formulário de história
@@ -21,7 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await salvarHistoria(titulo, descricao);
   });
 
-  // Botão "Nova História"
+  // Nova História
   document.getElementById('novaHistoriaBtn').addEventListener('click', () => {
     if (confirm('Tem certeza de que deseja começar uma nova história?')) {
       limparFormulario();
@@ -29,7 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Fecha modal "Ler Mais"
+  // Fechar modal “Ler Mais”
   document.getElementById('closeModal').addEventListener('click', () => {
     document.getElementById('modalOverlay').style.display = 'none';
   });
@@ -38,13 +37,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('modalOverlay').style.display = 'none';
   });
 
-  // Hover para abrir lista lateral
+  // Hover para exibir lista lateral
   document.body.addEventListener('mousemove', e => {
     if (e.clientX < 50) toggleTitleList(true);
   });
   document.body.addEventListener('mouseleave', () => toggleTitleList(false));
 
-  // Clique genérico para fechar menu e lista lateral
+  // Clique genérico: fecha menu e lista lateral
   document.addEventListener('click', e => {
     if (
       openMenu &&
@@ -59,7 +58,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Estado inicial dos containers
+  // Estado inicial
   document.getElementById('cartaoContainer').style.display = 'none';
   document.getElementById('modalOverlay').style.display   = 'none';
 });
@@ -102,50 +101,7 @@ async function exibirUsuarioLogado() {
 
 
 // --------------------------------------------------
-// [2] Carregar categorias (nos selectors passados)
-// --------------------------------------------------
-async function carregarCategorias(selectors = ['#categorias', '.categorias']) {
-  console.log('🔄 carregando categorias…');
-  const { data: cats, error } = await supabase
-    .from('categorias')
-    .select('id, nome');
-  if (error) {
-    console.error('❌ erro ao buscar categorias:', error);
-    return;
-  }
-  console.log('✅ categorias retornadas:', cats);
-
-  selectors.forEach(sel => {
-    const container = document.querySelector(sel);
-    if (!container) {
-      console.warn(`⚠️ container "${sel}" não encontrado.`);
-      return;
-    }
-    container.innerHTML = '';
-    if (!cats.length) {
-      container.innerHTML = '<p>Nenhuma categoria disponível.</p>';
-      return;
-    }
-    cats.forEach(cat => {
-      const wrapper = document.createElement('div');
-      wrapper.classList.add('categoria-wrapper');
-      const chk = document.createElement('input');
-      chk.type  = 'checkbox';
-      chk.name  = 'categoria';
-      chk.value = cat.id;
-      chk.id    = `categoria_${cat.id}`;
-      const lbl = document.createElement('label');
-      lbl.htmlFor     = chk.id;
-      lbl.textContent = cat.nome;
-      wrapper.append(chk, lbl);
-      container.appendChild(wrapper);
-    });
-  });
-}
-
-
-// --------------------------------------------------
-// [3] Toggle lista lateral
+// [2] Toggle lista lateral
 // --------------------------------------------------
 function toggleTitleList(show) {
   const list = document.getElementById('titleListLeft');
@@ -156,7 +112,7 @@ function toggleTitleList(show) {
 
 
 // --------------------------------------------------
-// [4] Mostrar histórias e menu de opções
+// [3] Mostrar histórias e menu de opções
 // --------------------------------------------------
 async function mostrarHistorias() {
   const { data: stories, error } = await supabase
@@ -184,6 +140,7 @@ async function mostrarHistorias() {
 
 function showMenu(li, id) {
   hideMenu();
+
   const menu = document.createElement('div');
   menu.classList.add('menu-opcoes');
   Object.assign(menu.style, {
@@ -201,7 +158,7 @@ function showMenu(li, id) {
   menu.style.top       = `${r.top + r.height/2}px`;
   menu.style.left      = `${r.right + 8}px`;
   menu.style.transform = 'translateY(-50%)';
-  // ações
+
   const actions = [
     { txt:'Cartão', ico:'fas fa-credit-card', fn:()=>mostrarCartaoForm(id) },
     { txt:'Editar', ico:'fas fa-edit',       fn:()=>editarHistoria(id) },
@@ -228,13 +185,14 @@ function showMenu(li, id) {
     btn.onclick     = e => { e.stopPropagation(); hideMenu(); a.fn(); };
     menu.appendChild(btn);
   });
+
   document.body.appendChild(menu);
   openMenu = { menu, li };
   menuTimeout = setTimeout(hideMenu, 3000);
 }
 
 function hideMenu() {
-  if (menuTimeout) { clearTimeout(menuTimeout); menuTimeout = null; }
+  if (menuTimeout) { clearTimeout(menuTimeout); menuTimeout=null; }
   if (!openMenu) return;
   openMenu.menu.remove();
   openMenu = null;
@@ -242,7 +200,7 @@ function hideMenu() {
 
 
 // --------------------------------------------------
-// [5] CRUD de histórias
+// [4] CRUD de histórias
 // --------------------------------------------------
 async function salvarHistoria(titulo, descricao) {
   const form   = document.getElementById('storyForm');
@@ -250,33 +208,18 @@ async function salvarHistoria(titulo, descricao) {
   const { data:{ user } } = await supabase.auth.getUser();
   if (!user) return alert('Faça login para salvar.');
 
-  const cats = Array.from(
-    document.querySelectorAll('input[name="categoria"]:checked')
-  ).map(c => Number(c.value));
-
   if (editId) {
     await supabase.from('historias').update({ titulo, descricao }).eq('id', editId);
     await supabase.from('historia_categorias').delete().eq('historia_id', editId);
-    if (cats.length) {
-      await supabase.from('historia_categorias').insert(
-        cats.map(cat=>({ historia_id:Number(editId), categoria_id:cat, user_id:user.id }))
-      );
-    }
     alert('História atualizada!');
     exibirHistoriaNoContainer(editId);
   } else {
     const { data, error } = await supabase.from('historias')
       .insert([{ titulo, descricao, user_id:user.id }]).select('id');
     if (error) return alert('Erro ao salvar história.');
-    const newId = data[0].id;
-    if (cats.length) {
-      await supabase.from('historia_categorias').insert(
-        cats.map(cat=>({ historia_id:newId, categoria_id:cat, user_id:user.id }))
-      );
-    }
     alert('História salva!');
-    removerExibicaoHistoria();
   }
+
   limparFormulario();
   await mostrarHistorias();
 }
@@ -306,13 +249,12 @@ function removerExibicaoHistoria() {
   document.querySelectorAll('.exibicao-historia').forEach(el=>el.remove());
 }
 function limparFormulario() {
-  document.getElementById('titulo').value    = '';
+  document.getElementById('titulo').value = '';
   document.getElementById('descricao').value = '';
   const form = document.getElementById('storyForm');
   delete form.dataset.editId;
   form.querySelector('button[type="submit"]').textContent = 'Salvar';
 }
-
 async function exibirHistoriaNoContainer(id) {
   const { data:h } = await supabase.from('historias')
     .select('titulo, descricao').eq('id',id).single();
@@ -320,19 +262,16 @@ async function exibirHistoriaNoContainer(id) {
   const cont = document.getElementById('storyContainer');
   const div  = document.createElement('div');
   div.classList.add('exibicao-historia');
-  div.style.border    = '1px solid #ccc';
-  div.style.padding   = '10px';
-  div.style.marginTop = '10px';
-  div.innerHTML       = `<h3>${h.titulo}</h3><p>${h.descricao}</p>`;
+  div.innerHTML = `<h3>${h.titulo}</h3><p>${h.descricao}</p>`;
   cont.appendChild(div);
 }
 
 
 // --------------------------------------------------
-// [6] Formulário de cartão + modal “Ler Mais”
+// [5] Formulário de cartão + modal “Ler Mais”
 // --------------------------------------------------
 async function mostrarCartaoForm(id) {
-  // recarrega apenas o container de .categorias
+  // carrega agora só o container .categorias (dentro de #cartaoContainer)
   await carregarCategorias(['.categorias']);
 
   document.getElementById('storyContainer').style.display   = 'none';
@@ -349,7 +288,6 @@ async function mostrarCartaoForm(id) {
     : new Date().toISOString().split('T')[0];
   document.getElementById('autor_cartao').value    = cart.autor_cartao   || '';
 
-  // marca categorias do cartão
   const { data: cats } = await supabase.from('historia_categorias')
     .select('categoria_id').eq('historia_id',id);
   document.querySelectorAll('.categorias input[name="categoria"]')
@@ -391,7 +329,7 @@ async function publicarCartao(id) {
   });
 
   const { data:{ user } } = await supabase.auth.getUser();
-  await supabase.from('historia_categorias').delete().eq('historia_id',id);
+  await supabase.from('historia_categorias').delete().eq('historia_id', id);
   if (catsSel.length) {
     await supabase.from('historia_categorias').insert(
       catsSel.map(cat=>({ historia_id:id, categoria_id:cat, user_id:user.id }))
@@ -422,3 +360,41 @@ async function lerMais(id) {
       cats2.map(x => x.categoria_id).join(', ');
   }
 }
+
+
+// --------------------------------------------------
+// [6] Carregar categorias (helper reutilizado)
+// --------------------------------------------------
+async function carregarCategorias(selectors) {
+  const { data: cats, error } = await supabase
+    .from('categorias')
+    .select('id, nome');
+  if (error) {
+    console.error(error);
+    return;
+  }
+  selectors.forEach(sel => {
+    const container = document.querySelector(sel);
+    if (!container) return;
+    container.innerHTML = '';
+    if (!cats.length) {
+      container.innerHTML = '<p>Nenhuma categoria disponível.</p>';
+      return;
+    }
+    cats.forEach(cat => {
+      const w = document.createElement('div');
+      w.classList.add('categoria-wrapper');
+      const chk = document.createElement('input');
+      chk.type = 'checkbox';
+      chk.name = 'categoria';
+      chk.value = cat.id;
+      chk.id = `categoria_${cat.id}`;
+      const lbl = document.createElement('label');
+      lbl.htmlFor = chk.id;
+      lbl.textContent = cat.nome;
+      w.append(chk, lbl);
+      container.appendChild(w);
+    });
+  });
+}
+
