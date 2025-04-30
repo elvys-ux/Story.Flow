@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await carregarCategorias();
   await mostrarHistorias();
 
-  // Submissão do formulário de história
+  // História: salvar
   document.getElementById('storyForm').addEventListener('submit', async e => {
     e.preventDefault();
     const titulo    = document.getElementById('titulo').value.trim();
@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await salvarHistoria(titulo, descricao);
   });
 
-  // Botão Nova História
+  // Nova história
   document.getElementById('novaHistoriaBtn').addEventListener('click', () => {
     if (confirm('Tem certeza de que deseja começar uma nova história?')) {
       limparFormulario();
@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Fechar modal de “Ler Mais”
+  // Modal “Ler Mais”
   document.getElementById('closeModal').addEventListener('click', () => {
     document.getElementById('modalOverlay').style.display = 'none';
   });
@@ -36,13 +36,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Hover na borda esquerda para abrir lista lateral
+  // Hover na beirada para abrir lista
   document.body.addEventListener('mousemove', e => {
     if (e.clientX < 50) toggleTitleList(true);
   });
   document.body.addEventListener('mouseleave', () => toggleTitleList(false));
 
-  // Clique geral: fecha menu e lista lateral
+  // Fecha menu e lista ao clicar fora
   document.addEventListener('click', e => {
     if (openMenu && !openMenu.menu.contains(e.target) && !openMenu.li.contains(e.target)) {
       hideMenu();
@@ -53,22 +53,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Esconde containers inicialmente
+  // Esconde containers iniciais
   document.getElementById('cartaoContainer').style.display = 'none';
   document.getElementById('modalOverlay').style.display   = 'none';
 });
 
 
-// [1] Exibe nome de usuário ou link de login
+/* [1] Usuário logado / logout */
 async function exibirUsuarioLogado() {
   const area = document.getElementById('userMenuArea');
   area.innerHTML = '';
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data:{user} } = await supabase.auth.getUser();
   if (!user) {
     area.innerHTML = `<a href="Criacao.html" style="color:white"><i class="fas fa-user"></i> Login</a>`;
     return;
   }
-  const { data: profile } = await supabase
+  const { data:profile } = await supabase
     .from('profiles').select('username').eq('id', user.id).single();
   const nome = profile?.username || user.email;
   area.innerHTML = `
@@ -87,9 +87,9 @@ async function exibirUsuarioLogado() {
 }
 
 
-// [2] Carrega as categorias para checklist
+/* [2] Carrega categorias checkbox */
 async function carregarCategorias() {
-  const { data: cats, error } = await supabase.from('categorias').select('id,nome');
+  const { data:cats, error } = await supabase.from('categorias').select('id,nome');
   if (error) { console.error(error); return; }
   ['#categorias','.categorias'].forEach(sel => {
     const ctn = document.querySelector(sel);
@@ -113,7 +113,7 @@ async function carregarCategorias() {
 }
 
 
-// [3] Toggle da lista lateral
+/* [3] Toggle lista lateral */
 function toggleTitleList(show) {
   const list = document.getElementById('titleListLeft');
   if (!list) return;
@@ -122,9 +122,9 @@ function toggleTitleList(show) {
 }
 
 
-// [4] Monta a lista de histórias e o menu de ações
+/* [4] Monta lista de histórias e menu */
 async function mostrarHistorias() {
-  const { data: historias, error } = await supabase
+  const { data:historias, error } = await supabase
     .from('historias').select('id,titulo')
     .order('data_criacao',{ascending:false});
   if (error) { console.error(error); return; }
@@ -154,7 +154,7 @@ function showMenu(li, id) {
     boxShadow:    '0 2px 6px rgba(0,0,0,0.6)',
     zIndex:       '2000'
   });
-  // posiciona fora da lista, ao lado do li clicado
+  // Posiciona fora da lista, ao lado do <li>
   const r = li.getBoundingClientRect();
   menu.style.top       = `${r.top + r.height/2}px`;
   menu.style.left      = `${r.right + 8}px`;
@@ -169,17 +169,17 @@ function showMenu(li, id) {
     const btn = document.createElement('button');
     btn.innerHTML = `<i class="${a.ico}" style="margin-right:8px;color:#ffcc00"></i>${a.txt}`;
     Object.assign(btn.style,{
-      display:     'flex',
-      alignItems:  'center',
-      width:       '100%',
-      padding:     '8px 12px',
-      background:  'none',
-      border:      'none',
+      display:      'flex',
+      alignItems:   'center',
+      width:        '100%',
+      padding:      '8px 12px',
+      background:   'none',
+      border:       'none',
       borderBottom: i<ações.length-1?'1px solid #444':'none',
-      color:       '#fff',
-      cursor:      'pointer',
-      fontSize:    '14px',
-      textAlign:   'left'
+      color:        '#fff',
+      cursor:       'pointer',
+      fontSize:     '14px',
+      textAlign:    'left'
     });
     btn.onmouseover = ()=>btn.style.background='#444';
     btn.onmouseout  = ()=>btn.style.background='transparent';
@@ -198,9 +198,9 @@ function hideMenu() {
 }
 
 
-// [5] CRUD de histórias
+/* [5] CRUD histórias */
 async function salvarHistoria(titulo, descricao) {
-  const form = document.getElementById('storyForm');
+  const form   = document.getElementById('storyForm');
   const editId = form.dataset.editId;
   const { data:{user} } = await supabase.auth.getUser();
   if (!user) return alert('Faça login para salvar.');
@@ -220,7 +220,7 @@ async function salvarHistoria(titulo, descricao) {
     alert('História atualizada!');
     exibirHistoriaNoContainer(editId);
   } else {
-    const { data,error } = await supabase.from('historias')
+    const { data, error } = await supabase.from('historias')
       .insert([{ titulo, descricao, user_id: user.id }])
       .select('id');
     if (error) return alert('Erro ao salvar.');
@@ -253,7 +253,7 @@ async function excluirHistoria(id) {
   await supabase.from('historia_categorias').delete().eq('historia_id', id);
   await supabase.from('cartoes').delete().eq('historia_id', id);
   await supabase.from('historias').delete().eq('id', id);
-  alert('Excluído com sucesso!');
+  alert('Excluído!');
   limparFormulario();
   removerExibicaoHistoria();
   await mostrarHistorias();
@@ -286,15 +286,18 @@ async function exibirHistoriaNoContainer(id) {
 }
 
 
-// [6] Abre o formulário de Cartão e configura os três botões
+/* [6] Formulário de Cartão + botões funcionando */
 async function mostrarCartaoForm(id) {
+  // Mostra o container do cartão
   document.getElementById('storyContainer').style.display   = 'none';
   document.getElementById('cartaoContainer').style.display = 'block';
 
-  // Carrega dados
+  // Puxa dados do Supabase
   const { data:h } = await supabase.from('historias')
     .select('*,cartoes(*)').eq('id', id).single();
   const cart = h.cartoes?.[0] || {};
+
+  // Preenche campos
   document.getElementById('titulo_cartao').value  = cart.titulo_cartao || '';
   document.getElementById('sinopse_cartao').value = cart.sinopse_cartao || '';
   document.getElementById('data_criacao').value   = cart.data_criacao
@@ -311,46 +314,33 @@ async function mostrarCartaoForm(id) {
     if (chk) chk.checked = true;
   });
 
-  // Botão Publicar Cartão
-  const btnPub = document.getElementById('btnPublicarCartao');
-  btnPub.replaceWith(btnPub.cloneNode(true));
-  document.getElementById('btnPublicarCartao')
-    .addEventListener('click', async e => {
-      e.preventDefault();
-      await publicarCartao(id);
-      // volta para lista principal
-      document.getElementById('cartaoContainer').style.display = 'none';
-      document.getElementById('storyContainer').style.display  = 'block';
-      await mostrarHistorias();
-    });
+  // Publicar Cartão
+  document.getElementById('btnPublicarCartao').onclick = async () => {
+    await publicarCartao(id);
+    document.getElementById('cartaoContainer').style.display = 'none';
+    document.getElementById('storyContainer').style.display  = 'block';
+    await mostrarHistorias();
+  };
 
-  // Botão Ler Mais
-  const btnLer = document.getElementById('btnLerMais');
-  btnLer.replaceWith(btnLer.cloneNode(true));
-  document.getElementById('btnLerMais')
-    .addEventListener('click', e => {
-      e.preventDefault();
-      lerMais(id);
-    });
+  // Ler Mais
+  document.getElementById('btnLerMais').onclick = () => {
+    lerMais(id);
+  };
 
-  // Botão Voltar
-  const btnVol = document.getElementById('btnVoltar');
-  btnVol.replaceWith(btnVol.cloneNode(true));
-  document.getElementById('btnVoltar')
-    .addEventListener('click', e => {
-      e.preventDefault();
-      document.getElementById('cartaoContainer').style.display  = 'none';
-      document.getElementById('storyContainer').style.display = 'block';
-    });
+  // Voltar
+  document.getElementById('btnVoltar').onclick = () => {
+    document.getElementById('cartaoContainer').style.display = 'none';
+    document.getElementById('storyContainer').style.display  = 'block';
+  };
 }
 
 async function publicarCartao(id) {
-  if (!confirm('Aviso: Ao publicar o cartão, o conteúdo fica definitivo. Continuar?')) return;
-  const titulo   = document.getElementById('titulo_cartao').value.trim();
-  const sinopse  = document.getElementById('sinopse_cartao').value.trim();
-  const dataCri  = document.getElementById('data_criacao').value;
-  const autor    = document.getElementById('autor_cartao').value.trim();
-  const catsSel  = Array.from(
+  if (!confirm('Conteúdo definitivo. Continuar?')) return;
+  const titulo  = document.getElementById('titulo_cartao').value.trim();
+  const sinopse = document.getElementById('sinopse_cartao').value.trim();
+  const dataCri = document.getElementById('data_criacao').value;
+  const autor   = document.getElementById('autor_cartao').value.trim();
+  const catsSel = Array.from(
     document.querySelectorAll('input[name="categoria"]:checked')
   ).map(c=>+c.value);
 
@@ -359,7 +349,7 @@ async function publicarCartao(id) {
   }
 
   await supabase.from('cartoes').upsert({
-    historia_id: id,
+    historia_id:    id,
     titulo_cartao:  titulo,
     sinopse_cartao: sinopse,
     autor_cartao:   autor,
