@@ -7,7 +7,7 @@ let isTitleListVisible = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
   await exibirUsuarioLogado();
-  await carregarCategorias();
+  await carregarCategorias();      // 👉 carrega as checkboxes em História + Cartão
   await mostrarHistorias();
 
   // Submissão do formulário de história
@@ -64,6 +64,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('modalOverlay').style.display   = 'none';
 });
 
+
 // --------------------------------------------------
 // [1] Exibir usuário logado / login
 // --------------------------------------------------
@@ -99,8 +100,9 @@ async function exibirUsuarioLogado() {
   };
 }
 
+
 // --------------------------------------------------
-// [2] Carregar categorias (história + cartão)
+// [2] Carregar categorias (História + Cartão)
 // --------------------------------------------------
 async function carregarCategorias() {
   console.log('🔄 carregando categorias…');
@@ -109,32 +111,36 @@ async function carregarCategorias() {
     .select('id, nome');
   if (error) {
     console.error('❌ erro ao buscar categorias:', error);
+    alert('Erro ao carregar categorias; veja o console para detalhes.');
     return;
   }
-  console.log('✅ categorias recebidas:', cats);
+  console.log('✅ categorias retornadas:', cats);
 
-  // Para TODOS os containers de categorias na página
-  document.querySelectorAll('#categorias, .categorias').forEach(container => {
+  const containers = document.querySelectorAll('#categorias, .categorias');
+  console.log('📦 containers de categorias encontrados:', containers);
+  containers.forEach(container => {
     container.innerHTML = '';
+    if (!cats || cats.length === 0) {
+      container.innerHTML = '<p>Nenhuma categoria disponível.</p>';
+      return;
+    }
     cats.forEach(cat => {
       const wrapper = document.createElement('div');
       wrapper.classList.add('categoria-wrapper');
-
       const chk = document.createElement('input');
       chk.type  = 'checkbox';
       chk.name  = 'categoria';
       chk.value = cat.id;
       chk.id    = `categoria_${cat.id}`;
-
       const lbl = document.createElement('label');
       lbl.htmlFor    = chk.id;
       lbl.textContent = cat.nome;
-
       wrapper.append(chk, lbl);
       container.appendChild(wrapper);
     });
   });
 }
+
 
 // --------------------------------------------------
 // [3] Toggle lista lateral
@@ -146,6 +152,7 @@ function toggleTitleList(show) {
   isTitleListVisible = show;
 }
 
+
 // --------------------------------------------------
 // [4] Mostrar histórias e menu de opções
 // --------------------------------------------------
@@ -154,8 +161,10 @@ async function mostrarHistorias() {
     .from('historias')
     .select('id, titulo')
     .order('data_criacao', { ascending: false });
-  if (error) return console.error(error);
-
+  if (error) {
+    console.error(error);
+    return;
+  }
   const ul = document.getElementById('titleListUl');
   ul.innerHTML = '';
   stories.forEach(h => {
@@ -171,61 +180,62 @@ async function mostrarHistorias() {
   });
 }
 
-// Exibe menu flutuante ao lado do <li> e fecha em 3s
 function showMenu(li, id) {
   hideMenu();
-
   const menu = document.createElement('div');
   menu.classList.add('menu-opcoes');
   Object.assign(menu.style, {
-    display:   'block',
-    position:  'fixed',
-    background:'#222',
-    borderRadius: '5px',
-    padding:      '5px 0',
-    minWidth:     '140px',
-    boxShadow:    '0 2px 6px rgba(0,0,0,0.6)',
-    zIndex:       '2000'
+    display:    'block',
+    position:   'fixed',
+    background: '#222',
+    borderRadius:'5px',
+    padding:     '5px 0',
+    minWidth:    '140px',
+    boxShadow:   '0 2px 6px rgba(0,0,0,0.6)',
+    zIndex:      '2000'
   });
-
-  // Posiciona fora da lista, à direita do LI
   const r = li.getBoundingClientRect();
   menu.style.top       = `${r.top + r.height/2}px`;
   menu.style.left      = `${r.right + 8}px`;
   menu.style.transform = 'translateY(-50%)';
-
   const actions = [
     { txt:'Cartão', ico:'fas fa-credit-card', fn:()=>mostrarCartaoForm(id) },
     { txt:'Editar', ico:'fas fa-edit',       fn:()=>editarHistoria(id) },
     { txt:'Excluir',ico:'fas fa-trash',      fn:()=>excluirHistoria(id) }
   ];
-
   actions.forEach((a,i) => {
     const btn = document.createElement('button');
     btn.innerHTML = `<i class="${a.ico}" style="margin-right:8px;color:#ffcc00"></i>${a.txt}`;
-    Object.assign(btn.style,{
-      display:'flex', alignItems:'center', width:'100%',
-      padding:'8px 12px', background:'none', border:'none',
+    Object.assign(btn.style, {
+      display:      'flex',
+      alignItems:   'center',
+      width:        '100%',
+      padding:      '8px 12px',
+      background:   'none',
+      border:       'none',
       borderBottom: i<actions.length-1?'1px solid #444':'none',
-      color:'#fff', cursor:'pointer', fontSize:'14px', textAlign:'left'
+      color:        '#fff',
+      cursor:       'pointer',
+      fontSize:     '14px',
+      textAlign:    'left'
     });
     btn.onmouseover = ()=>btn.style.background='#444';
     btn.onmouseout  = ()=>btn.style.background='transparent';
     btn.onclick     = e=>{ e.stopPropagation(); hideMenu(); a.fn(); };
     menu.appendChild(btn);
   });
-
   document.body.appendChild(menu);
   openMenu = { menu, li };
   menuTimeout = setTimeout(hideMenu, 3000);
 }
 
 function hideMenu() {
-  if (menuTimeout) { clearTimeout(menuTimeout); menuTimeout = null; }
+  if (menuTimeout) { clearTimeout(menuTimeout); menuTimeout=null; }
   if (!openMenu) return;
   openMenu.menu.remove();
   openMenu = null;
 }
+
 
 // --------------------------------------------------
 // [5] CRUD de histórias
@@ -245,15 +255,14 @@ async function salvarHistoria(titulo, descricao) {
     await supabase.from('historia_categorias').delete().eq('historia_id', editId);
     if (cats.length) {
       await supabase.from('historia_categorias').insert(
-        cats.map(cat=>({ historia_id: Number(editId), categoria_id:cat, user_id:user.id }))
+        cats.map(cat=>({ historia_id:Number(editId), categoria_id:cat, user_id:user.id }))
       );
     }
     alert('História atualizada!');
     exibirHistoriaNoContainer(editId);
   } else {
     const { data, error } = await supabase.from('historias')
-      .insert([{ titulo, descricao, user_id:user.id }])
-      .select('id');
+      .insert([{ titulo, descricao, user_id:user.id }]).select('id');
     if (error) return alert('Erro ao salvar história.');
     const newId = data[0].id;
     if (cats.length) {
@@ -320,14 +329,14 @@ async function exibirHistoriaNoContainer(id) {
 // [6] Formulário de cartão e modal “Ler Mais”
 // --------------------------------------------------
 async function mostrarCartaoForm(id) {
-  // REPOPUlA checkboxes (para o container .categorias do cartão)
+  // **Re-carrega** as categorias para o container do cartão
   await carregarCategorias();
 
   document.getElementById('storyContainer').style.display   = 'none';
   document.getElementById('cartaoContainer').style.display = 'block';
 
   const { data:h } = await supabase.from('historias')
-    .select('*, cartoes(*)').eq('id',id).single();
+    .select('*, cartoes(*)').eq('id', id).single();
   const cart = h.cartoes?.[0] || {};
 
   // Preenche campos do cartão
@@ -357,7 +366,7 @@ async function mostrarCartaoForm(id) {
 }
 
 async function publicarCartao(id) {
-  if (!confirm('Ao publicar o cartão, o conteúdo fica definitivo. Continuar?'))
+  if (!confirm('Aviso: Ao publicar o cartão, o conteúdo fica definitivo. Continuar?'))
     return;
   const titulo   = document.getElementById('titulo_cartao').value.trim();
   const sinopse  = document.getElementById('sinopse_cartao').value.trim();
