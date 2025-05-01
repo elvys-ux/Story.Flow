@@ -230,7 +230,7 @@ async function editarHistoria(id) {
   document.getElementById('titulo').value    = h.titulo;
   document.getElementById('descricao').value = h.descricao;
   const form = document.getElementById('storyForm');
-  form.dataset.editId = id;
+  form.dataset.editId              = id;
   form.querySelector('button[type="submit"]').textContent = 'Atualizar';
   exibirHistoriaNoContainer(id);
 }
@@ -241,8 +241,7 @@ async function excluirHistoria(id) {
   await supabase.from('cartoes').delete().eq('historia_id',id);
   await supabase.from('historias').delete().eq('id',id);
   alert('História excluída!');
-  limparFormulario();
-  removerExibicaoHistoria();
+  limparFormulario(); removerExibicaoHistoria();
   await mostrarHistorias();
 }
 
@@ -272,7 +271,7 @@ async function exibirHistoriaNoContainer(id) {
 
 // [6] Cartão + modal “Ler Mais”
 async function mostrarCartaoForm(id) {
-  // recarrega apenas categorias para o cartão
+  // recarrega categorias só para o cartão
   await carregarCategoriasCartao();
 
   document.getElementById('storyContainer').style.display   = 'none';
@@ -289,7 +288,7 @@ async function mostrarCartaoForm(id) {
     : new Date().toISOString().split('T')[0];
   document.getElementById('autor_cartao').value    = cart.autor_cartao || '';
 
-  // associa categorias
+  // marca categorias associadas
   const { data:cats } = await supabase.from('historia_categorias')
     .select('categoria_id').eq('historia_id',id);
   document.querySelectorAll('.categorias input[name="categoria"]')
