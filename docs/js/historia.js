@@ -10,6 +10,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   await exibirUsuarioLogado();
   await mostrarHistorias();
 
+  // Se havia um cartão aberto antes de recarregar, reabra-o
+  const savedCardId = localStorage.getItem('storyCardId');
+  if (savedCardId) {
+    localStorage.removeItem('storyCardId');
+    mostrarCartaoForm(savedCardId);
+  }
+
   // Submissão do formulário de história
   document.getElementById('storyForm')
     .addEventListener('submit', async e => {
@@ -75,6 +82,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   document.getElementById('btnVoltar')
     .addEventListener('click', () => {
+      // Remove o ID salvo e volta à lista de histórias
+      localStorage.removeItem('storyCardId');
       document.getElementById('cartaoContainer').style.display = 'none';
       document.getElementById('storyContainer').style.display  = 'block';
       currentCardId = null;
@@ -282,7 +291,8 @@ async function exibirHistoriaNoContainer(id) {
 // --------------------------------------------------
 async function mostrarCartaoForm(id) {
   currentCardId = id;
-  await carregarCategoriasCartao();  // só no container .categorias
+  localStorage.setItem('storyCardId', id);
+  await carregarCategoriasCartao();
 
   document.getElementById('storyContainer').style.display   = 'none';
   document.getElementById('cartaoContainer').style.display = 'block';
@@ -308,7 +318,6 @@ async function mostrarCartaoForm(id) {
   });
 }
 
-// Carrega categorias apenas no cartão
 async function carregarCategoriasCartao() {
   const { data: cats, error } = await supabase
     .from('categorias').select('id, nome');
