@@ -358,20 +358,40 @@ async function publicarCartao(id) {
 
 async function lerMais(id) {
   document.getElementById('modalOverlay').style.display = 'flex';
-  const { data:h } = await supabase.from('historias')
-    .select('titulo, descricao').eq('id',id).single();
+
+  // história
+  const { data: h } = await supabase
+    .from('historias')
+    .select('titulo, descricao')
+    .eq('id', id)
+    .single();
   document.getElementById('modalTitulo').textContent    = h.titulo;
   document.getElementById('modalDescricao').textContent = h.descricao;
-  const { data:c } = await supabase.from('cartoes')
-    .select('*').eq('historia_id',id).single();
+
+  // cartao
+  const { data: c } = await supabase
+    .from('cartoes')
+    .select('*')
+    .eq('historia_id', id)
+    .single();
   if (c) {
     document.getElementById('modalCartaoTitulo').textContent   = c.titulo_cartao;
     document.getElementById('modalCartaoSinopse').textContent  = c.sinopse_cartao;
     document.getElementById('modalCartaoData').textContent     = c.data_criacao;
     document.getElementById('modalCartaoAutor').textContent    = c.autor_cartao;
-    const { data: cats2 } = await supabase.from('historia_categorias')
-      .select('categoria_id').eq('historia_id',id);
-    document.getElementById('modalCartaoCategorias').textContent =
-      cats2.map(x=>x.categoria_id).join(', ');
+
+    // Pega categoria_id **e** o nome via relacionamento
+    const { data: cats2, error } = await supabase
+      .from('historia_categorias')
+      .select('categoria_id, categorias(nome)')
+      .eq('historia_id', id);
+    if (error) {
+      console.error('Erro ao buscar categorias:', error);
+      document.getElementById('modalCartaoCategorias').textContent = '(erro)';
+    } else {
+      // extrai só o nome
+      const nomes = cats2.map(x => x.categorias.nome);
+      document.getElementById('modalCartaoCategorias').textContent = nomes.join(', ');
+    }
   }
 }
