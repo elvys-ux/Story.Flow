@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('novaHistoriaBtn')
     .addEventListener('click', () => {
       if (!confirm('Começar nova história?')) return;
-      limparFormulario();
+  
       removerExibicaoHistoria();
     });
 
