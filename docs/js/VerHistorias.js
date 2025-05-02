@@ -27,10 +27,10 @@ let currentStoryId = null;
 let originalText   = "";
 
 let likedStories   = JSON.parse(localStorage.getItem('likedStories') || '[]');
-let categoryMap    = {};  // mapeia id → nome
+let categoryMap    = {};  // mapeia categoria_id → nome
 
 /************************************************************
- * [1] Exibe usuário logado ou link de login
+ * [1] Exibe usuário logado / link de login
  ************************************************************/
 async function exibirUsuarioLogado() {
   const userArea = document.getElementById('userMenuArea');
@@ -57,7 +57,7 @@ async function exibirUsuarioLogado() {
 }
 
 /************************************************************
- * [2] Busca categorias (id → nome)
+ * [2] Carrega mapa de categorias (id → nome)
  ************************************************************/
 async function fetchCategories() {
   const { data, error } = await supabase
@@ -69,40 +69,52 @@ async function fetchCategories() {
 }
 
 /************************************************************
- * [3] Busca histórias + cartões no Supabase
+ * [3] Busca histórias + cartões + categorias
  ************************************************************/
 async function fetchStoriesFromSupabase() {
-  // Busca todos os cartões, com a história e as categorias associadas
   const { data, error } = await supabase
-    .from('cartoes')
+    .from('historias')
     .select(`
-      historia_id,
-      titulo_cartao,
-      sinopse_cartao,
-      data_criacao,
-      autor_cartao,
-      historias ( id, titulo, descricao ),
-      historia_categorias ( categoria_id )
+      id,
+      titulo,
+      descricao,
+      cartoes (
+        titulo_cartao,
+        sinopse_cartao,
+        autor_cartao,
+        data_criacao
+      ),
+      historia_categorias (
+        categoria_id
+      )
     `);
   if (error) {
-    console.error("Erro ao buscar cartões:", error);
+    console.error("Erro ao buscar histórias:", error);
     return;
   }
 
-  // Monta allStories
-  allStories = data.map(rec => {
-    const story = rec.historias;
-    const cats   = rec.historia_categorias.map(c=>categoryMap[c.categoria_id] || ""); 
+  allStories = data.map(story => {
+    // se não houver cartão, usamos valores vazios
+    const cart = story.cartoes[0] || {
+      titulo_cartao: "",
+      sinopse_cartao: "",
+      autor_cartao: "",
+      data_criacao: ""
+    };
+    const cats = story.historia_categorias
+      .map(hc => categoryMap[hc.categoria_id])
+      .filter(n => !!n);
+
     return {
       id: story.id,
       titulo: story.titulo,
       descricao: story.descricao,
       cartao: {
-        tituloCartao:     rec.titulo_cartao,
-        sinopseCartao:    rec.sinopse_cartao,
+        tituloCartao:     cart.titulo_cartao,
+        sinopseCartao:    cart.sinopse_cartao,
         historiaCompleta: story.descricao,
-        dataCartao:       rec.data_criacao?.split('T')[0] || '',
-        autorCartao:      rec.autor_cartao,
+        dataCartao:       cart.data_criacao?.split('T')[0] || '',
+        autorCartao:      cart.autor_cartao,
         categorias:       cats,
         likes:            0
       }
@@ -111,45 +123,44 @@ async function fetchStoriesFromSupabase() {
 }
 
 /************************************************************
- * [4] Formatadores e utilitários (mesmos que antes)
+ * [4] Helpers de formatação e leitura
  ************************************************************/
 function formatarPor4Linhas(text) {
   const lines = text.split('\n');
-  let paragrafos = [], buffer = [];
-  lines.forEach((ln,i) => {
-    buffer.push(ln);
-    if (buffer.length === 4) {
-      paragrafos.push(buffer.join('<br>'));
-      buffer = [];
+  let parag = [], buf = [];
+  lines.forEach(l => {
+    buf.push(l);
+    if (buf.length === 4) {
+      parag.push(buf.join('<br>'));
+      buf = [];
     }
   });
-  if (buffer.length) paragrafos.push(buffer.join('<br>'));
-  return paragrafos.map(p => `<p style="text-align: justify;">${p}</p>`).join('');
+  if (buf.length) parag.push(buf.join('<br>'));
+  return parag.map(p => `<p style="text-align: justify;">${p}</p>`).join('');
 }
 
 function formatarTextoParaLeitura(text) {
   const lines = text.split('\n');
-  let paragraphs = [], buffer = [], idx = 0;
-  lines.forEach(ln => {
-    const words = ln.split(' ').map(w => {
-      const span = `<span class="reading-word" data-index="${idx}" onclick="markReadingPosition(this)">${w}</span>`;
+  let paragraphs = [], buf = [], idx = 0;
+  lines.forEach(l => {
+    const spans = l.split(' ').map(w => {
+      const s = `<span class="reading-word" data-index="${idx}" onclick="markReadingPosition(this)">${w}</span>`;
       idx++;
-      return span;
+      return s;
     });
-    buffer.push(words.join(' '));
-    if (buffer.length === 4) {
-      paragraphs.push(`<p style="text-align: justify;">${buffer.join('<br>')}</p>`);
-      buffer = [];
+    buf.push(spans.join(' '));
+    if (buf.length === 4) {
+      paragraphs.push(`<p style="text-align: justify;">${buf.join('<br>')}</p>`);
+      buf = [];
     }
   });
-  if (buffer.length) paragraphs.push(`<p style="text-align: justify;">${buffer.join('<br>')}</p>`);
+  if (buf.length) paragraphs.push(`<p style="text-align: justify;">${buf.join('<br>')}</p>`);
   return paragraphs.join('');
 }
 
 function markReadingPosition(el) {
-  const index = el.getAttribute('data-index');
-  localStorage.setItem('readingPosition_' + currentStoryId, index);
-  showToast("Posição de leitura salva (palavra " + index + ")");
+  const i = el.getAttribute('data-index');
+  localStorage.setItem('readingPosition_' + currentStoryId, i);
 }
 
 function destacarPalavra() {
@@ -164,30 +175,29 @@ function destacarPalavra() {
 }
 
 /************************************************************
- * [5] Cria o card de cada história
+ * [5] Cria um card de história
  ************************************************************/
 function createStoryCard(story) {
   const div = document.createElement('div');
   div.className = 'sheet';
 
-  // Título do cartão
-  const titleEl = document.createElement('div');
-  titleEl.className = 'sheet-title';
-  titleEl.textContent = story.cartao.tituloCartao;
-  div.appendChild(titleEl);
+  // Título do Cartão
+  const t = document.createElement('div');
+  t.className = 'sheet-title';
+  t.textContent = story.cartao.tituloCartao;
+  div.appendChild(t);
 
   // Sinopse
-  const sinopseEl = document.createElement('div');
-  sinopseEl.className = 'sheet-sinopse';
-  sinopseEl.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao);
-  div.appendChild(sinopseEl);
+  const s = document.createElement('div');
+  s.className = 'sheet-sinopse';
+  s.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao);
+  div.appendChild(s);
 
   // “mais...”
-  const verMais = document.createElement('span');
-  verMais.className = 'ver-mais';
-  verMais.textContent = 'mais...';
-  verMais.style.cursor = 'pointer';
-  verMais.onclick = () => {
+  const mais = document.createElement('span');
+  mais.className = 'ver-mais';
+  mais.textContent = 'mais...';
+  mais.onclick = () => {
     isModalOpen = true;
     currentStoryId = story.id;
     modalTitle.textContent = story.cartao.tituloCartao;
@@ -197,7 +207,7 @@ function createStoryCard(story) {
       <p><strong>Autor:</strong> ${story.cartao.autorCartao}</p>
       <p><strong>Categorias:</strong> ${story.cartao.categorias.join(', ')}</p>
     `;
-    // Botão Ler
+    // Ler
     const lerBtn = document.createElement('button');
     lerBtn.textContent = 'Ler';
     lerBtn.onclick = () => {
@@ -206,25 +216,24 @@ function createStoryCard(story) {
     };
     modalFullText.appendChild(lerBtn);
 
-    // Botão Continuar
+    // Continuar
     const pos = localStorage.getItem('readingPosition_' + story.id);
     continuarBtn.style.display = pos !== null ? 'inline-block' : 'none';
 
     modalOverlay.style.display = 'flex';
   };
-  div.appendChild(verMais);
+  div.appendChild(mais);
 
-  // Likes (mantém localStorage)
+  // Likes
   const likeCont = document.createElement('div');
-  likeCont.style.marginTop = '10px';
-  const likeBtn = document.createElement('button');
-  const likeCount = document.createElement('span');
-  let userLiked = likedStories.includes(story.id);
-  function updateLikeUI() {
-    likeBtn.textContent = userLiked ? '❤️' : '🤍';
-    likeCount.textContent = ` ${story.cartao.likes} curtida(s)`;
+  const likeBtn  = document.createElement('button');
+  const likeCt   = document.createElement('span');
+  let userLiked  = likedStories.includes(story.id);
+  function updUI() {
+    likeBtn.textContent  = userLiked ? '❤️' : '🤍';
+    likeCt.textContent  = ` ${story.cartao.likes} curtida(s)`;
   }
-  updateLikeUI();
+  updUI();
   likeBtn.onclick = () => {
     if (userLiked) {
       story.cartao.likes = Math.max(story.cartao.likes - 1, 0);
@@ -234,10 +243,10 @@ function createStoryCard(story) {
       likedStories.push(story.id);
     }
     localStorage.setItem('likedStories', JSON.stringify(likedStories));
-    updateLikeUI();
+    updUI();
   };
   likeCont.appendChild(likeBtn);
-  likeCont.appendChild(likeCount);
+  likeCont.appendChild(likeCt);
   div.appendChild(likeCont);
 
   // Categorias
@@ -262,24 +271,24 @@ function createStoryCard(story) {
 }
 
 /************************************************************
- * [6] Filtragem, ordenação e pesquisa
+ * [6] Filtrar / ordenar / pesquisar
  ************************************************************/
-function matchesSearch(story, text) {
-  text = text.trim().toLowerCase();
-  if (!text) return true;
-  return story.cartao.tituloCartao.toLowerCase().includes(text)
-      || story.cartao.autorCartao.toLowerCase().includes(text);
+function matchesSearch(story, txt) {
+  txt = txt.trim().toLowerCase();
+  if (!txt) return true;
+  return story.cartao.tituloCartao.toLowerCase().includes(txt)
+      || story.cartao.autorCartao.toLowerCase().includes(txt);
 }
 
 function getFilteredStories() {
   let arr = [...allStories];
-  // Pesquisa
-  const txt = (searchBar.value||'').toLowerCase();
-  arr = arr.filter(s => matchesSearch(s, txt));
-  // Categoria
-  const cat = categoryFilter.value;
-  if (cat) arr = arr.filter(s => s.cartao.categorias.includes(cat));
-  // Ordenação
+  // pesquisa:
+  arr = arr.filter(s => matchesSearch(s, searchBar.value));
+  // categoria
+  if (categoryFilter.value) {
+    arr = arr.filter(s => s.cartao.categorias.includes(categoryFilter.value));
+  }
+  // ordenação
   if (sortFilter.value === 'date') {
     arr.sort((a,b) => (a.cartao.dataCartao||'').localeCompare(b.cartao.dataCartao||''));
   } else if (sortFilter.value === 'popularity') {
@@ -289,19 +298,18 @@ function getFilteredStories() {
 }
 
 /************************************************************
- * [7] Paginação “Carregar Mais”
+ * [7] Paginação
  ************************************************************/
-function showBatch(count) {
-  const filtered = getFilteredStories();
-  const slice = filtered.slice(currentOffset, currentOffset + count);
-  slice.forEach(story => container.appendChild(createStoryCard(story)));
-  currentOffset += count;
+function showBatch(cnt) {
+  const slice = getFilteredStories().slice(currentOffset, currentOffset + cnt);
+  slice.forEach(st => container.appendChild(createStoryCard(st)));
+  currentOffset += cnt;
   loadMoreBtn.disabled = false;
 }
 
 function initialLoad() {
-  container.innerHTML = '';
-  currentOffset = 0;
+  container.innerHTML   = '';
+  currentOffset         = 0;
   showBatch(initialCount);
 }
 
@@ -311,21 +319,17 @@ function loadMore() {
 }
 
 function handleFilterOrSort() {
-  container.innerHTML = '';
-  currentOffset = 0;
+  container.innerHTML   = '';
+  currentOffset         = 0;
   showBatch(initialCount);
 }
 
 /************************************************************
- * [8] Configurações de Modal
+ * [8] Modal e aviso
  ************************************************************/
-if (modalClose) {
-  modalClose.onclick = () => { modalOverlay.style.display = 'none'; isModalOpen = false; };
-}
+modalClose.onclick = () => { modalOverlay.style.display = 'none'; isModalOpen = false; };
 modalOverlay.onclick = e => {
-  if (e.target === modalOverlay && isModalOpen) {
-    warningOverlay.style.display = 'flex';
-  }
+  if (e.target === modalOverlay && isModalOpen) warningOverlay.style.display = 'flex';
 };
 warningYes.onclick = () => {
   modalOverlay.style.display = 'none';
@@ -333,15 +337,13 @@ warningYes.onclick = () => {
   isModalOpen = false;
 };
 warningNo.onclick = () => { warningOverlay.style.display = 'none'; };
-if (continuarBtn) {
-  continuarBtn.onclick = () => {
-    const story = allStories.find(s => s.id === currentStoryId);
-    if (story) {
-      modalFullText.innerHTML = formatarTextoParaLeitura(story.cartao.historiaCompleta);
-      setTimeout(destacarPalavra, 100);
-    }
-  };
-}
+continuarBtn.onclick = () => {
+  const st = allStories.find(s=>s.id===currentStoryId);
+  if (st) {
+    modalFullText.innerHTML = formatarTextoParaLeitura(st.cartao.historiaCompleta);
+    setTimeout(destacarPalavra, 100);
+  }
+};
 
 /************************************************************
  * [9] Inicialização
@@ -352,8 +354,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   await fetchStoriesFromSupabase();
   initialLoad();
 
-  if (searchBar)      searchBar.oninput      = handleFilterOrSort;
-  if (categoryFilter) categoryFilter.onchange= handleFilterOrSort;
-  if (sortFilter)     sortFilter.onchange    = handleFilterOrSort;
-  if (loadMoreBtn)    loadMoreBtn.onclick    = loadMore;
+  searchBar.oninput      = handleFilterOrSort;
+  categoryFilter.onchange= handleFilterOrSort;
+  sortFilter.onchange    = handleFilterOrSort;
+  loadMoreBtn.onclick    = loadMore;
 });
