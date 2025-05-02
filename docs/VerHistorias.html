@@ -2,50 +2,31 @@
 <html lang="pt">
 <head>
   <meta charset="UTF-8">
-  <title>StoryFlow - Histórias da Comunidade</title>
+  <title>StoryFlow – Histórias da Comunidade</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Ícones do Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <!-- Arquivo CSS sem espaços -->
+  <!-- Font Awesome -->
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <!-- Seu CSS -->
   <link rel="stylesheet" href="css/VerHistorias.css">
-  
-  <!-- Scripts de módulo -->
-  <script type="module" src="js/supabase.js"></script>
-  <script type="module" src="js/userDisplay.js"></script>
 </head>
 <body>
 
-
-  <!-- NAVBAR -->
-  <div class="navbar">
-    <a href="index.html"><i class="fas fa-home"></i>Início</a>
-    <div class="dropdown">
-      <a href="#"><i class="fas fa-pencil-alt"></i>Criar História</a>
-      <div class="dropdown-content">
-        <a href="diario.html">Escrever Diário</a>
-        <a href="historia.html">Escrever História</a>
-      </div>
-    </div>
-    <div class="dropdown">
-      <a href="#"><i class="fas fa-book"></i>Histórias</a>
-      <div class="dropdown-content">
-         <a href="hisotirasqueescrevi.html">Minhas Histórias</a>
-        <a href="VerHistorias.html">Ler Histórias</a>
-      </div>
-    </div>
-    <div id="userMenuArea"></div>
+  <nav class="navbar">
+    <a href="index.html"><i class="fas fa-home"></i> Início</a>
+    <div class="dropdown">…</div>
+    <div id="userMenuArea" class="user-area"></div>
     <div class="search-box">
+      <input type="text" id="searchBar" placeholder="Pesquisar por título ou autor…">
       <button id="searchBtn"><i class="fas fa-search"></i></button>
-	  <input type="text" id="searchBar" placeholder="Pesquisar...">
-
     </div>
-  </div>
+  </nav>
 
-  <!-- FILTROS -->
   <div class="filter-bar">
     <select id="category-filter">
-      <option value="">-- Categoria --</option>
+      <option value="">Todas as categorias</option>
+      <!-- Você pode preencher dinamicamente se preferir -->
       <option value="Fantasia">Fantasia</option>
       <option value="Terror">Terror</option>
       <option value="Comédia">Comédia</option>
@@ -58,49 +39,41 @@
     </select>
   </div>
 
-  <!-- HISTÓRIAS -->
   <section class="stories-section">
     <h2>Histórias da Comunidade</h2>
-    <p class="subtitle">Explore as melhores histórias criadas pela comunidade.</p>
-    <div class="stories-container" id="storiesContainer"></div>
+    <div id="storiesContainer" class="stories-container"></div>
     <div class="pagination">
       <button id="loadMoreBtn">Carregar Mais</button>
     </div>
   </section>
 
-  <!-- MODAL PARA LEITURA DA HISTÓRIA -->
-  <div class="modal-overlay" id="modalOverlay">
+  <!-- Modal de Leitura -->
+  <div id="modalOverlay" class="modal-overlay">
     <div class="modal-content">
-      <button class="modal-close" id="modalClose">Fechar</button>
-      <h2 id="modalTitle">Título da História</h2>
-
-      <!-- Texto completo (onde exibimos sinopse/história) -->
-      <p id="modalFullText"></p>
-	<button id="continuarBtn">Continuar</button>
-      <!-- Informações extras (data, autor, etc.) -->
-      <div class="modal-info" id="modalInfo"></div>
-
+      <button id="modalClose" class="modal-close">× Fechar</button>
+      <h2 id="modalTitle">Título</h2>
+      <div id="modalFullText" class="modal-text"></div>
+      <button id="continuarBtn" class="continuar-btn">Continuar</button>
+      <div id="modalInfo" class="modal-info"></div>
     </div>
   </div>
 
-  <!-- AVISO PARA CLIQUE FORA DO MODAL -->
-  <div class="warning-overlay" id="warningOverlay">
+  <!-- Aviso ao clicar fora -->
+  <div id="warningOverlay" class="warning-overlay">
     <div class="warning-box">
       <p>Deseja fechar a leitura?</p>
-      <div>
-        <button id="warningYes">Sim</button>
-        <button id="warningNo">Não</button>
-      </div>
+      <button id="warningYes">Sim</button>
+      <button id="warningNo">Não</button>
     </div>
   </div>
 
- <footer>
-    ©Ano-2025 / Elvys / StoryFlow / 𝐓𝐮𝐫𝐦𝐚-Tis7 <a href="Sobre.html">Termos de uso</a>
+  <footer>
+    © 2025 StoryFlow – Turma Tis7 | <a href="Sobre.html">Termos de uso</a>
   </footer>
 
-  <!-- JS PRINCIPAL: Inclua o script com type="module" se usar import/export -->
+  <!-- Scripts -->
+  <script type="module" src="js/supabase.js"></script>
+  <script type="module" src="js/userDisplay.js"></script>
   <script type="module" src="js/VerHistorias.js"></script>
-
-
 </body>
 </html>
