@@ -1,3 +1,4 @@
+
 // js/historia.js
 import { supabase } from './supabase.js';
 
@@ -27,8 +28,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('novaHistoriaBtn')
     .addEventListener('click', () => {
       if (!confirm('Começar nova história?')) return;
-  
-      removerExibicaoHistoria();
+      limparFormulario();
+     
     });
 
   // Fechar modal “Ler Mais”
