@@ -1,53 +1,50 @@
 // js/historia.js
 import { supabase } from './supabase.js';
 
-let openMenu = null,
-    menuTimeout = null,
+let openMenu       = null,
+    menuTimeout    = null,
     isTitleListVisible = false,
-    currentCardId = null;    // Armazena a história cujo cartão está aberto
+    currentCardId  = null;    // Guarda a história cujo cartão está aberto
 
 document.addEventListener('DOMContentLoaded', async () => {
   await exibirUsuarioLogado();
   await mostrarHistorias();
 
   // Submissão do formulário de história
-  document.getElementById('storyForm')
-    .addEventListener('submit', async e => {
-      e.preventDefault();
-      const titulo    = document.getElementById('titulo').value.trim();
-      const descricao = document.getElementById('descricao').value.trim();
-      if (!titulo || !descricao)
-        return alert('Preencha o título e a descrição!');
-      await salvarHistoria(titulo, descricao);
-    });
+  document.getElementById('storyForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const titulo    = document.getElementById('titulo').value.trim();
+    const descricao = document.getElementById('descricao').value.trim();
+    if (!titulo || !descricao) {
+      return alert('Preencha o título e a descrição!');
+    }
+    await salvarHistoria(titulo, descricao);
+  });
 
   // Nova História
-  document.getElementById('novaHistoriaBtn')
-    .addEventListener('click', () => {
-      if (confirm('Começar nova história?')) {
-        limparFormulario();
-        removerExibicaoHistoria();
-      }
-    });
+  document.getElementById('novaHistoriaBtn').addEventListener('click', () => {
+    if (confirm('Começar nova história?')) {
+      limparFormulario();
+      removerExibicaoHistoria();
+    }
+  });
 
   // Fechar modal “Ler Mais”
-  document.getElementById('closeModal')
-    .addEventListener('click', () => {
+  document.getElementById('closeModal').addEventListener('click', () => {
+    document.getElementById('modalOverlay').style.display = 'none';
+  });
+  document.getElementById('modalOverlay').addEventListener('click', e => {
+    if (e.target.id === 'modalOverlay')
       document.getElementById('modalOverlay').style.display = 'none';
-    });
-  document.getElementById('modalOverlay')
-    .addEventListener('click', e => {
-      if (e.target.id === 'modalOverlay')
-        document.getElementById('modalOverlay').style.display = 'none';
-    });
+  });
 
-  // Hover lista lateral
+  // Hover da lista lateral
   document.body.addEventListener('mousemove', e => {
     if (e.clientX < 50) toggleTitleList(true);
   });
   document.body.addEventListener('mouseleave', () => toggleTitleList(false));
 
-  // Cliques gerais: fecha menu & lista lateral
+  // Clique genérico: fecha menu e lista lateral
   document.addEventListener('click', e => {
     if (openMenu &&
         !openMenu.menu.contains(e.target) &&
@@ -60,29 +57,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Estado inicial
+  // Estado inicial dos containers
   document.getElementById('cartaoContainer').style.display = 'none';
   document.getElementById('modalOverlay').style.display   = 'none';
 
-  // —— Liga botões do Cartão usando currentCardId ——
-  document.getElementById('btnPublicarCartao')
-    .addEventListener('click', () => {
-      if (currentCardId !== null) publicarCartao(currentCardId);
-    });
-  document.getElementById('btnLerMais')
-    .addEventListener('click', () => {
-      if (currentCardId !== null) lerMais(currentCardId);
-    });
-  document.getElementById('btnVoltar')
-    .addEventListener('click', () => {
-      document.getElementById('cartaoContainer').style.display = 'none';
-      document.getElementById('storyContainer').style.display  = 'block';
-      currentCardId = null;
-    });
+  // Botões do Cartão (usam currentCardId)
+  document.getElementById('btnPublicarCartao').addEventListener('click', () => {
+    if (currentCardId !== null) publicarCartao(currentCardId);
+  });
+  document.getElementById('btnLerMais').addEventListener('click', () => {
+    if (currentCardId !== null) lerMais(currentCardId);
+  });
+  document.getElementById('btnVoltar').addEventListener('click', () => {
+    document.getElementById('cartaoContainer').style.display = 'none';
+    document.getElementById('storyContainer').style.display  = 'block';
+    currentCardId = null;
+  });
 });
 
 // --------------------------------------------------
-// [1] Usuário logado / login
+// [1] Exibir usuário logado / Login
 // --------------------------------------------------
 async function exibirUsuarioLogado() {
   const area = document.getElementById('userMenuArea');
@@ -155,14 +149,14 @@ function showMenu(li, id) {
   const menu = document.createElement('div');
   menu.classList.add('menu-opcoes');
   Object.assign(menu.style, {
-    display:     'block',
-    position:    'fixed',
-    background:  '#222',
-    borderRadius:'5px',
-    padding:     '5px 0',
-    minWidth:    '140px',
-    boxShadow:   '0 2px 6px rgba(0,0,0,0.6)',
-    zIndex:      '2000'
+    display:      'block',
+    position:     'fixed',
+    background:   '#222',
+    borderRadius: '5px',
+    padding:      '5px 0',
+    minWidth:     '140px',
+    boxShadow:    '0 2px 6px rgba(0,0,0,0.6)',
+    zIndex:       '2000'
   });
   const r = li.getBoundingClientRect();
   menu.style.top       = `${r.top + r.height/2}px`;
@@ -170,9 +164,9 @@ function showMenu(li, id) {
   menu.style.transform = 'translateY(-50%)';
 
   const actions = [
-    { txt:'Cartão', ico:'fas fa-credit-card', fn:()=> mostrarCartaoForm(id) },
-    { txt:'Editar', ico:'fas fa-edit',        fn:()=> editarHistoria(id) },
-    { txt:'Excluir',ico:'fas fa-trash',       fn:()=> excluirHistoria(id) }
+    { txt:'Cartão', ico:'fas fa-credit-card', fn: ()=> mostrarCartaoForm(id) },
+    { txt:'Editar', ico:'fas fa-edit',        fn: ()=> editarHistoria(id) },
+    { txt:'Excluir',ico:'fas fa-trash',       fn: ()=> excluirHistoria(id) }
   ];
   actions.forEach((a,i) => {
     const btn = document.createElement('button');
@@ -184,7 +178,7 @@ function showMenu(li, id) {
       padding:      '8px 12px',
       background:   'none',
       border:       'none',
-      borderBottom: i < actions.length-1 ? '1px solid #444' : 'none',
+      borderBottom: i<actions.length-1 ? '1px solid #444' : 'none',
       color:        '#fff',
       cursor:       'pointer',
       fontSize:     '14px',
@@ -218,14 +212,16 @@ async function salvarHistoria(titulo, descricao) {
   if (!user) return alert('Faça login para salvar.');
 
   if (editId) {
+    // atualiza
     await supabase.from('historias')
       .update({ titulo, descricao })
       .eq('id', editId);
     alert('História atualizada!');
     exibirHistoriaNoContainer(editId);
   } else {
+    // insere nova
     const { data, error } = await supabase.from('historias')
-      .insert([{ titulo, descricao, user_id:user.id }])
+      .insert([{ titulo, descricao, user_id: user.id }])
       .select('id');
     if (error) return alert('Erro ao salvar história.');
     alert('História salva!');
@@ -237,8 +233,8 @@ async function salvarHistoria(titulo, descricao) {
 }
 
 async function editarHistoria(id) {
-  const { data:h } = await supabase.from('historias')
-    .select('*').eq('id',id).single();
+  const { data: h } = await supabase.from('historias')
+    .select('*').eq('id', id).single();
   document.getElementById('titulo').value    = h.titulo;
   document.getElementById('descricao').value = h.descricao;
   const form = document.getElementById('storyForm');
@@ -249,7 +245,7 @@ async function editarHistoria(id) {
 
 async function excluirHistoria(id) {
   if (!confirm('Deseja excluir a história?')) return;
-  await supabase.from('historias').delete().eq('id',id);
+  await supabase.from('historias').delete().eq('id', id);
   alert('História excluída!');
   limparFormulario();
   removerExibicaoHistoria();
@@ -257,18 +253,20 @@ async function excluirHistoria(id) {
 }
 
 function removerExibicaoHistoria() {
-  document.querySelectorAll('.exibicao-historia').forEach(el=>el.remove());
+  document.querySelectorAll('.exibicao-historia').forEach(el => el.remove());
 }
+
 function limparFormulario() {
-  document.getElementById('titulo').value = '';
+  document.getElementById('titulo').value    = '';
   document.getElementById('descricao').value = '';
   const form = document.getElementById('storyForm');
   delete form.dataset.editId;
   form.querySelector('button[type="submit"]').textContent = 'Salvar';
 }
+
 async function exibirHistoriaNoContainer(id) {
-  const { data:h } = await supabase.from('historias')
-    .select('titulo, descricao').eq('id',id).single();
+  const { data: h } = await supabase.from('historias')
+    .select('titulo, descricao').eq('id', id).single();
   removerExibicaoHistoria();
   const cont = document.getElementById('storyContainer');
   const div  = document.createElement('div');
@@ -278,27 +276,26 @@ async function exibirHistoriaNoContainer(id) {
 }
 
 // --------------------------------------------------
-// [5] Formulário de Cartão + modal “Ler Mais”
+// [5] Form de Cartão + modal “Ler Mais”
 // --------------------------------------------------
 async function mostrarCartaoForm(id) {
   currentCardId = id;
-  await carregarCategoriasCartao();  // só no container .categorias
-
   document.getElementById('storyContainer').style.display   = 'none';
   document.getElementById('cartaoContainer').style.display = 'block';
+  await carregarCategoriasCartao();
 
-  const { data:h } = await supabase.from('historias')
+  const { data: h } = await supabase.from('historias')
     .select('*, cartoes(*)').eq('id', id).single();
   const cart = h.cartoes?.[0] || {};
 
-  document.getElementById('titulo_cartao').value  = cart.titulo_cartao  || '';
-  document.getElementById('sinopse_cartao').value = cart.sinopse_cartao || '';
-  document.getElementById('data_criacao').value  = cart.data_criacao
+  document.getElementById('titulo_cartao').value   = cart.titulo_cartao  || '';
+  document.getElementById('sinopse_cartao').value  = cart.sinopse_cartao || '';
+  document.getElementById('data_criacao').value   = cart.data_criacao
     ? cart.data_criacao.split('T')[0]
     : new Date().toISOString().split('T')[0];
-  document.getElementById('autor_cartao').value   = cart.autor_cartao   || '';
+  document.getElementById('autor_cartao').value    = cart.autor_cartao   || '';
 
-  // Marcar categorias já salvas
+  // marca checkboxes já salvas
   const { data: saved } = await supabase.from('historia_categorias')
     .select('categoria_id').eq('historia_id', id);
   document.querySelectorAll('.categorias input').forEach(chk => chk.checked = false);
@@ -308,10 +305,9 @@ async function mostrarCartaoForm(id) {
   });
 }
 
-// Carrega categorias apenas no cartão
+// só carrega no container do cartão
 async function carregarCategoriasCartao() {
-  const { data: cats, error } = await supabase
-    .from('categorias').select('id, nome');
+  const { data: cats, error } = await supabase.from('categorias').select('id, nome');
   if (error) return console.error('Erro ao carregar categorias do cartão:', error);
   const ctn = document.querySelector('.categorias');
   ctn.innerHTML = '';
@@ -339,20 +335,30 @@ async function publicarCartao(id) {
   const autor   = document.getElementById('autor_cartao').value.trim();
   const cats    = Array.from(
     document.querySelectorAll('.categorias input:checked')
-  ).map(c=>+c.value);
-  if (!titulo||!sinopse||cats.length===0)
-    return alert('Preencha título, sinopse e selecione pelo menos 1 categoria.');
+  ).map(c => +c.value);
+
+  if (!titulo || !sinopse || cats.length === 0) {
+    return alert('Preencha título, sinopse e selecione ao menos uma categoria.');
+  }
+
+  // upsert no cartoes
   await supabase.from('cartoes').upsert({
-    historia_id:id,
-    titulo_cartao:titulo,
-    sinopse_cartao:sinopse,
-    autor_cartao:autor,
-    data_criacao:dataC
+    historia_id:    id,
+    titulo_cartao:  titulo,
+    sinopse_cartao: sinopse,
+    autor_cartao:   autor,
+    data_criacao:   dataC
   });
+
+  // atualiza relações
   const { data:{ user } } = await supabase.auth.getUser();
-  await supabase.from('historia_categorias').delete().eq('historia_id',id);
+  await supabase.from('historia_categorias').delete().eq('historia_id', id);
   await supabase.from('historia_categorias')
-    .insert(cats.map(cat=>({ historia_id:id, categoria_id:cat, user_id:user.id })));
+    .insert(cats.map(cat => ({
+      historia_id: id,
+      categoria_id: cat,
+      user_id: user.id
+    })));
   alert('Cartão publicado com sucesso!');
 }
 
@@ -368,7 +374,7 @@ async function lerMais(id) {
   document.getElementById('modalTitulo').textContent    = h.titulo;
   document.getElementById('modalDescricao').textContent = h.descricao;
 
-  // cartao
+  // cartão
   const { data: c } = await supabase
     .from('cartoes')
     .select('*')
@@ -380,7 +386,7 @@ async function lerMais(id) {
     document.getElementById('modalCartaoData').textContent     = c.data_criacao;
     document.getElementById('modalCartaoAutor').textContent    = c.autor_cartao;
 
-    // Pega categoria_id **e** o nome via relacionamento
+    // busca também o nome da categoria via relacionamento
     const { data: cats2, error } = await supabase
       .from('historia_categorias')
       .select('categoria_id, categorias(nome)')
@@ -389,7 +395,6 @@ async function lerMais(id) {
       console.error('Erro ao buscar categorias:', error);
       document.getElementById('modalCartaoCategorias').textContent = '(erro)';
     } else {
-      // extrai só o nome
       const nomes = cats2.map(x => x.categorias.nome);
       document.getElementById('modalCartaoCategorias').textContent = nomes.join(', ');
     }
