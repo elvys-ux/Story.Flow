@@ -71,37 +71,35 @@ async function fetchCategories() {
 /************************************************************
  * [3] Busca histórias + cartões + categorias
  ************************************************************/
+// [3] Busca histórias + cartões + categorias
 async function fetchStoriesFromSupabase() {
-  const { data, error } = await supabase
+  // Traz tudo de historias, cartoes e historica_categorias
+  const { data: stories, error } = await supabase
     .from('historias')
-    .select(`
-      id,
-      titulo,
-      descricao,
-      cartoes (
-        titulo_cartao,
-        sinopse_cartao,
-        autor_cartao,
-        data_criacao
-      ),
-      historia_categorias (
-        categoria_id
-      )
-    `);
+    .select('*, cartoes(*), historia_categorias(*)');
+
+  console.log('fetchStories:', { stories, error });
+
   if (error) {
     console.error("Erro ao buscar histórias:", error);
+    // Se quiser, mostre uma mensagem na UI:
+    container.innerHTML = `<p>Nenhuma história disponível (erro).</p>`;
     return;
   }
 
-  allStories = data.map(story => {
-    // se não houver cartão, usamos valores vazios
-    const cart = story.cartoes[0] || {
-      titulo_cartao: "",
-      sinopse_cartao: "",
-      autor_cartao: "",
-      data_criacao: ""
+  if (!stories || stories.length === 0) {
+    container.innerHTML = `<p>Nenhuma história encontrada.</p>`;
+    return;
+  }
+
+  allStories = stories.map(story => {
+    const cart = (story.cartoes && story.cartoes[0]) || {
+      titulo_cartao:   "(sem título)",
+      sinopse_cartao:  "(sem sinopse)",
+      autor_cartao:    "(sem autor)",
+      data_criacao:    null
     };
-    const cats = story.historia_categorias
+    const cats = (story.historia_categorias || [])
       .map(hc => categoryMap[hc.categoria_id])
       .filter(n => !!n);
 
@@ -121,7 +119,6 @@ async function fetchStoriesFromSupabase() {
     };
   });
 }
-
 /************************************************************
  * [4] Helpers de formatação e leitura
  ************************************************************/
