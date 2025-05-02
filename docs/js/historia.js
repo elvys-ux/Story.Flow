@@ -318,7 +318,9 @@ async function carregarCategoriasCartao() {
 }
 
 async function publicarCartao(id) {
-  if (!confirm('Publicar cartão? Conteúdo definitivo.')) return;
+  if (!confirm('Aviso: Ao publicar o cartão, o conteúdo fica definitivo. Continuar?'))
+    return;
+
   const titulo  = document.getElementById('titulo_cartao').value.trim();
   const sinopse = document.getElementById('sinopse_cartao').value.trim();
   const dataC   = document.getElementById('data_criacao').value;
@@ -331,52 +333,76 @@ async function publicarCartao(id) {
     return alert('Preencha título, sinopse e selecione ao menos uma categoria.');
   }
 
-  await supabase.from('cartoes').upsert({
-    historia_id:    id,
-    titulo_cartao:  titulo,
-    sinopse_cartao: sinopse,
-    autor_cartao:   autor,
-    data_criacao:   dataC
-  });
+  // ————— Upsert com onConflict —————
+  const { error: upsertError } = await supabase
+    .from('cartoes')
+    .upsert({
+      historia_id:    id,
+      titulo_cartao:  titulo,
+      sinopse_cartao: sinopse,
+      autor_cartao:   autor,
+      data_criacao:   dataC
+    }, { onConflict: 'historia_id' });
 
+  if (upsertError) {
+    console.error('Erro ao inserir/atualizar cartao:', upsertError);
+    return alert('Não foi possível salvar o cartão. Veja o console.');
+  }
+
+  // — Atualiza categorias na tabela de relacionamento — 
   const { data:{ user } } = await supabase.auth.getUser();
   await supabase.from('historia_categorias').delete().eq('historia_id', id);
-  await supabase.from('historia_categorias')
-    .insert(cats.map(cat => ({
+  await supabase.from('historia_categorias').insert(
+    cats.map(cat => ({
       historia_id:  id,
       categoria_id: cat,
       user_id:      user.id
-    })));
+    }))
+  );
 
   alert('Cartão publicado com sucesso!');
-  // recarrega o formulário do cartão com os dados salvos
+
+  // Recarrega o próprio formulário do Cartão para mostrar os dados salvos
   await mostrarCartaoForm(id);
 }
+
 
 async function lerMais(id) {
   document.getElementById('modalOverlay').style.display = 'flex';
 
-  const { data:h } = await supabase.from('historias')
-    .select('titulo, descricao').eq('id', id).single();
+  // história
+  const { data: h } = await supabase
+    .from('historias')
+    .select('titulo, descricao')
+    .eq('id', id)
+    .single();
   document.getElementById('modalTitulo').textContent    = h.titulo;
   document.getElementById('modalDescricao').textContent = h.descricao;
 
-  const { data: c } = await supabase.from('cartoes')
-    .select('*').eq('historia_id', id).single();
+  // cartão
+  const { data: c } = await supabase
+    .from('cartoes')
+    .select('*')
+    .eq('historia_id', id)
+    .single();
+
   if (c) {
     document.getElementById('modalCartaoTitulo').textContent   = c.titulo_cartao;
     document.getElementById('modalCartaoSinopse').textContent  = c.sinopse_cartao;
     document.getElementById('modalCartaoData').textContent     = c.data_criacao;
     document.getElementById('modalCartaoAutor').textContent    = c.autor_cartao;
 
-    const { data: rec } = await supabase
+    // buscar nomes das categorias via join
+    const { data: rels, error } = await supabase
       .from('historia_categorias')
-      .select('categorias(nome)')
-      .eq('historia_id', id)
-      .single();
-    if (rec && rec.categorias) {
-      document.getElementById('modalCartaoCategorias').textContent =
-        rec.categorias.nome;
+      .select('categoria_id, categorias(nome)')
+      .eq('historia_id', id);
+
+    if (!error) {
+      const nomes = rels.map(r => r.categorias.nome);
+      document.getElementById('modalCartaoCategorias').textContent = nomes.join(', ');
+    } else {
+      console.error('Erro ao buscar categorias para modal:', error);
     }
   }
 }
