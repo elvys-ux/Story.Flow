@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     .addEventListener('click', () => {
       if (!confirm('Começar nova história?')) return;
       limparFormulario();
-     
+      removerExibicaoHistoria();
     });
 
   // Fechar modal “Ler Mais”
@@ -235,7 +235,7 @@ async function salvarHistoria(titulo, descricao) {
     removerExibicaoHistoria();
   }
 
-  limparFormulario();
+ 
   await mostrarHistorias();
 }
 
