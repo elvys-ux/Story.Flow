@@ -10,7 +10,7 @@ body {
   font-family: Arial, sans-serif;
   background-color: #f4f4f4;
   margin: 0;
-  padding-top: 60px; /* Espaço para a navbar fixa */
+  padding-top: 60px; /* espaço para navbar fixa */
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -19,104 +19,84 @@ body {
 /* ====== NAVBAR FIXA ====== */
 .navbar {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  background-color: rgba(0, 0, 0, 0.9);
+  top: 0; left: 0; width: 100%;
+  background-color: rgba(0,0,0,0.9);
   padding: 10px 20px;
   z-index: 1000;
+
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  gap: 16px;              /* espaço uniforme entre itens */
 }
 
-.navbar a {
-  color: white;
+.navbar a,
+.navbar button,
+#userMenuArea {
+  color: #fff;
   text-decoration: none;
-  padding: 10px;
-  transition: background-color 0.3s, transform 0.3s;
-  border-radius: 5px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: background-color .2s, transform .2s;
 }
 
-.navbar a i {
-  margin-right: 8px;
-}
-
-.navbar a:hover {
-  background-color: rgba(255, 255, 255, 0.2);
+.navbar a:hover,
+.navbar button:hover {
+  background-color: rgba(255,255,255,0.2);
   transform: scale(1.05);
+}
+
+.navbar .search-box {
+  margin-left: auto;      /* envia a search-box para o fim */
 }
 
 .dropdown {
   position: relative;
-  display: inline-block;
 }
 
 .dropdown-content {
   display: none;
   position: absolute;
-  background-color: rgba(0, 0, 0, 0.8);
+  background: rgba(0,0,0,0.8);
   min-width: 150px;
-  box-shadow: 0px 8px 16px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  border-radius: 4px;
   z-index: 1001;
-  border-radius: 5px;
-}
-
-.dropdown-content a {
-  color: white;
-  padding: 12px 16px;
-  text-decoration: none;
-  display: block;
-}
-
-.dropdown-content a:hover {
-  background-color: rgba(255, 255, 255, 0.2);
 }
 
 .dropdown:hover .dropdown-content {
   display: block;
 }
 
-#userMenuArea {
-  color: white;
-  cursor: pointer;
-}
-
 /* ====== BARRA DE PESQUISA ====== */
 .search-box {
   display: flex;
   align-items: center;
-  background-color: white;
+  background: #fff;
   border-radius: 5px;
-  padding: 5px;
 }
-
-.search-box input[type="text"] {
+.search-box input {
   border: none;
   outline: none;
-  padding: 5px;
+  padding: 6px 8px;
 }
-
 .search-box button {
-  background-color: black;
-  color: white;
+  background: #000;
+  color: #fff;
   border: none;
-  padding: 5px 10px;
+  padding: 6px 10px;
+  border-radius: 4px;
   cursor: pointer;
-  border-radius: 5px;
 }
 
-/* ====== FILTRO ====== */
+/* ====== FILTROS ====== */
 .filter-bar {
-  margin: 20px auto 0 auto;
+  margin: 20px auto 0;
   text-align: center;
 }
-
 .filter-bar select {
   margin: 0 10px;
   padding: 8px;
-  border-radius: 5px;
+  border-radius: 4px;
   border: 1px solid #ccc;
 }
 
@@ -126,67 +106,52 @@ body {
   width: 100%;
   margin: 0 auto;
   padding: 20px;
-  text-align: center;
-  color: #333;
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
-
 .stories-section h2 {
   font-size: 2rem;
-  margin-bottom: 10px;
-  color: #333;
+  margin-bottom: 16px;
 }
-
 .stories-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px,1fr));
   gap: 20px;
   width: 100%;
-  margin: 0 auto;
+  margin-top: 10px;
 }
 
 /* ====== CARTÃO (SHEET) ====== */
 .sheet {
-  width: 220px;
-  min-height: 260px;
+  background: #fff;
   border: 2px solid #ddd;
-  border-radius: 20px;
-  background-color: #fff;
+  border-radius: 16px;
   box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
-  align-items: center;
-  padding: 10px;
+  padding: 12px;
   text-align: center;
-  transition: transform 0.2s;
-  overflow: hidden; /* garante que nada vaze */
+  overflow: hidden;
+  transition: transform .2s;
+  min-height: 260px;
 }
-
 .sheet:hover {
   transform: translateY(-5px);
 }
 
-/* Título com elipse se muito longo */
 .sheet h3 {
-  font-weight: bold;
   font-size: 1rem;
-  color: #333;
-  margin: 0.5rem 0;
+  margin-bottom: 8px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  width: 100%;
 }
 
-/* Sinopse truncada em 5 linhas, com quebra de palavra */
 .sheet-sinopse {
   font-size: 0.85rem;
   color: #555;
-  margin-bottom: 1rem;
   line-height: 1.3;
   flex: 1;
   text-align: justify;
@@ -195,173 +160,129 @@ body {
   -webkit-box-orient: vertical;
   overflow: hidden;
   word-break: break-word;
-  text-overflow: ellipsis;
+  margin-bottom: 8px;
 }
 
 .ver-mais {
-  color: #000;
-  font-weight: bold;
-  cursor: pointer;
-  text-decoration: underline;
   font-size: 0.8rem;
-  margin-bottom: 1rem;
+  font-weight: bold;
+  color: #007bff;
+  cursor: pointer;
+  margin-bottom: 8px;
 }
 
+/* ====== BADGES ====== */
 .sheet-categories {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 6px;
   justify-content: center;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
-
 .badge {
-  background-color: #eee;
+  background: #eee;
   color: #333;
-  font-size: 0.75rem;
-  padding: 3px 6px;
-  border-radius: 4px;
+  font-size: .75rem;
+  padding: 4px 8px;
+  border-radius: 12px;
 }
 
-/* ====== BOTÃO CARREGAR MAIS ====== */
+/* ====== CURTIDAS ====== */
+.like-btn {
+  background: none;
+  border: none;
+  font-size: 1.4rem;    /* coração maior */
+  cursor: pointer;
+  margin-right: 6px;
+  transition: transform .2s;
+}
+.like-btn:hover {
+  transform: scale(1.2);
+}
+
+/* você já seta o emoji no JS:
+   🤍 quando não curtiu, ❤️ quando curtiu */
+
+/* ====== PAGINAÇÃO ====== */
 .pagination button {
-  background-color: #000;
-  color: white;
+  background: #000;
+  color: #fff;
   padding: 10px 20px;
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  transition: background-color 0.3s, transform 0.2s;
+  transition: background-color .2s, transform .2s;
 }
-
-.pagination button:hover {
-  background-color: #333;
+.pagination button:hover:not(:disabled) {
+  background: #333;
   transform: scale(1.05);
 }
-
-/* ====== BOTÃO DE CURTIR ====== */
-.like-btn {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  transition: color 0.3s;
-}
-
-.like-btn i {
-  color: black;
-}
-
-.like-btn.liked i {
-  color: red;
+.pagination button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
 }
 
 /* ====== MODAL ====== */
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0,0,0,0.93);
+  inset: 0;
+  background: rgba(0,0,0,0.8);
   display: none;
   justify-content: center;
   align-items: center;
   z-index: 9999;
 }
-
 .modal-content {
   background: #fff;
-  width: 80%;
+  width: 90%;
   max-width: 600px;
-  padding: 20px;
-  border-radius: 10px;
-  position: relative;
   max-height: 80vh;
   overflow-y: auto;
+  border-radius: 10px;
+  padding: 20px;
   text-align: justify;
 }
-
-/* Esconde o botão “X” */
+/* esconde o “X” */
 .modal-close {
   display: none !important;
 }
-
 .modal-info {
-  margin-top: 10px;
-}
-
-/* Destaque de palavra */
-.highlighted {
-  background-color: yellow;
-  font-weight: bold;
+  margin-top: 12px;
 }
 
 /* ====== AVISO CLIQUE FORA ====== */
 .warning-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(255,0,0,0.3);
+  inset: 0;
+  background: rgba(255,0,0,0.3);
   display: none;
   justify-content: center;
   align-items: center;
   z-index: 10000;
 }
-
 .warning-box {
-  background-color: #fff;
+  background: #fff;
   padding: 20px;
   border-radius: 10px;
-  max-width: 300px;
   text-align: center;
 }
-
-.warning-box p {
-  margin-bottom: 10px;
-}
-
 .warning-box button {
   margin: 5px;
   padding: 8px 16px;
-  border: none;
-  background-color: #000;
+  background: #000;
   color: #fff;
+  border: none;
   border-radius: 5px;
   cursor: pointer;
 }
-
 .warning-box button:hover {
-  background-color: #444;
-}
-
-/* ====== LEITURA ====== */
-.reading-options {
-  margin-top: 20px;
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.reading-options button {
-  background-color: #000;
-  color: #fff;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.reading-options button:hover {
-  background-color: #333;
+  background: #333;
 }
 
 /* ====== RODAPÉ ====== */
 footer {
-  background-color: rgba(0, 0, 0, 0.9);
-  color: white;
+  background: rgba(0,0,0,0.9);
+  color: #fff;
   text-align: center;
   padding: 10px 0;
   width: 100%;
@@ -370,32 +291,10 @@ footer {
 /* ====== RESPONSIVO ====== */
 @media (max-width: 768px) {
   .stories-container {
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(160px,1fr));
   }
   .sheet {
-    width: 160px;
     min-height: 220px;
+    padding: 8px;
   }
-}
-
-/* ====== TOAST ====== */
-.my-toast {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0,0,0,0.8);
-  color: #fff;
-  padding: 8px 16px;
-  border-radius: 5px;
-  font-size: 0.9rem;
-  z-index: 99999;
-  animation: fadeInOut 2s forwards;
-}
-
-@keyframes fadeInOut {
-  0% { opacity: 0; }
-  10% { opacity: 1; }
-  90% { opacity: 1; }
-  100% { opacity: 0; }
 }
