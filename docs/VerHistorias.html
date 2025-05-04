@@ -2,8 +2,9 @@
 <html lang="pt">
 <head>
   <meta charset="UTF-8">
-  <title>StoryFlow – Histórias da Comunidade</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StoryFlow – Ler Histórias</title>
+  <meta name="description" content="Leia as histórias da comunidade em StoryFlow, filtre por categoria, pesquise por título ou autor e navegue entre cartões.">
 
   <!-- Font Awesome -->
   <link rel="stylesheet"
@@ -15,22 +16,22 @@
 <body>
 
   <!-- NAVBAR -->
-  <nav class="navbar">
+  <nav class="navbar" role="navigation">
     <a href="index.html"><i class="fas fa-home"></i> Início</a>
 
-    <div class="dropdown">
-      <a href="#"><i class="fas fa-pencil-alt"></i> Criar História</a>
-      <div class="dropdown-content">
-        <a href="diario.html">Escrever Diário</a>
-        <a href="historia.html">Escrever História</a>
+    <div class="dropdown" aria-haspopup="true" aria-expanded="false">
+      <button type="button"><i class="fas fa-pencil-alt"></i> Criar História</button>
+      <div class="dropdown-content" role="menu">
+        <a role="menuitem" href="diario.html">Escrever Diário</a>
+        <a role="menuitem" href="historia.html">Escrever História</a>
       </div>
     </div>
 
-    <div class="dropdown">
-      <a href="#"><i class="fas fa-book"></i> Histórias</a>
-      <div class="dropdown-content">
-        <a href="historiasqueescrevi.html">Minhas Histórias</a>
-        <a href="VerHistorias.html">Ler Histórias</a>
+    <div class="dropdown" aria-haspopup="true" aria-expanded="false">
+      <button type="button"><i class="fas fa-book"></i> Histórias</button>
+      <div class="dropdown-content" role="menu">
+        <a role="menuitem" href="historiasqueescrevi.html">Minhas Histórias</a>
+        <a role="menuitem" href="VerHistorias.html">Ler Histórias</a>
       </div>
     </div>
 
@@ -38,20 +39,21 @@
     <div id="userMenuArea" class="user-area"></div>
 
     <!-- Formulário de busca -->
-    <form id="searchForm" class="search-box">
+    <form id="searchForm" class="search-box" role="search">
       <input type="text"
              id="searchBar"
-             placeholder="Pesquisar por título ou autor…"
-             autocomplete="off">
-      <button type="submit" id="searchBtn"><i class="fas fa-search"></i></button>
+             placeholder="Pesquisar por título do cartão ou autor…"
+             autocomplete="off"
+             aria-label="Pesquisar histórias">
+      <button type="submit" id="searchBtn" aria-label="Pesquisar"><i class="fas fa-search"></i></button>
     </form>
   </nav>
 
   <!-- FILTROS -->
   <div class="filter-bar">
-    <select id="category-filter">
+    <label for="category-filter">Categoria:</label>
+    <select id="category-filter" aria-label="Filtrar por categoria">
       <option value="">Todas as categorias</option>
-      <!-- Opcionalmente, preencha dinamicamente via JS -->
       <option value="Fantasia">Fantasia</option>
       <option value="Terror">Terror</option>
       <option value="Comédia">Comédia</option>
@@ -59,9 +61,10 @@
       <option value="Drama">Drama</option>
     </select>
 
-    <select id="sort-filter">
-      <option value="date">Ordenar por Data</option>
-      <option value="popularity">Ordenar por Popularidade</option>
+    <label for="sort-filter">Ordenar por:</label>
+    <select id="sort-filter" aria-label="Ordenar histórias">
+      <option value="date">Data</option>
+      <option value="popularity">Popularidade</option>
     </select>
   </div>
 
@@ -69,44 +72,41 @@
   <main>
     <section class="stories-section">
       <h2>Histórias da Comunidade</h2>
-      <div id="storiesContainer" class="stories-container"></div>
+      <div id="storiesContainer" class="stories-container" aria-live="polite"></div>
       <div class="pagination">
-        <button id="loadMoreBtn">Carregar Mais</button>
+        <button id="loadMoreBtn" aria-label="Carregar mais histórias">Carregar Mais</button>
       </div>
     </section>
   </main>
 
   <!-- MODAL DE LEITURA -->
-  <div id="modalOverlay" class="modal-overlay" style="display:none;">
+  <div id="modalOverlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle" style="display:none;">
     <div class="modal-content">
-      <button id="modalClose" class="modal-close">&times; Fechar</button>
+      <button id="modalClose" class="modal-close" aria-label="Fechar modal">&times;</button>
       <h2 id="modalTitle">Título da História</h2>
       <div id="modalFullText" class="modal-text"></div>
-      <button id="continuarBtn" class="continuar-btn" style="display:none;">
-        Continuar
-      </button>
+      <button id="continuarBtn" class="continuar-btn" style="display:none;">Continuar</button>
       <div id="modalInfo" class="modal-info"></div>
     </div>
   </div>
 
   <!-- AVISO AO CLICAR FORA -->
-  <div id="warningOverlay" class="warning-overlay" style="display:none;">
+  <div id="warningOverlay" class="warning-overlay" style="display:none;" role="alertdialog" aria-modal="true" aria-labelledby="warningText">
     <div class="warning-box">
-      <p>Deseja fechar a leitura?</p>
+      <p id="warningText">Deseja fechar a leitura?</p>
       <button id="warningYes">Sim</button>
       <button id="warningNo">Não</button>
     </div>
   </div>
 
   <footer>
-    © 2025 StoryFlow – Turma Tis7 | <a href="Sobre.html">Termos de uso</a>
+    <small>© 2025 StoryFlow – Turma Tis7 | <a href="Sobre.html">Termos de uso</a></small>
   </footer>
 
   <!-- Scripts -->
   <script type="module" src="js/supabase.js"></script>
   <script type="module" src="js/userDisplay.js"></script>
   <script type="module" src="js/VerHistorias.js"></script>
-
   <script>
     // Intercepta o submit da busca para evitar reload de página
     document.getElementById('searchForm').addEventListener('submit', e => {
@@ -116,5 +116,6 @@
       document.getElementById('searchBar').dispatchEvent(event);
     });
   </script>
+
 </body>
 </html>
