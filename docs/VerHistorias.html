@@ -17,36 +17,37 @@
 
   <!-- NAVBAR -->
   <nav class="navbar" role="navigation">
-    <a href="index.html"><i class="fas fa-home"></i> Início</a>
+    <div class="nav-left">
+      <a href="index.html"><i class="fas fa-home"></i> Início</a>
 
-    <div class="dropdown" aria-haspopup="true" aria-expanded="false">
-      <button type="button"><i class="fas fa-pencil-alt"></i> Criar História</button>
-      <div class="dropdown-content" role="menu">
-        <a role="menuitem" href="diario.html">Escrever Diário</a>
-        <a role="menuitem" href="historia.html">Escrever História</a>
+      <div class="dropdown" aria-haspopup="true" aria-expanded="false">
+        <button type="button"><i class="fas fa-pencil-alt"></i> Criar História</button>
+        <div class="dropdown-content" role="menu">
+          <a role="menuitem" href="diario.html">Escrever Diário</a>
+          <a role="menuitem" href="historia.html">Escrever História</a>
+        </div>
+      </div>
+
+      <div class="dropdown" aria-haspopup="true" aria-expanded="false">
+        <button type="button"><i class="fas fa-book"></i> Histórias</button>
+        <div class="dropdown-content" role="menu">
+          <a role="menuitem" href="historiasqueescrevi.html">Minhas Histórias</a>
+          <a role="menuitem" href="VerHistorias.html">Ler Histórias</a>
+        </div>
       </div>
     </div>
 
-    <div class="dropdown" aria-haspopup="true" aria-expanded="false">
-      <button type="button"><i class="fas fa-book"></i> Histórias</button>
-      <div class="dropdown-content" role="menu">
-        <a role="menuitem" href="historiasqueescrevi.html">Minhas Histórias</a>
-        <a role="menuitem" href="VerHistorias.html">Ler Histórias</a>
-      </div>
+    <div class="nav-right">
+      <div id="userMenuArea" class="user-area"></div>
+      <form id="searchForm" class="search-box" role="search">
+        <input type="text"
+               id="searchBar"
+               placeholder="Pesquisar por título ou autor…"
+               autocomplete="off"
+               aria-label="Pesquisar histórias">
+        <button type="submit" id="searchBtn" aria-label="Pesquisar"><i class="fas fa-search"></i></button>
+      </form>
     </div>
-
-    <!-- Área de login / usuário -->
-    <div id="userMenuArea" class="user-area"></div>
-
-    <!-- Formulário de busca -->
-    <form id="searchForm" class="search-box" role="search">
-      <input type="text"
-             id="searchBar"
-             placeholder="Pesquisar por título do cartão ou autor…"
-             autocomplete="off"
-             aria-label="Pesquisar histórias">
-      <button type="submit" id="searchBtn" aria-label="Pesquisar"><i class="fas fa-search"></i></button>
-    </form>
   </nav>
 
   <!-- FILTROS -->
