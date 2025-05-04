@@ -70,32 +70,34 @@ async function fetchCategories() {
 }
 
 /************************************************************
- * [3] Buscar histórias + cartões + categorias
+ * [3] Busca somente histórias com cartão publicado
  ************************************************************/
 async function fetchStoriesFromSupabase() {
+  // inner join em cartoes: só retorna historias que têm pelo menos 1 cartoes
   const { data: stories, error } = await supabase
     .from('historias')
-    .select('*, cartoes(*), historia_categorias(*)')
+    .select('*, cartoes!inner(*), historia_categorias(*)')
     .order('data_criacao', { ascending: false });
-  console.log('fetchStories:', { stories, error });
+
+  console.log('fetchStories (publicadas):', { stories, error });
+
   if (error) {
     container.innerHTML = `<p>Erro ao carregar histórias.</p>`;
     return;
   }
   if (!stories || stories.length === 0) {
+    // se não houver nenhuma publicada, limpa a lista
     allStories = [];
     return;
   }
+
+  // monta apenas as publicadas
   allStories = stories.map(story => {
-    const cart = (story.cartoes && story.cartoes[0]) || {
-      titulo_cartao:   "",
-      sinopse_cartao:  "",
-      autor_cartao:    "",
-      data_criacao:    null
-    };
+    const cart = story.cartoes[0];  // sempre existe, por causa do inner join
     const cats = (story.historia_categorias || [])
       .map(hc => categoryMap[hc.categoria_id] || '')
       .filter(n => n);
+
     return {
       id: story.id,
       titulo: story.titulo,
@@ -111,6 +113,7 @@ async function fetchStoriesFromSupabase() {
       }
     };
   });
+}
 }
 
 /************************************************************
