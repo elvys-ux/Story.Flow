@@ -202,10 +202,14 @@ body {
 .ver-mais {
   font-size: 0.8rem;
   font-weight: bold;
-  color: #007bff;
+  color: #000;
   cursor: pointer;
   margin-bottom: 8px;
 }
+.ver-mais:hover {
+  color: #333;
+}
+
 .sheet-categories {
   display: flex;
   flex-wrap: wrap;
@@ -330,21 +334,3 @@ footer {
   }
 }
 
-/* ====== BOTÃO “VER MAIS” ====== */
-.ver-mais {
-  display: inline-block;
-  background-color: #000;
-  color: #fff !important;
-  padding: 6px 12px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  text-decoration: none;
-  transition: background-color .2s, transform .2s;
-  margin-bottom: 8px;
-}
-
-.ver-mais:hover {
-  background-color: #333;
-  transform: scale(1.05);
-}
