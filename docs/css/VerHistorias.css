@@ -9,7 +9,6 @@
 body {
   font-family: Arial, sans-serif;
   background-color: #f4f4f4;
-  margin: 0;
   padding-top: 60px; /* espaço para navbar fixa */
   min-height: 100vh;
   display: flex;
@@ -19,14 +18,14 @@ body {
 /* ====== NAVBAR FIXA ====== */
 .navbar {
   position: fixed;
-  top: 0; left: 0; width: 100%;
+  top: 0; left: 0; right: 0;
   background-color: rgba(0,0,0,0.9);
   padding: 10px 20px;
   z-index: 1000;
 
   display: flex;
   align-items: center;
-  gap: 16px;              /* espaço uniforme entre itens */
+  gap: 16px;
 }
 
 .navbar a,
@@ -45,40 +44,22 @@ body {
   transform: scale(1.05);
 }
 
-.navbar .search-box {
-  margin-left: auto;      /* envia a search-box para o fim */
-}
-
-.dropdown {
-  position: relative;
-}
-
-.dropdown-content {
-  display: none;
-  position: absolute;
-  background: rgba(0,0,0,0.8);
-  min-width: 150px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-  border-radius: 4px;
-  z-index: 1001;
-}
-
-.dropdown:hover .dropdown-content {
-  display: block;
-}
-
-/* ====== BARRA DE PESQUISA ====== */
+/* envia a barra de pesquisa para o fim */
 .search-box {
+  margin-left: auto;
   display: flex;
   align-items: center;
   background: #fff;
   border-radius: 5px;
+  padding: 4px;
 }
+
 .search-box input {
   border: none;
   outline: none;
-  padding: 6px 8px;
+  padding: 6px;
 }
+
 .search-box button {
   background: #000;
   color: #fff;
@@ -87,6 +68,24 @@ body {
   border-radius: 4px;
   cursor: pointer;
 }
+
+/* dropdown mantém igual */
+.dropdown { position: relative; }
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background: rgba(0,0,0,0.8);
+  min-width: 150px;
+  border-radius: 4px;
+  z-index: 1001;
+}
+.dropdown:hover .dropdown-content { display: block; }
+.dropdown-content a {
+  display: block;
+  color: #fff;
+  padding: 8px 12px;
+}
+.dropdown-content a:hover { background: rgba(255,255,255,0.2); }
 
 /* ====== FILTROS ====== */
 .filter-bar {
@@ -114,13 +113,14 @@ body {
 .stories-section h2 {
   font-size: 2rem;
   margin-bottom: 16px;
+  color: #333;
 }
+
 .stories-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px,1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 20px;
   width: 100%;
-  margin-top: 10px;
 }
 
 /* ====== CARTÃO (SHEET) ====== */
@@ -141,14 +141,17 @@ body {
   transform: translateY(-5px);
 }
 
+/* Título com elipse se longo */
 .sheet h3 {
   font-size: 1rem;
   margin-bottom: 8px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  width: 100%;
 }
 
+/* Sinopse truncada em 5 linhas */
 .sheet-sinopse {
   font-size: 0.85rem;
   color: #555;
@@ -188,20 +191,18 @@ body {
 }
 
 /* ====== CURTIDAS ====== */
+/* JS vai definir o emoji 🤍 ou ❤️ */
 .like-btn {
   background: none;
   border: none;
-  font-size: 1.4rem;    /* coração maior */
+  font-size: 1.4rem;
   cursor: pointer;
-  margin-right: 6px;
+  margin-bottom: 8px;
   transition: transform .2s;
 }
 .like-btn:hover {
   transform: scale(1.2);
 }
-
-/* você já seta o emoji no JS:
-   🤍 quando não curtiu, ❤️ quando curtiu */
 
 /* ====== PAGINAÇÃO ====== */
 .pagination button {
@@ -212,6 +213,7 @@ body {
   border-radius: 5px;
   cursor: pointer;
   transition: background-color .2s, transform .2s;
+  margin-top: 12px;
 }
 .pagination button:hover:not(:disabled) {
   background: #333;
@@ -242,7 +244,7 @@ body {
   padding: 20px;
   text-align: justify;
 }
-/* esconde o “X” */
+/* remove o “X” de fechar */
 .modal-close {
   display: none !important;
 }
