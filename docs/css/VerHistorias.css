@@ -225,18 +225,22 @@ body {
   border-radius: 12px;
 }
 
-/* ====== CURTIDAS ====== */
+/* ====== BOTÃO DE CURTIR ====== */
 .like-btn {
   background: none;
   border: none;
-  font-size: 1.4rem;
+  font-size: 1.6rem;  /* coração bem visível */
   cursor: pointer;
+  padding: 0;
   margin-bottom: 8px;
-  transition: transform .2s;
+  line-height: 1;
 }
+
+/* Se quiseres mudar cor ao hover: */
 .like-btn:hover {
   transform: scale(1.2);
 }
+
 
 /* ====== PAGINAÇÃO ====== */
 .pagination button {
