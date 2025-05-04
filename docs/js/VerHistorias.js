@@ -1,3 +1,4 @@
+// js/VerHistorias.js
 import { supabase } from './supabase.js';
 
 let allStories       = [];
@@ -27,9 +28,7 @@ let currentStoryId = null;
 let likedStories   = JSON.parse(localStorage.getItem('likedStories') || '[]');
 let categoryMap    = {};  // id → nome
 
-// ————————————————————————————————
 // [1] Exibe usuário logado / login
-// ————————————————————————————————
 async function exibirUsuarioLogado() {
   const area = document.getElementById('userMenuArea');
   const { data: { session } } = await supabase.auth.getSession();
@@ -53,9 +52,7 @@ async function exibirUsuarioLogado() {
   };
 }
 
-// ————————————————————————————————
 // [2] Carrega categorias (id → nome)
-// ————————————————————————————————
 async function fetchCategories() {
   const { data, error } = await supabase
     .from('categorias')
@@ -67,14 +64,12 @@ async function fetchCategories() {
   categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
 }
 
-// ————————————————————————————————
-// [3] Busca histórias + cartões + categorias + autor do perfil
-// ————————————————————————————————
+// [3] Busca histórias + cartões + categorias
 async function fetchStoriesFromSupabase() {
-  // 3.1) Carrega histórias
+  // Carrega todas as histórias
   const { data: historias, error: errH } = await supabase
     .from('historias')
-    .select('*')
+    .select('id, titulo, descricao, user_id, data_criacao')
     .order('data_criacao', { ascending: false });
   if (errH) {
     console.error('Erro ao carregar histórias:', errH);
@@ -82,17 +77,17 @@ async function fetchStoriesFromSupabase() {
     return;
   }
 
-  // 3.2) Carrega cartões
+  // Carrega todos os cartões
   const { data: cartoes, error: errC } = await supabase
     .from('cartoes')
-    .select('*');
+    .select('historia_id, titulo_cartao, sinopse_cartao, autor_cartao, data_criacao');
   if (errC) {
     console.error('Erro ao carregar cartões:', errC);
     return;
   }
   const cartaoMap = Object.fromEntries(cartoes.map(c => [c.historia_id, c]));
 
-  // 3.3) Carrega relações história–categoria
+  // Carrega todas as relações história–categoria
   const { data: hcData, error: errHC } = await supabase
     .from('historia_categorias')
     .select('historia_id, categoria_id');
@@ -103,40 +98,28 @@ async function fetchStoriesFromSupabase() {
   const hcMap = {};
   hcData.forEach(({ historia_id, categoria_id }) => {
     if (!hcMap[historia_id]) hcMap[historia_id] = [];
-    hcMap[historia_id].push(categoriaMap[categoria_id]);
+    hcMap[historia_id].push(categoryMap[categoria_id]);
   });
 
-  // 3.4) Carrega perfis de autores
-  const { data: perfis, error: errP } = await supabase
-    .from('profiles')
-    .select('id, username');
-  if (errP) {
-    console.error('Erro ao carregar perfis:', errP);
-    return;
-  }
-  const perfilMap = Object.fromEntries(perfis.map(u => [u.id, u.username]));
-
-  // 3.5) Monta allStories
+  // Monta allStories usando apenas dados de histórias e cartões
   allStories = historias.map(h => {
     const c = cartaoMap[h.id] || {};
     return {
       id: h.id,
       cartao: {
-        tituloCartao:     c.titulo_cartao || h.titulo,
-        sinopseCartao:    c.sinopse_cartao || '',
-        historiaCompleta: h.descricao,
-        dataCartao:       h.data_criacao.split('T')[0],
-        autorCartao:      perfilMap[h.user_id] || 'Anónimo',
-        categorias:       hcMap[h.id] || [],
+        tituloCartao:     c.titulo_cartao   || h.titulo    || 'Sem título',
+        sinopseCartao:    c.sinopse_cartao  || '',
+        historiaCompleta: h.descricao       || '',
+        dataCartao:       (c.data_criacao || h.data_criacao).split('T')[0],
+        autorCartao:      c.autor_cartao    || 'Anónimo',
+        categorias:       hcMap[h.id]       || [],
         likes:            0
       }
     };
   });
 }
 
-// ————————————————————————————————
-// [4] Helpers de formatação
-// ————————————————————————————————
+// [4] Formatação de texto
 function formatarPor4Linhas(text) {
   const lines = text.split('\n');
   const paras = [];
@@ -180,19 +163,17 @@ function destacarPalavra() {
   }
 }
 
-// ————————————————————————————————
 // [5] Criação de cards e placeholders
-// ————————————————————————————————
 function createStoryCard(story) {
   const div = document.createElement('div');
   div.className = 'sheet';
 
-  // título
+  // Título
   const h3 = document.createElement('h3');
   h3.textContent = story.cartao.tituloCartao;
   div.appendChild(h3);
 
-  // sinopse
+  // Sinopse
   const sin = document.createElement('div');
   sin.className = 'sheet-sinopse';
   sin.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao);
@@ -224,7 +205,7 @@ function createStoryCard(story) {
   });
   div.appendChild(mais);
 
-  // likes
+  // Likes
   const likeCont = document.createElement('div');
   likeCont.style.marginTop = '10px';
   const likeBtn = document.createElement('button');
@@ -249,7 +230,7 @@ function createStoryCard(story) {
   likeCont.append(likeBtn, likeCt);
   div.appendChild(likeCont);
 
-  // categorias
+  // Categorias
   const catCont = document.createElement('div');
   catCont.className = 'sheet-categories';
   const cats = story.cartao.categorias.length ? story.cartao.categorias : ['Sem Categoria'];
@@ -276,9 +257,7 @@ function createPlaceholderCard() {
   return div;
 }
 
-// ————————————————————————————————
-// [6] Filtrar / ordenar / pesquisar (inclui popularidade)
-// ————————————————————————————————
+// [6] Filtrar / ordenar / pesquisar
 function matchesSearch(story, txt) {
   if (!txt) return true;
   txt = txt.toLowerCase();
@@ -299,9 +278,7 @@ function getFilteredStories() {
   return arr;
 }
 
-// ————————————————————————————————
-// [7] Paginação (mantém sempre placeholders)
-// ————————————————————————————————
+// [7] Paginação (placeholders garantidos)
 function showBatch(count) {
   const filtered = getFilteredStories();
   const slice = filtered.slice(currentOffset, currentOffset + count);
@@ -328,9 +305,7 @@ function loadMore() {
   showBatch(increment);
 }
 
-// ————————————————————————————————
 // [8] Modal & aviso
-// ————————————————————————————————
 modalClose.addEventListener('click', () => {
   modalOverlay.style.display = 'none';
   isModalOpen = false;
@@ -356,9 +331,7 @@ continuarBtn.addEventListener('click', () => {
   }
 });
 
-// ————————————————————————————————
-// [9] Inicia tudo
-// ————————————————————————————————
+// [9] Inicialização
 document.addEventListener('DOMContentLoaded', async () => {
   await exibirUsuarioLogado();
   await fetchCategories();
