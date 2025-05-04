@@ -30,7 +30,7 @@ let likedStories   = JSON.parse(localStorage.getItem('likedStories') || '[]');
 let categoryMap    = {};  // mapeia categoria_id → nome
 
 /************************************************************
- * [1] Exibir usuário logado ou link de login
+ * [1] LOGIN/LOGOUT
  ************************************************************/
 async function exibirUsuarioLogado() {
   const userArea = document.getElementById('userMenuArea');
@@ -58,7 +58,7 @@ async function exibirUsuarioLogado() {
 }
 
 /************************************************************
- * [2] Carregar categorias para o map
+ * [2] BUSCAR CATEGORIAS
  ************************************************************/
 async function fetchCategories() {
   const { data, error } = await supabase
@@ -70,10 +70,9 @@ async function fetchCategories() {
 }
 
 /************************************************************
- * [3] Busca somente histórias com cartão publicado
+ * [3] BUSCAR SÓ HISTÓRIAS COM CARTÃO PUBLICADO
  ************************************************************/
 async function fetchStoriesFromSupabase() {
-  // inner join em cartoes: só retorna historias que têm pelo menos 1 cartoes
   const { data: stories, error } = await supabase
     .from('historias')
     .select('*, cartoes!inner(*), historia_categorias(*)')
@@ -86,18 +85,15 @@ async function fetchStoriesFromSupabase() {
     return;
   }
   if (!stories || stories.length === 0) {
-    // se não houver nenhuma publicada, limpa a lista
     allStories = [];
     return;
   }
 
-  // monta apenas as publicadas
   allStories = stories.map(story => {
-    const cart = story.cartoes[0];  // sempre existe, por causa do inner join
+    const cart = story.cartoes[0];
     const cats = (story.historia_categorias || [])
       .map(hc => categoryMap[hc.categoria_id] || '')
       .filter(n => n);
-
     return {
       id: story.id,
       titulo: story.titulo,
@@ -114,10 +110,9 @@ async function fetchStoriesFromSupabase() {
     };
   });
 }
-}
 
 /************************************************************
- * [4] Formatadores e leitura
+ * [4] FORMATADORES
  ************************************************************/
 function formatarPor4Linhas(text) {
   const lines = text.split('\n');
@@ -169,22 +164,25 @@ function destacarPalavra() {
 }
 
 /************************************************************
- * [5] Criação de cards e placeholder
+ * [5] CRIAR CARDS E PLACEHOLDERS
  ************************************************************/
 function createStoryCard(story) {
   const div = document.createElement('div');
   div.className = 'sheet';
 
+  // Título
   const t = document.createElement('div');
   t.className = 'sheet-title';
   t.textContent = story.cartao.tituloCartao || '(sem título)';
   div.appendChild(t);
 
+  // Sinopse
   const s = document.createElement('div');
   s.className = 'sheet-sinopse';
   s.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao || '(sem sinopse)');
   div.appendChild(s);
 
+  // “mais...”
   const mais = document.createElement('span');
   mais.className = 'ver-mais';
   mais.textContent = 'mais...';
@@ -200,7 +198,7 @@ function createStoryCard(story) {
   let userLiked  = likedStories.includes(story.id);
   function updateLikeUI() {
     likeBtn.textContent = userLiked ? '❤️' : '🤍';
-    likeCt.textContent = ` ${story.cartao.likes} curtida(s)`;
+    likeCt.textContent  = ` ${story.cartao.likes} curtida(s)`;
   }
   updateLikeUI();
   likeBtn.onclick = () => {
@@ -255,21 +253,21 @@ function createPlaceholderCard() {
 }
 
 /************************************************************
- * [5.1] Abre modal
+ * [5.1] ABRIR MODAL
  ************************************************************/
 function openModalForStory(story) {
   isModalOpen    = true;
   currentStoryId = story.id;
-  modalTitle.textContent = story.cartao.tituloCartao;
-  modalFullText.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao);
-  modalInfo.innerHTML = `
+  modalTitle.textContent    = story.cartao.tituloCartao;
+  modalFullText.innerHTML   = formatarPor4Linhas(story.cartao.sinopseCartao);
+  modalInfo.innerHTML       = `
     <p><strong>Data:</strong> ${story.cartao.dataCartao}</p>
     <p><strong>Autor:</strong> ${story.cartao.autorCartao}</p>
     <p><strong>Categorias:</strong> ${story.cartao.categorias.join(', ')}</p>
   `;
   const lerBtn = document.createElement('button');
   lerBtn.textContent = 'Ler';
-  lerBtn.onclick = () => {
+  lerBtn.onclick     = () => {
     originalText = story.cartao.historiaCompleta;
     modalFullText.innerHTML = formatarTextoParaLeitura(originalText);
   };
@@ -282,7 +280,7 @@ function openModalForStory(story) {
 }
 
 /************************************************************
- * [6] Filtrar / ordenar / pesquisar
+ * [6] FILTRAR / ORDENAR / PESQUISAR
  ************************************************************/
 function matchesSearch(story, txt) {
   txt = txt.trim().toLowerCase();
@@ -306,14 +304,13 @@ function getFilteredStories() {
 }
 
 /************************************************************
- * [7] Paginação + placeholders
+ * [7] PAGINAÇÃO + PLACEHOLDERS
  ************************************************************/
 function showBatch(cnt) {
   const filtered = getFilteredStories();
   const slice = filtered.slice(currentOffset, currentOffset + cnt);
   slice.forEach(st => container.appendChild(createStoryCard(st)));
 
-  // placeholders para preencher o grid
   const needed = cnt - slice.length;
   for (let i = 0; i < needed; i++) {
     container.appendChild(createPlaceholderCard());
@@ -325,7 +322,7 @@ function showBatch(cnt) {
 
 function initialLoad() {
   container.innerHTML = '';
-  currentOffset = 0;
+  currentOffset       = 0;
   showBatch(initialCount);
 }
 
@@ -336,12 +333,12 @@ function loadMore() {
 
 function handleFilterOrSort() {
   container.innerHTML = '';
-  currentOffset = 0;
+  currentOffset       = 0;
   showBatch(initialCount);
 }
 
 /************************************************************
- * [8] Modal e aviso
+ * [8] MODAL & AVISO
  ************************************************************/
 modalClose.onclick = () => {
   modalOverlay.style.display = 'none';
@@ -353,9 +350,9 @@ modalOverlay.onclick = e => {
   }
 };
 warningYes.onclick = () => {
-  modalOverlay.style.display = 'none';
+  modalOverlay.style.display   = 'none';
   warningOverlay.style.display = 'none';
-  isModalOpen = false;
+  isModalOpen                  = false;
 };
 warningNo.onclick = () => {
   warningOverlay.style.display = 'none';
@@ -369,7 +366,7 @@ continuarBtn.onclick = () => {
 };
 
 /************************************************************
- * [9] Inicialização
+ * [9] INICIALIZAÇÃO
  ************************************************************/
 document.addEventListener('DOMContentLoaded', async () => {
   await exibirUsuarioLogado();
