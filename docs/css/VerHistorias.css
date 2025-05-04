@@ -19,33 +19,52 @@ body {
 .navbar {
   position: fixed;
   top: 0; left: 0; right: 0;
+  height: 60px;
   background-color: rgba(0,0,0,0.9);
-  padding: 10px 20px;
-  z-index: 1000;
-
+  padding: 0 20px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  z-index: 1000;
+  /* faz todos os itens começarem à esquerda */
+  justify-content: flex-start;
 }
 
+/* espaçamento horizontal uniforme entre itens */
+.navbar > * {
+  margin-right: 20px;
+}
+
+/* links e botões da navbar */
 .navbar a,
-.navbar button,
-#userMenuArea {
+.navbar button {
   color: #fff;
   text-decoration: none;
   padding: 8px 12px;
   border-radius: 4px;
   transition: background-color .2s, transform .2s;
 }
-
 .navbar a:hover,
 .navbar button:hover {
   background-color: rgba(255,255,255,0.2);
   transform: scale(1.05);
 }
 
-/* envia a barra de pesquisa para o fim */
+/* ordering: tudo por omissão tem order:0 */
+.dropdown,
+.navbar a {
+  order: 0;
+}
+
+/* área de utilizador aparece antes da pesquisa */
+#userMenuArea {
+  order: 1;
+  color: #fff;
+  cursor: pointer;
+}
+
+/* pesquisa fica sempre à extrema direita */
 .search-box {
+  order: 2;
   margin-left: auto;
   display: flex;
   align-items: center;
@@ -53,13 +72,12 @@ body {
   border-radius: 5px;
   padding: 4px;
 }
-
 .search-box input {
   border: none;
   outline: none;
   padding: 6px;
+  width: 200px; /* largura fixa para consistência */
 }
-
 .search-box button {
   background: #000;
   color: #fff;
@@ -69,7 +87,7 @@ body {
   cursor: pointer;
 }
 
-/* dropdown mantém igual */
+/* dropdown permanece igual */
 .dropdown { position: relative; }
 .dropdown-content {
   display: none;
@@ -115,7 +133,6 @@ body {
   margin-bottom: 16px;
   color: #333;
 }
-
 .stories-container {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -140,8 +157,6 @@ body {
 .sheet:hover {
   transform: translateY(-5px);
 }
-
-/* Título com elipse se longo */
 .sheet h3 {
   font-size: 1rem;
   margin-bottom: 8px;
@@ -150,8 +165,6 @@ body {
   text-overflow: ellipsis;
   width: 100%;
 }
-
-/* Sinopse truncada em 5 linhas */
 .sheet-sinopse {
   font-size: 0.85rem;
   color: #555;
@@ -165,7 +178,6 @@ body {
   word-break: break-word;
   margin-bottom: 8px;
 }
-
 .ver-mais {
   font-size: 0.8rem;
   font-weight: bold;
@@ -173,8 +185,6 @@ body {
   cursor: pointer;
   margin-bottom: 8px;
 }
-
-/* ====== BADGES ====== */
 .sheet-categories {
   display: flex;
   flex-wrap: wrap;
@@ -191,7 +201,6 @@ body {
 }
 
 /* ====== CURTIDAS ====== */
-/* JS vai definir o emoji 🤍 ou ❤️ */
 .like-btn {
   background: none;
   border: none;
@@ -244,7 +253,6 @@ body {
   padding: 20px;
   text-align: justify;
 }
-/* remove o “X” de fechar */
 .modal-close {
   display: none !important;
 }
