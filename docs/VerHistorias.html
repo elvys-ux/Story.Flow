@@ -17,6 +17,7 @@
 
   <!-- NAVBAR -->
   <nav class="navbar" role="navigation">
+    <!-- GROUP: itens à esquerda -->
     <div class="nav-left">
       <a href="index.html"><i class="fas fa-home"></i> Início</a>
 
@@ -37,15 +38,19 @@
       </div>
     </div>
 
+    <!-- GROUP: itens à direita -->
     <div class="nav-right">
       <div id="userMenuArea" class="user-area"></div>
       <form id="searchForm" class="search-box" role="search">
-        <input type="text"
-               id="searchBar"
-               placeholder="Pesquisar por título ou autor…"
-               autocomplete="off"
-               aria-label="Pesquisar histórias">
-        <button type="submit" id="searchBtn" aria-label="Pesquisar"><i class="fas fa-search"></i></button>
+        <input
+          type="text"
+          id="searchBar"
+          placeholder="Pesquisar por título ou autor…"
+          autocomplete="off"
+          aria-label="Pesquisar histórias">
+        <button type="submit" id="searchBtn" aria-label="Pesquisar">
+          <i class="fas fa-search"></i>
+        </button>
       </form>
     </div>
   </nav>
@@ -112,11 +117,9 @@
     // Intercepta o submit da busca para evitar reload de página
     document.getElementById('searchForm').addEventListener('submit', e => {
       e.preventDefault();
-      // dispara a filtragem imediatamente
       const event = new Event('input');
       document.getElementById('searchBar').dispatchEvent(event);
     });
   </script>
-
 </body>
 </html>
