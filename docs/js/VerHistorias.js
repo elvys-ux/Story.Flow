@@ -25,8 +25,8 @@ const continuarBtn   = document.getElementById('continuarBtn');
 let isModalOpen    = false;
 let currentStoryId = null;
 
-let likedStories = JSON.parse(localStorage.getItem('likedStories') || '[]');
-let categoryMap  = {};  // id → nome
+let likedStories   = JSON.parse(localStorage.getItem('likedStories') || '[]');
+let categoryMap    = {};  // id → nome
 
 // [1] Exibe usuário logado / login
 async function exibirUsuarioLogado() {
@@ -64,19 +64,34 @@ async function fetchCategories() {
   categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
 }
 
-// [3] Busca histórias + cartões + categorias (agora incluindo likes)
+// [3] Busca histórias + cartões + categorias (com fallback para likes)
 async function fetchStoriesFromSupabase() {
-  // Carrega todas as histórias com contador de likes
-  const { data: historias, error: errH } = await supabase
+  // 1) Tenta buscar com coluna 'likes'
+  let { data: historias, error: errH } = await supabase
     .from('historias')
     .select('id, titulo, descricao, user_id, data_criacao, likes')
     .order('data_criacao', { ascending: false });
+
+  if (errH) {
+    console.warn('Coluna likes não encontrada ou outro erro; tentando sem likes:', errH);
+    // 2) Faz fallback sem 'likes'
+    const resp = await supabase
+      .from('historias')
+      .select('id, titulo, descricao, user_id, data_criacao')
+      .order('data_criacao', { ascending: false });
+    historias = resp.data;
+    errH = resp.error;
+  }
+
   if (errH) {
     console.error('Erro ao carregar histórias:', errH);
     container.innerHTML = '<p>Erro ao carregar histórias.</p>';
     return;
   }
 
+  console.log('Histórias carregadas:', historias);
+
+  // Cartões
   const { data: cartoes, error: errC } = await supabase
     .from('cartoes')
     .select('historia_id, titulo_cartao, sinopse_cartao, autor_cartao, data_criacao');
@@ -86,6 +101,7 @@ async function fetchStoriesFromSupabase() {
   }
   const cartaoMap = Object.fromEntries(cartoes.map(c => [c.historia_id, c]));
 
+  // Relações história–categoria
   const { data: hcData, error: errHC } = await supabase
     .from('historia_categorias')
     .select('historia_id, categoria_id');
@@ -99,7 +115,7 @@ async function fetchStoriesFromSupabase() {
     hcMap[historia_id].push(categoryMap[categoria_id]);
   });
 
-  // Monta allStories usando likes vindos do Supabase
+  // Monta allStories
   allStories = historias.map(h => {
     const c = cartaoMap[h.id] || {};
     return {
@@ -111,13 +127,15 @@ async function fetchStoriesFromSupabase() {
         dataCartao:       (c.data_criacao || h.data_criacao).split('T')[0],
         autorCartao:      c.autor_cartao    || 'Anónimo',
         categorias:       hcMap[h.id]       || [],
-        likes:            h.likes || 0
+        likes:            h.likes ?? 0      // se veio likes, usa; senão 0
       }
     };
   });
+
+  console.log('allStories montado:', allStories);
 }
 
-// [4] Textos e marcações (sem alterações)…
+// [4] Formatação de texto (sem alterações)
 function formatarPor4Linhas(text) { /* … */ }
 function formatarTextoParaLeitura(text) { /* … */ }
 function markReadingPosition(el) { /* … */ }
@@ -165,14 +183,14 @@ function createStoryCard(story) {
   });
   div.appendChild(mais);
 
-  // Likes (persistidos em Supabase)
+  // Likes
   const likeCont = document.createElement('div');
   likeCont.style.marginTop = '10px';
   const likeBtn = document.createElement('button');
   const likeCt  = document.createElement('span');
   let userLiked = likedStories.includes(story.id);
 
-  // Remove estilo padrão de botão
+  // Remove contorno
   likeBtn.style.background = 'transparent';
   likeBtn.style.border     = 'none';
   likeBtn.style.outline    = 'none';
@@ -187,7 +205,6 @@ function createStoryCard(story) {
   updateUI();
 
   likeBtn.addEventListener('click', async () => {
-    // Atualiza contador local
     if (userLiked) {
       story.cartao.likes = Math.max(story.cartao.likes - 1, 0);
       likedStories = likedStories.filter(i => i !== story.id);
@@ -199,14 +216,12 @@ function createStoryCard(story) {
     localStorage.setItem('likedStories', JSON.stringify(likedStories));
     updateUI();
 
-    // Persiste no Supabase
+    // Persiste likes no Supabase (se coluna existir)
     const { error } = await supabase
       .from('historias')
       .update({ likes: story.cartao.likes })
       .eq('id', story.id);
-    if (error) {
-      console.error('Erro ao salvar like no Supabase:', error);
-    }
+    if (error) console.error('Erro ao salvar like no Supabase:', error);
   });
 
   likeCont.append(likeBtn, likeCt);
@@ -214,7 +229,7 @@ function createStoryCard(story) {
 
   // Categorias
   const catCont = document.createElement('div');
-  catCont.className = 'sheet-categorias';
+  catCont.className = 'sheet-categories';
   const cats = story.cartao.categorias.length ? story.cartao.categorias : ['Sem Categoria'];
   cats.forEach(c => {
     const badge = document.createElement('span');
@@ -227,23 +242,89 @@ function createStoryCard(story) {
   return div;
 }
 
-function createPlaceholderCard() { /* … */ }
+function createPlaceholderCard() {
+  const div = document.createElement('div');
+  div.className = 'sheet sheet-placeholder';
+  const h3 = document.createElement('h3');
+  h3.textContent = 'Placeholder';
+  div.appendChild(h3);
+  const p = document.createElement('p');
+  p.textContent = '(sem história)';
+  div.appendChild(p);
+  return div;
+}
 
-// [6] Filtrar / ordenar / pesquisar (sem alterações)…
-function matchesSearch(story, txt) { /* … */ }
-function getFilteredStories() { /* … */ }
+// [6] Filtrar / ordenar / pesquisar
+function matchesSearch(story, txt) {
+  if (!txt) return true;
+  txt = txt.toLowerCase();
+  return story.cartao.tituloCartao.toLowerCase().includes(txt)
+      || story.cartao.autorCartao.toLowerCase().includes(txt);
+}
 
-// [7] Paginação (sem alterações)…
-function showBatch(count) { /* … */ }
-function initialLoad() { /* … */ }
-function loadMore() { /* … */ }
+function getFilteredStories() {
+  let arr = allStories.filter(st => matchesSearch(st, searchBar.value));
+  if (categoryFilter.value) {
+    arr = arr.filter(st => st.cartao.categorias.includes(categoryFilter.value));
+  }
+  if (sortFilter.value === 'date') {
+    arr.sort((a, b) => b.cartao.dataCartao.localeCompare(a.cartao.dataCartao));
+  } else if (sortFilter.value === 'popularity') {
+    arr.sort((a, b) => b.cartao.likes - a.cartao.likes);
+  }
+  return arr;
+}
 
-// [8] Modal & aviso (sem alterações)…
-modalClose.addEventListener('click', () => { /* … */ });
-modalOverlay.addEventListener('click', e => { /* … */ });
-warningYes.addEventListener('click', () => { /* … */ });
-warningNo.addEventListener('click', () => { /* … */ });
-continuarBtn.addEventListener('click', () => { /* … */ });
+// [7] Paginação
+function showBatch(count) {
+  const filtered = getFilteredStories();
+  const slice = filtered.slice(currentOffset, currentOffset + count);
+  const frag = document.createDocumentFragment();
+  slice.forEach(s => frag.appendChild(createStoryCard(s)));
+  for (let i = slice.length; i < count; i++) {
+    frag.appendChild(createPlaceholderCard());
+  }
+  container.appendChild(frag);
+  currentOffset += count;
+  loadMoreBtn.disabled = false;
+}
+
+function initialLoad() {
+  container.innerHTML = '';
+  currentOffset = 0;
+  showBatch(initialCount);
+}
+
+function loadMore() {
+  loadMoreBtn.disabled = true;
+  showBatch(increment);
+}
+
+// [8] Modal & aviso
+modalClose.addEventListener('click', () => {
+  modalOverlay.style.display = 'none';
+  isModalOpen = false;
+});
+modalOverlay.addEventListener('click', e => {
+  if (e.target === modalOverlay && isModalOpen) {
+    warningOverlay.style.display = 'flex';
+  }
+});
+warningYes.addEventListener('click', () => {
+  modalOverlay.style.display = 'none';
+  warningOverlay.style.display = 'none';
+  isModalOpen = false;
+});
+warningNo.addEventListener('click', () => {
+  warningOverlay.style.display = 'none';
+});
+continuarBtn.addEventListener('click', () => {
+  const st = allStories.find(s => s.id === currentStoryId);
+  if (st) {
+    modalFullText.innerHTML = formatarTextoParaLeitura(st.cartao.historiaCompleta);
+    setTimeout(destacarPalavra, 100);
+  }
+});
 
 // [9] Inicialização
 document.addEventListener('DOMContentLoaded', async () => {
