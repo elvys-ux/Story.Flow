@@ -66,7 +66,6 @@ async function fetchCategories() {
 
 // [3] Busca histórias + cartões + categorias
 async function fetchStoriesFromSupabase() {
-  // Carrega todas as histórias
   const { data: historias, error: errH } = await supabase
     .from('historias')
     .select('id, titulo, descricao, user_id, data_criacao')
@@ -77,7 +76,6 @@ async function fetchStoriesFromSupabase() {
     return;
   }
 
-  // Carrega todos os cartões
   const { data: cartoes, error: errC } = await supabase
     .from('cartoes')
     .select('historia_id, titulo_cartao, sinopse_cartao, autor_cartao, data_criacao');
@@ -87,7 +85,6 @@ async function fetchStoriesFromSupabase() {
   }
   const cartaoMap = Object.fromEntries(cartoes.map(c => [c.historia_id, c]));
 
-  // Carrega todas as relações história–categoria
   const { data: hcData, error: errHC } = await supabase
     .from('historia_categorias')
     .select('historia_id, categoria_id');
@@ -101,7 +98,6 @@ async function fetchStoriesFromSupabase() {
     hcMap[historia_id].push(categoryMap[categoria_id]);
   });
 
-  // Monta allStories usando apenas dados de histórias e cartões
   allStories = historias.map(h => {
     const c = cartaoMap[h.id] || {};
     return {
@@ -191,7 +187,8 @@ function createStoryCard(story) {
     modalInfo.innerHTML = `
       <p><strong>Data:</strong> ${story.cartao.dataCartao}</p>
       <p><strong>Autor:</strong> ${story.cartao.autorCartao}</p>
-      <p><strong>Categorias:</strong> ${story.cartao.categorias.join(', ')}</p>`;
+      <p><strong>Categorias:</strong> ${story.cartao.categorias.join(', ')}</p>
+    `;
     const btnLer = document.createElement('button');
     btnLer.textContent = 'Ler';
     btnLer.addEventListener('click', () => {
@@ -212,7 +209,8 @@ function createStoryCard(story) {
   const likeCt  = document.createElement('span');
   let userLiked = likedStories.includes(story.id);
   function updateUI() {
-    likeBtn.textContent = userLiked ? '❤️' : '🤍';
+    // Emoji invertido conforme solicitado:
+    likeBtn.textContent = userLiked ? '🤍' : '❤️';
     likeCt.textContent = ` ${story.cartao.likes} curtida(s)`;
   }
   updateUI();
@@ -225,6 +223,7 @@ function createStoryCard(story) {
       likedStories.push(story.id);
     }
     localStorage.setItem('likedStories', JSON.stringify(likedStories));
+    userLiked = !userLiked;
     updateUI();
   });
   likeCont.append(likeBtn, likeCt);
