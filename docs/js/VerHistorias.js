@@ -217,7 +217,7 @@ function createStoryCard(story) {
   likeBtn.onfocus          = () => likeBtn.blur();
 
   function updateUI() {
-    likeBtn.textContent = userLiked ? '⬛' : '⬜';
+    likeBtn.textContent = userLiked ? '❤️' : '🤍';
     likeCt.textContent   = ` ${story.cartao.likes} curtida(s)`;
   }
 
