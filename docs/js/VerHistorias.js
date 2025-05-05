@@ -1,13 +1,14 @@
 // js/VerHistorias.js
 import { supabase } from './supabase.js';
 
-let allStories     = [];
-let currentOffset  = 0;
-const initialCount = 20;
-const increment    = 5;
+let allStories       = [];
+let currentOffset    = 0;
+const initialCount   = 20;
+const increment      = 5;
 
-let isUserLoggedIn = false;
-let currentStoryId = null;
+let isUserLoggedIn   = false;
+let currentStoryId   = null;
+let categoryMap      = {};  // id → nome
 
 const container      = document.getElementById('storiesContainer');
 const categoryFilter = document.getElementById('category-filter');
@@ -25,19 +26,11 @@ const warningYes     = document.getElementById('warningYes');
 const warningNo      = document.getElementById('warningNo');
 const continuarBtn   = document.getElementById('continuarBtn');
 
-let categoryMap = {};
-
-// [1] Verifica sessão e mostra login/usuário
+// [1] Exibe usuário logado / login
 async function exibirUsuarioLogado() {
   const area = document.getElementById('userMenuArea');
   const { data: { session }, error } = await supabase.auth.getSession();
-  if (error) {
-    console.error('Erro ao obter sessão:', error);
-    isUserLoggedIn = false;
-    area.innerHTML = `<a href="Criacao.html"><i class="fas fa-user"></i> Login</a>`;
-    return;
-  }
-  if (!session) {
+  if (error || !session) {
     isUserLoggedIn = false;
     area.innerHTML = `<a href="Criacao.html"><i class="fas fa-user"></i> Login</a>`;
     return;
@@ -45,7 +38,6 @@ async function exibirUsuarioLogado() {
   isUserLoggedIn = true;
   const { data: profile, error: errP } = await supabase
     .from('profiles').select('username').eq('id', session.user.id).single();
-  if (errP) console.error('Erro ao carregar perfil:', errP);
   const nome = profile?.username || session.user.email;
   area.textContent = nome;
   area.style.cursor = 'pointer';
@@ -68,49 +60,57 @@ async function fetchCategories() {
   categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
 }
 
-// [3] Carrega tudo de uma vez (histórias + cartão + categorias + likes)
+// [3] Busca histórias + cartões + categorias manualmente
 async function fetchStoriesFromSupabase() {
-  const { data, error } = await supabase
+  // 3.1) Puxa todas as histórias
+  const { data: historias, error: errH } = await supabase
     .from('historias')
-    .select(`
-      id,
-      titulo,
-      descricao,
-      data_criacao,
-      likes,
-      cartoes (
-        titulo_cartao,
-        sinopse_cartao,
-        autor_cartao,
-        data_criacao
-      ),
-      historia_categorias (
-        categoria_id
-      )
-    `)
+    .select('id, titulo, descricao, data_criacao, likes')
     .order('data_criacao', { ascending: false });
-
-  if (error) {
-    console.error('Erro ao buscar histórias:', error);
+  if (errH) {
+    console.error('Erro ao carregar histórias:', errH);
     container.innerHTML = '<p>Erro ao carregar histórias.</p>';
     return;
   }
 
-  allStories = data.map(row => {
-    const card = row.cartoes[0] || {};
-    const cats = (row.historia_categorias || [])
-      .map(hc => categoryMap[hc.categoria_id])
-      .filter(Boolean);
+  // 3.2) Puxa todos os cartões
+  const { data: cartoes, error: errC } = await supabase
+    .from('cartoes')
+    .select('historia_id, titulo_cartao, sinopse_cartao, autor_cartao, data_criacao');
+  if (errC) {
+    console.error('Erro ao carregar cartões:', errC);
+    return;
+  }
+  const cartaoMap = Object.fromEntries(cartoes.map(c => [c.historia_id, c]));
+
+  // 3.3) Puxa todas as ligações história–categoria
+  const { data: hcData, error: errHC } = await supabase
+    .from('historia_categorias')
+    .select('historia_id, categoria_id');
+  if (errHC) {
+    console.error('Erro ao carregar categorias de história:', errHC);
+    return;
+  }
+  const hcMap = {};
+  hcData.forEach(({ historia_id, categoria_id }) => {
+    if (!hcMap[historia_id]) hcMap[historia_id] = [];
+    hcMap[historia_id].push(categoryMap[categoria_id]);
+  });
+
+  // Monta allStories
+  allStories = historias.map(h => {
+    const card = cartaoMap[h.id] || {};
+    const cats = hcMap[h.id] || [];
     return {
-      id: row.id,
+      id: h.id,
       cartao: {
-        tituloCartao:     card.titulo_cartao   || row.titulo    || 'Sem título',
+        tituloCartao:     card.titulo_cartao   || h.titulo    || 'Sem título',
         sinopseCartao:    card.sinopse_cartao  || '',
-        historiaCompleta: row.descricao        || '',
-        dataCartao:       (card.data_criacao || row.data_criacao).split('T')[0],
+        historiaCompleta: h.descricao         || '',
+        dataCartao:       (card.data_criacao || h.data_criacao).split('T')[0],
         autorCartao:      card.autor_cartao    || 'Anónimo',
         categorias:       cats,
-        likes:            row.likes            || 0
+        likes:            h.likes              || 0
       }
     };
   });
@@ -152,7 +152,7 @@ function destacarPalavra() {
   }
 }
 
-// [5] Cria cada cartão de história
+// [5] Cria o cartão de cada história
 function createStoryCard(story) {
   const div = document.createElement('div');
   div.className = 'sheet';
@@ -193,7 +193,7 @@ function createStoryCard(story) {
   };
   div.appendChild(mais);
 
-  // Likes (só para user logado)
+  // Likes (só para quem estiver logado)
   if (isUserLoggedIn) {
     const likeCont = document.createElement('div');
     likeCont.style.marginTop = '8px';
@@ -226,21 +226,19 @@ function createStoryCard(story) {
   // Categorias
   const catCont = document.createElement('div');
   catCont.className = 'sheet-categories';
-  const cats = story.cartao.categorias.length
-    ? story.cartao.categorias
-    : ['Sem Categoria'];
-  cats.forEach(c => {
-    const badge = document.createElement('span');
-    badge.className = 'badge';
-    badge.textContent = c;
-    catCont.appendChild(badge);
-  });
+  (story.cartao.categorias.length ? story.cartao.categorias : ['Sem Categoria'])
+    .forEach(c => {
+      const badge = document.createElement('span');
+      badge.className = 'badge';
+      badge.textContent = c;
+      catCont.appendChild(badge);
+    });
   div.appendChild(catCont);
 
   return div;
 }
 
-// Placeholder para manter grade
+// Placeholder
 function createPlaceholderCard() {
   const div = document.createElement('div');
   div.className = 'sheet sheet-placeholder';
@@ -252,10 +250,8 @@ function createPlaceholderCard() {
 function matchesSearch(story, txt) {
   if (!txt) return true;
   txt = txt.toLowerCase();
-  return (
-    story.cartao.tituloCartao.toLowerCase().includes(txt) ||
-    story.cartao.autorCartao.toLowerCase().includes(txt)
-  );
+  return story.cartao.tituloCartao.toLowerCase().includes(txt)
+      || story.cartao.autorCartao.toLowerCase().includes(txt);
 }
 function getFilteredStories() {
   let arr = allStories.filter(st => matchesSearch(st, searchBar.value));
@@ -306,7 +302,7 @@ continuarBtn.onclick = () => {
   }
 };
 
-// [9] Inicialização: login → fetch → render → hooks
+// [9] Inicialização
 document.addEventListener('DOMContentLoaded', async () => {
   await exibirUsuarioLogado();
   await fetchCategories();
