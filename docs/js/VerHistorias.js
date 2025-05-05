@@ -1,10 +1,9 @@
-// js/VerHistorias.js
 import { supabase } from './supabase.js';
 
-let allStories       = [];
-let currentOffset    = 0;
-const initialCount   = 20;
-const increment      = 5;
+let allStories    = [];
+let currentOffset = 0;
+const initialCount = 20;
+const increment    = 5;
 
 const container      = document.getElementById('storiesContainer');
 const categoryFilter = document.getElementById('category-filter');
@@ -25,15 +24,52 @@ const continuarBtn   = document.getElementById('continuarBtn');
 let isModalOpen    = false;
 let currentStoryId = null;
 
-let likedStories   = JSON.parse(localStorage.getItem('likedStories') || '[]');
-let categoryMap    = {};  // id → nome
+let likedStories = JSON.parse(localStorage.getItem('likedStories') || '[]');
+let categoryMap  = {};  // id → nome
+
+// Utils for paragraph-based reading
+function formatarPor4Linhas(text) {
+  const lines = text.split('\n');
+  const paras = [];
+  for (let i = 0; i < lines.length; i += 4) {
+    paras.push(`<p style=\"text-align: justify;\">${lines.slice(i, i + 4).join('<br>')}</p>`);
+  }
+  return paras.join('');
+}
+
+function formatarTextoParaLeitura(text) {
+  const lines = text.split('\n');
+  const paras = [];
+  let pIdx = 0;
+  for (let i = 0; i < lines.length; i += 4) {
+    const chunk = lines.slice(i, i + 4).join('<br>');
+    paras.push(`<p style=\"text-align: justify; cursor: pointer;\" data-index=\"${pIdx}\">${chunk}</p>`);
+    pIdx++;
+  }
+  return paras.join('');
+}
+
+function markReadingPositionParagraph(idx) {
+  localStorage.setItem(`readingPosition_${currentStoryId}`, idx);
+}
+
+function destacarParagrafo() {
+  const saved = localStorage.getItem(`readingPosition_${currentStoryId}`);
+  if (saved !== null) {
+    const p = modalFullText.querySelector(`p[data-index=\"${saved}\"]`);
+    if (p) {
+      p.style.background = 'yellow';
+      p.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  }
+}
 
 // [1] Exibe usuário logado / login
 async function exibirUsuarioLogado() {
   const area = document.getElementById('userMenuArea');
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
-    area.innerHTML = `<a href="Criacao.html"><i class="fas fa-user"></i> Login</a>`;
+    area.innerHTML = `<a href=\"Criacao.html\"><i class=\"fas fa-user\"></i> Login</a>`;
     return;
   }
   const userId = session.user.id;
@@ -58,41 +94,40 @@ async function fetchCategories() {
     .from('categorias')
     .select('id, nome');
   if (error) {
-    console.error('Erro ao carregar categorias:', error);
+    document.querySelector('.filter-bar')
+      .insertAdjacentHTML('afterend',
+        '<p class=\"error\">Não foi possível carregar as categorias.</p>');
     return;
   }
   categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
 }
 
-// [3] Busca histórias + cartões + categorias
+// [3] Busca histórias + cartões + categorias + likes
 async function fetchStoriesFromSupabase() {
-  // Carrega todas as histórias
+  // Histórias
   const { data: historias, error: errH } = await supabase
     .from('historias')
     .select('id, titulo, descricao, user_id, data_criacao')
     .order('data_criacao', { ascending: false });
   if (errH) {
-    console.error('Erro ao carregar histórias:', errH);
     container.innerHTML = '<p>Erro ao carregar histórias.</p>';
     return;
   }
-
-  // Carrega todos os cartões
+  // Cartões
   const { data: cartoes, error: errC } = await supabase
     .from('cartoes')
     .select('historia_id, titulo_cartao, sinopse_cartao, autor_cartao, data_criacao');
   if (errC) {
-    console.error('Erro ao carregar cartões:', errC);
+    console.error(errC);
     return;
   }
   const cartaoMap = Object.fromEntries(cartoes.map(c => [c.historia_id, c]));
-
-  // Carrega todas as relações história–categoria
+  // Categorias de história
   const { data: hcData, error: errHC } = await supabase
     .from('historia_categorias')
     .select('historia_id, categoria_id');
   if (errHC) {
-    console.error('Erro ao carregar categorias de história:', errHC);
+    console.error(errHC);
     return;
   }
   const hcMap = {};
@@ -100,8 +135,13 @@ async function fetchStoriesFromSupabase() {
     if (!hcMap[historia_id]) hcMap[historia_id] = [];
     hcMap[historia_id].push(categoryMap[categoria_id]);
   });
+  // Likes agregados
+  const { data: likesAgg } = await supabase
+    .from('likes')
+    .select('historia_id, count(*)')
+    .group('historia_id');
+  const likesMap = Object.fromEntries(likesAgg.map(l => [l.historia_id, l.count]));
 
-  // Monta allStories usando apenas dados de histórias e cartões
   allStories = historias.map(h => {
     const c = cartaoMap[h.id] || {};
     return {
@@ -113,73 +153,26 @@ async function fetchStoriesFromSupabase() {
         dataCartao:       (c.data_criacao || h.data_criacao).split('T')[0],
         autorCartao:      c.autor_cartao    || 'Anónimo',
         categorias:       hcMap[h.id]       || [],
-        likes:            0
+        likes:            likesMap[h.id]    || 0
       }
     };
   });
 }
 
-// [4] Formatação de texto
-function formatarPor4Linhas(text) {
-  const lines = text.split('\n');
-  const paras = [];
-  for (let i = 0; i < lines.length; i += 4) {
-    paras.push(lines.slice(i, i + 4).join('<br>'));
-  }
-  return paras.map(p => `<p style="text-align: justify;">${p}</p>`).join('');
-}
-
-function formatarTextoParaLeitura(text) {
-  const lines = text.split('\n');
-  let idx = 0, buf = [], paras = [];
-  for (let i = 0; i < lines.length; i++) {
-    const spans = lines[i]
-      .split(' ')
-      .map(w => `<span data-index="${idx++}" onclick="markReadingPosition(this)">${w}</span>`)
-      .join(' ');
-    buf.push(spans);
-    if ((i + 1) % 4 === 0) {
-      paras.push(`<p style="text-align: justify;">${buf.join('<br>')}</p>`);
-      buf = [];
-    }
-  }
-  if (buf.length) paras.push(`<p style="text-align: justify;">${buf.join('<br>')}</p>`);
-  return paras.join('');
-}
-
-function markReadingPosition(el) {
-  const idx = el.getAttribute('data-index');
-  localStorage.setItem(`readingPosition_${currentStoryId}`, idx);
-}
-
-function destacarPalavra() {
-  const saved = localStorage.getItem(`readingPosition_${currentStoryId}`);
-  if (saved !== null) {
-    const span = modalFullText.querySelector(`[data-index="${saved}"]`);
-    if (span) {
-      span.style.background = 'yellow';
-      span.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    }
-  }
-}
-
-// [5] Criação de cards e placeholders
+// [4] Criação de cards
 function createStoryCard(story) {
   const div = document.createElement('div');
   div.className = 'sheet';
 
-  // Título
   const h3 = document.createElement('h3');
   h3.textContent = story.cartao.tituloCartao;
   div.appendChild(h3);
 
-  // Sinopse
   const sin = document.createElement('div');
   sin.className = 'sheet-sinopse';
   sin.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao);
   div.appendChild(sin);
 
-  // “mais...”
   const mais = document.createElement('span');
   mais.className = 'ver-mais';
   mais.textContent = 'mais...';
@@ -188,24 +181,25 @@ function createStoryCard(story) {
     currentStoryId = story.id;
     modalTitle.textContent = story.cartao.tituloCartao;
     modalFullText.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao);
-    modalInfo.innerHTML = `
-      <p><strong>Data:</strong> ${story.cartao.dataCartao}</p>
-      <p><strong>Autor:</strong> ${story.cartao.autorCartao}</p>
-      <p><strong>Categorias:</strong> ${story.cartao.categorias.join(', ')}</p>`;
+    modalInfo.innerHTML = `\n      <p><strong>Data:</strong> ${story.cartao.dataCartao}</p>\n      <p><strong>Autor:</strong> ${story.cartao.autorCartao}</p>\n      <p><strong>Categorias:</strong> ${story.cartao.categorias.join(', ')}</p>`;
     const btnLer = document.createElement('button');
     btnLer.textContent = 'Ler';
     btnLer.addEventListener('click', () => {
       modalFullText.innerHTML = formatarTextoParaLeitura(story.cartao.historiaCompleta);
-      setTimeout(destacarPalavra, 100);
+      // adicionar listeners em parágrafos
+      modalFullText.querySelectorAll('p[data-index]').forEach(p => {
+        p.addEventListener('click', () => markReadingPositionParagraph(p.dataset.index));
+      });
+      setTimeout(destacarParagrafo, 100);
     });
     modalFullText.appendChild(btnLer);
+
     const pos = localStorage.getItem(`readingPosition_${story.id}`);
     continuarBtn.style.display = pos !== null ? 'inline-block' : 'none';
     modalOverlay.style.display = 'flex';
   });
   div.appendChild(mais);
 
-  // Likes
   const likeCont = document.createElement('div');
   likeCont.style.marginTop = '10px';
   const likeBtn = document.createElement('button');
@@ -216,21 +210,26 @@ function createStoryCard(story) {
     likeCt.textContent = ` ${story.cartao.likes} curtida(s)`;
   }
   updateUI();
-  likeBtn.addEventListener('click', () => {
+  likeBtn.addEventListener('click', async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return; // não logado
+    const userId = session.user.id;
     if (userLiked) {
-      story.cartao.likes = Math.max(story.cartao.likes - 1, 0);
+      await supabase.from('likes').delete().match({ historia_id: story.id, user_id: userId });
+      story.cartao.likes--;
       likedStories = likedStories.filter(i => i !== story.id);
     } else {
+      await supabase.from('likes').insert({ historia_id: story.id, user_id: userId });
       story.cartao.likes++;
       likedStories.push(story.id);
     }
     localStorage.setItem('likedStories', JSON.stringify(likedStories));
+    userLiked = !userLiked;
     updateUI();
   });
   likeCont.append(likeBtn, likeCt);
   div.appendChild(likeCont);
 
-  // Categorias
   const catCont = document.createElement('div');
   catCont.className = 'sheet-categories';
   const cats = story.cartao.categorias.length ? story.cartao.categorias : ['Sem Categoria'];
@@ -245,19 +244,7 @@ function createStoryCard(story) {
   return div;
 }
 
-function createPlaceholderCard() {
-  const div = document.createElement('div');
-  div.className = 'sheet sheet-placeholder';
-  const h3 = document.createElement('h3');
-  h3.textContent = 'Placeholder';
-  div.appendChild(h3);
-  const p = document.createElement('p');
-  p.textContent = '(sem história)';
-  div.appendChild(p);
-  return div;
-}
-
-// [6] Filtrar / ordenar / pesquisar
+// [5] Filtrar / ordenar / pesquisar
 function matchesSearch(story, txt) {
   if (!txt) return true;
   txt = txt.toLowerCase();
@@ -278,25 +265,23 @@ function getFilteredStories() {
   return arr;
 }
 
-// [7] Paginação (placeholders garantidos)
+// [6] Paginação sem placeholders
 function showBatch(count) {
   const filtered = getFilteredStories();
   const slice = filtered.slice(currentOffset, currentOffset + count);
-
-  const frag = document.createDocumentFragment();
-  slice.forEach(s => frag.appendChild(createStoryCard(s)));
-  for (let i = slice.length; i < count; i++) {
-    frag.appendChild(createPlaceholderCard());
+  slice.forEach(s => container.appendChild(createStoryCard(s)));
+  currentOffset += slice.length;
+  if (currentOffset >= filtered.length) {
+    loadMoreBtn.style.display = 'none';
+  } else {
+    loadMoreBtn.disabled = false;
   }
-
-  container.appendChild(frag);
-  currentOffset += count;
-  loadMoreBtn.disabled = false;
 }
 
 function initialLoad() {
   container.innerHTML = '';
   currentOffset = 0;
+  loadMoreBtn.style.display = getFilteredStories().length > initialCount ? 'inline-block' : 'none';
   showBatch(initialCount);
 }
 
@@ -305,7 +290,7 @@ function loadMore() {
   showBatch(increment);
 }
 
-// [8] Modal & aviso
+// [7] Modal & aviso
 modalClose.addEventListener('click', () => {
   modalOverlay.style.display = 'none';
   isModalOpen = false;
@@ -327,11 +312,15 @@ continuarBtn.addEventListener('click', () => {
   const st = allStories.find(s => s.id === currentStoryId);
   if (st) {
     modalFullText.innerHTML = formatarTextoParaLeitura(st.cartao.historiaCompleta);
-    setTimeout(destacarPalavra, 100);
+    modalFullText.querySelectorAll('p[data-index]').forEach(p => {
+      p.addEventListener('click', () => markReadingPositionParagraph(p.dataset.index));
+    });
+    setTimeout(destacarParagrafo, 100);
   }
 });
 
-// [9] Inicialização
+// [8] Inicialização
+js
 document.addEventListener('DOMContentLoaded', async () => {
   await exibirUsuarioLogado();
   await fetchCategories();
