@@ -1,86 +1,34 @@
+// js/VerHistorias.js
 import { supabase } from './supabase.js';
 
-// Estado e contadores
-let allStories = [];
-let currentOffset = 0;
-const initialCount = 20;
-const increment = 5;
+let allStories       = [];
+let currentOffset    = 0;
+const initialCount   = 20;
+const increment      = 5;
 
-// Elementos do DOM
-const container = document.getElementById('storiesContainer');
+const container      = document.getElementById('storiesContainer');
 const categoryFilter = document.getElementById('category-filter');
-const sortFilter = document.getElementById('sort-filter');
-const searchBar = document.getElementById('searchBar');
-const loadMoreBtn = document.getElementById('loadMoreBtn');
+const sortFilter     = document.getElementById('sort-filter');
+const searchBar      = document.getElementById('searchBar');
+const loadMoreBtn    = document.getElementById('loadMoreBtn');
 
-const modalOverlay = document.getElementById('modalOverlay');
-const modalClose = document.getElementById('modalClose');
-const modalTitle = document.getElementById('modalTitle');
-const modalFullText = document.getElementById('modalFullText');
-const modalInfo = document.getElementById('modalInfo');
+const modalOverlay   = document.getElementById('modalOverlay');
+const modalClose     = document.getElementById('modalClose');
+const modalTitle     = document.getElementById('modalTitle');
+const modalFullText  = document.getElementById('modalFullText');
+const modalInfo      = document.getElementById('modalInfo');
 const warningOverlay = document.getElementById('warningOverlay');
-const warningYes = document.getElementById('warningYes');
-const warningNo = document.getElementById('warningNo');
-const continuarBtn = document.getElementById('continuarBtn');
+const warningYes     = document.getElementById('warningYes');
+const warningNo      = document.getElementById('warningNo');
+const continuarBtn   = document.getElementById('continuarBtn');
 
-let isModalOpen = false;
+let isModalOpen    = false;
 let currentStoryId = null;
-let likedStories = JSON.parse(localStorage.getItem('likedStories') || '[]');
-let categoryMap = {};
 
-// Agrupa texto em parágrafos de até 4 linhas
-function formatarPor4Linhas(text) {
-  const lines = text.split('\n');
-  let html = '';
-  for (let i = 0; i < lines.length; i += 4) {
-    const chunk = lines.slice(i, i + 4).join('<br>');
-    html += `<p style="text-align: justify;">${chunk}</p>`;
-  }
-  return html;
-}
+let likedStories   = JSON.parse(localStorage.getItem('likedStories') || '[]');
+let categoryMap    = {};  // id → nome
 
-// Formata texto completo em parágrafos clicáveis
-function formatarTextoParaLeitura(text) {
-  const lines = text.split('\n');
-  let html = '';
-  let pIdx = 0;
-  for (let i = 0; i < lines.length; i += 4) {
-    const chunk = lines.slice(i, i + 4).join('<br>');
-    html += `<p style="text-align: justify; cursor: pointer;" data-index="${pIdx}">${chunk}</p>`;
-    pIdx++;
-  }
-  return html;
-}
-
-// Cartão placeholder ao paginar
-function createPlaceholderCard() {
-  const div = document.createElement('div');
-  div.className = 'sheet sheet-placeholder';
-  const h3 = document.createElement('h3');
-  h3.textContent = 'Carregando…';
-  div.appendChild(h3);
-  const p = document.createElement('p');
-  p.textContent = 'Aguarde';
-  div.appendChild(p);
-  return div;
-}
-
-// Handlers globais para leitura
-window.markReadingPositionParagraph = idx => {
-  localStorage.setItem(`readingPosition_${currentStoryId}`, idx);
-};
-window.destacarParagrafo = () => {
-  const saved = localStorage.getItem(`readingPosition_${currentStoryId}`);
-  if (saved !== null) {
-    const p = modalFullText.querySelector(`p[data-index="${saved}"]`);
-    if (p) {
-      p.style.background = 'yellow';
-      p.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    }
-  }
-};
-
-// [1] Exibe usuário logado ou botão de login
+// [1] Exibe usuário logado / login
 async function exibirUsuarioLogado() {
   const area = document.getElementById('userMenuArea');
   const { data: { session } } = await supabase.auth.getSession();
@@ -89,7 +37,8 @@ async function exibirUsuarioLogado() {
     return;
   }
   const userId = session.user.id;
-  const { data: profile } = await supabase.from('profiles')
+  const { data: profile } = await supabase
+    .from('profiles')
     .select('username')
     .eq('id', userId)
     .single();
@@ -97,144 +46,300 @@ async function exibirUsuarioLogado() {
   area.textContent = nome;
   area.style.cursor = 'pointer';
   area.onclick = () => {
-    if (confirm('Deseja fazer logout?')) supabase.auth.signOut().then(() => location.href = 'Criacao.html');
+    if (confirm('Deseja fazer logout?')) {
+      supabase.auth.signOut().then(() => location.href = 'Criacao.html');
+    }
   };
 }
 
-// [2] Carrega categorias com feedback de erro
+// [2] Carrega categorias (id → nome)
 async function fetchCategories() {
-  const { data, error } = await supabase.from('categorias').select('id, nome');
+  const { data, error } = await supabase
+    .from('categorias')
+    .select('id, nome');
   if (error) {
-    document.querySelector('.filter-bar').insertAdjacentHTML('afterend',
-      '<p class="error">Não foi possível carregar as categorias.</p>');
+    console.error('Erro ao carregar categorias:', error);
     return;
   }
   categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
 }
 
-// [3] Carrega histórias, cartões, relações e curtidas
+// [3] Busca histórias + cartões + categorias
 async function fetchStoriesFromSupabase() {
-  const { data: historias, error: errH } = await supabase.from('historias')
-    .select('id, titulo, descricao, data_criacao')
+  // Carrega todas as histórias
+  const { data: historias, error: errH } = await supabase
+    .from('historias')
+    .select('id, titulo, descricao, user_id, data_criacao')
     .order('data_criacao', { ascending: false });
-  if (errH) { container.innerHTML = '<p>Erro ao carregar histórias.</p>'; return; }
+  if (errH) {
+    console.error('Erro ao carregar histórias:', errH);
+    container.innerHTML = '<p>Erro ao carregar histórias.</p>';
+    return;
+  }
 
-  const { data: cartoes } = await supabase.from('cartoes')
+  // Carrega todos os cartões
+  const { data: cartoes, error: errC } = await supabase
+    .from('cartoes')
     .select('historia_id, titulo_cartao, sinopse_cartao, autor_cartao, data_criacao');
+  if (errC) {
+    console.error('Erro ao carregar cartões:', errC);
+    return;
+  }
   const cartaoMap = Object.fromEntries(cartoes.map(c => [c.historia_id, c]));
 
-  const { data: hcData } = await supabase.from('historia_categorias')
+  // Carrega todas as relações história–categoria
+  const { data: hcData, error: errHC } = await supabase
+    .from('historia_categorias')
     .select('historia_id, categoria_id');
+  if (errHC) {
+    console.error('Erro ao carregar categorias de história:', errHC);
+    return;
+  }
   const hcMap = {};
   hcData.forEach(({ historia_id, categoria_id }) => {
-    hcMap[historia_id] = hcMap[historia_id] || [];
+    if (!hcMap[historia_id]) hcMap[historia_id] = [];
     hcMap[historia_id].push(categoryMap[categoria_id]);
   });
 
-  const { data: likesAgg } = await supabase.from('likes')
-    .select('historia_id, count(*)')
-    .group('historia_id');
-  const likesMap = Object.fromEntries(likesAgg.map(l => [l.historia_id, l.count]));
-
-  allStories = historias.map(h => ({
-    id: h.id,
-    cartao: {
-      tituloCartao: cartaoMap[h.id]?.titulo_cartao || h.titulo || 'Sem título',
-      sinopseCartao: cartaoMap[h.id]?.sinopse_cartao || '',
-      historiaCompleta: h.descricao || '',
-      dataCartao: (cartaoMap[h.id]?.data_criacao || h.data_criacao).split('T')[0],
-      autorCartao: cartaoMap[h.id]?.autor_cartao || 'Anónimo',
-      categorias: hcMap[h.id] || [],
-      likes: likesMap[h.id] || 0
-    }
-  }));
+  // Monta allStories usando apenas dados de histórias e cartões
+  allStories = historias.map(h => {
+    const c = cartaoMap[h.id] || {};
+    return {
+      id: h.id,
+      cartao: {
+        tituloCartao:     c.titulo_cartao   || h.titulo    || 'Sem título',
+        sinopseCartao:    c.sinopse_cartao  || '',
+        historiaCompleta: h.descricao       || '',
+        dataCartao:       (c.data_criacao || h.data_criacao).split('T')[0],
+        autorCartao:      c.autor_cartao    || 'Anónimo',
+        categorias:       hcMap[h.id]       || [],
+        likes:            0
+      }
+    };
+  });
 }
 
-// Cria card de história
+// [4] Formatação de texto
+function formatarPor4Linhas(text) {
+  const lines = text.split('\n');
+  const paras = [];
+  for (let i = 0; i < lines.length; i += 4) {
+    paras.push(lines.slice(i, i + 4).join('<br>'));
+  }
+  return paras.map(p => `<p style="text-align: justify;">${p}</p>`).join('');
+}
+
+function formatarTextoParaLeitura(text) {
+  const lines = text.split('\n');
+  let idx = 0, buf = [], paras = [];
+  for (let i = 0; i < lines.length; i++) {
+    const spans = lines[i]
+      .split(' ')
+      .map(w => `<span data-index="${idx++}" onclick="markReadingPosition(this)">${w}</span>`)
+      .join(' ');
+    buf.push(spans);
+    if ((i + 1) % 4 === 0) {
+      paras.push(`<p style="text-align: justify;">${buf.join('<br>')}</p>`);
+      buf = [];
+    }
+  }
+  if (buf.length) paras.push(`<p style="text-align: justify;">${buf.join('<br>')}</p>`);
+  return paras.join('');
+}
+
+function markReadingPosition(el) {
+  const idx = el.getAttribute('data-index');
+  localStorage.setItem(`readingPosition_${currentStoryId}`, idx);
+}
+
+function destacarPalavra() {
+  const saved = localStorage.getItem(`readingPosition_${currentStoryId}`);
+  if (saved !== null) {
+    const span = modalFullText.querySelector(`[data-index="${saved}"]`);
+    if (span) {
+      span.style.background = 'yellow';
+      span.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  }
+}
+
+// [5] Criação de cards e placeholders
 function createStoryCard(story) {
-  const div = document.createElement('div'); div.className = 'sheet';
+  const div = document.createElement('div');
+  div.className = 'sheet';
 
-  const h3 = document.createElement('h3'); h3.textContent = story.cartao.tituloCartao; div.appendChild(h3);
-  const sin = document.createElement('div'); sin.className = 'sheet-sinopse'; sin.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao); div.appendChild(sin);
+  // Título
+  const h3 = document.createElement('h3');
+  h3.textContent = story.cartao.tituloCartao;
+  div.appendChild(h3);
 
-  const mais = document.createElement('span'); mais.className = 'ver-mais'; mais.textContent = 'mais...';
+  // Sinopse
+  const sin = document.createElement('div');
+  sin.className = 'sheet-sinopse';
+  sin.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao);
+  div.appendChild(sin);
+
+  // “mais...”
+  const mais = document.createElement('span');
+  mais.className = 'ver-mais';
+  mais.textContent = 'mais...';
   mais.addEventListener('click', () => {
-    isModalOpen = true; currentStoryId = story.id;
+    isModalOpen = true;
+    currentStoryId = story.id;
     modalTitle.textContent = story.cartao.tituloCartao;
     modalFullText.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao);
     modalInfo.innerHTML = `
       <p><strong>Data:</strong> ${story.cartao.dataCartao}</p>
       <p><strong>Autor:</strong> ${story.cartao.autorCartao}</p>
       <p><strong>Categorias:</strong> ${story.cartao.categorias.join(', ')}</p>`;
-
-    const btnLer = document.createElement('button'); btnLer.textContent = 'Ler';
+    const btnLer = document.createElement('button');
+    btnLer.textContent = 'Ler';
     btnLer.addEventListener('click', () => {
       modalFullText.innerHTML = formatarTextoParaLeitura(story.cartao.historiaCompleta);
-      modalFullText.querySelectorAll('p[data-index]').forEach(p => p.addEventListener('click', () => markReadingPositionParagraph(p.dataset.index)));
-      setTimeout(destacarParagrafo, 100);
-    }); modalFullText.appendChild(btnLer);
-
-    continuarBtn.style.display = localStorage.getItem(`readingPosition_${story.id}`) ? 'inline-block' : 'none';
+      setTimeout(destacarPalavra, 100);
+    });
+    modalFullText.appendChild(btnLer);
+    const pos = localStorage.getItem(`readingPosition_${story.id}`);
+    continuarBtn.style.display = pos !== null ? 'inline-block' : 'none';
     modalOverlay.style.display = 'flex';
-  }); div.appendChild(mais);
+  });
+  div.appendChild(mais);
 
-  const likeCont = document.createElement('div'); likeCont.style.marginTop = '10px';
-  const likeBtn = document.createElement('button'); const likeCt = document.createElement('span');
+  // Likes
+  const likeCont = document.createElement('div');
+  likeCont.style.marginTop = '10px';
+  const likeBtn = document.createElement('button');
+  const likeCt  = document.createElement('span');
   let userLiked = likedStories.includes(story.id);
-  function updateUI() { likeBtn.textContent = userLiked ? '❤️' : '🤍'; likeCt.textContent = ` ${story.cartao.likes} curtida(s)`; }
+  function updateUI() {
+    likeBtn.textContent = userLiked ? '❤️' : '🤍';
+    likeCt.textContent = ` ${story.cartao.likes} curtida(s)`;
+  }
   updateUI();
-  likeBtn.addEventListener('click', async () => {
-    const { data: { session } } = await supabase.auth.getSession(); if (!session) return;
-    const userId = session.user.id;
+  likeBtn.addEventListener('click', () => {
     if (userLiked) {
-      await supabase.from('likes').delete().match({ historia_id: story.id, user_id: userId });
-      story.cartao.likes--; likedStories = likedStories.filter(i => i !== story.id);
+      story.cartao.likes = Math.max(story.cartao.likes - 1, 0);
+      likedStories = likedStories.filter(i => i !== story.id);
     } else {
-      await supabase.from('likes').insert({ historia_id: story.id, user_id: userId });
-      story.cartao.likes++; likedStories.push(story.id);
+      story.cartao.likes++;
+      likedStories.push(story.id);
     }
-    localStorage.setItem('likedStories', JSON.stringify(likedStories)); userLiked = !userLiked; updateUI();
-  }); likeCont.append(likeBtn, likeCt); div.appendChild(likeCont);
+    localStorage.setItem('likedStories', JSON.stringify(likedStories));
+    updateUI();
+  });
+  likeCont.append(likeBtn, likeCt);
+  div.appendChild(likeCont);
 
-  const catCont = document.createElement('div'); catCont.className = 'sheet-categories';
-  (story.cartao.categorias.length ? story.cartao.categorias : ['Sem Categoria']).forEach(c => { const badge = document.createElement('span'); badge.className = 'badge'; badge.textContent = c; catCont.appendChild(badge); }); div.appendChild(catCont);
+  // Categorias
+  const catCont = document.createElement('div');
+  catCont.className = 'sheet-categories';
+  const cats = story.cartao.categorias.length ? story.cartao.categorias : ['Sem Categoria'];
+  cats.forEach(c => {
+    const badge = document.createElement('span');
+    badge.className = 'badge';
+    badge.textContent = c;
+    catCont.appendChild(badge);
+  });
+  div.appendChild(catCont);
 
   return div;
 }
 
-// Filtrar e ordenar
+function createPlaceholderCard() {
+  const div = document.createElement('div');
+  div.className = 'sheet sheet-placeholder';
+  const h3 = document.createElement('h3');
+  h3.textContent = 'Placeholder';
+  div.appendChild(h3);
+  const p = document.createElement('p');
+  p.textContent = '(sem história)';
+  div.appendChild(p);
+  return div;
+}
+
+// [6] Filtrar / ordenar / pesquisar
 function matchesSearch(story, txt) {
   if (!txt) return true;
   txt = txt.toLowerCase();
-  return story.cartao.tituloCartao.toLowerCase().includes(txt) || story.cartao.autorCartao.toLowerCase().includes(txt);
+  return story.cartao.tituloCartao.toLowerCase().includes(txt)
+      || story.cartao.autorCartao.toLowerCase().includes(txt);
 }
+
 function getFilteredStories() {
   let arr = allStories.filter(st => matchesSearch(st, searchBar.value));
-  if (categoryFilter.value) arr = arr.filter(st => st.cartao.categorias.includes(categoryFilter.value));
-  if (sortFilter.value === 'date') arr.sort((a, b) => b.cartao.dataCartao.localeCompare(a.cartao.dataCartao));
-  else if (sortFilter.value === 'popularity') arr.sort((a, b) => b.cartao.likes - a.cartao.likes);
+  if (categoryFilter.value) {
+    arr = arr.filter(st => st.cartao.categorias.includes(categoryFilter.value));
+  }
+  if (sortFilter.value === 'date') {
+    arr.sort((a, b) => b.cartao.dataCartao.localeCompare(a.cartao.dataCartao));
+  } else if (sortFilter.value === 'popularity') {
+    arr.sort((a, b) => b.cartao.likes - a.cartao.likes);
+  }
   return arr;
 }
 
-// Paginação
+// [7] Paginação (placeholders garantidos)
 function showBatch(count) {
   const filtered = getFilteredStories();
   const slice = filtered.slice(currentOffset, currentOffset + count);
-  slice.forEach(s => container.appendChild(createStoryCard(s)));
-  for (let i = slice.length; i < count; i++) container.appendChild(createPlaceholderCard());
-  currentOffset += slice.length;
+
+  const frag = document.createDocumentFragment();
+  slice.forEach(s => frag.appendChild(createStoryCard(s)));
+  for (let i = slice.length; i < count; i++) {
+    frag.appendChild(createPlaceholderCard());
+  }
+
+  container.appendChild(frag);
+  currentOffset += count;
   loadMoreBtn.disabled = false;
-  if (currentOffset >= filtered.length) loadMoreBtn.style.display = 'none';
 }
-function initialLoad() { container.innerHTML = ''; currentOffset = 0; loadMoreBtn.style.display = getFilteredStories().length > initialCount ? 'inline-block' : 'none'; showBatch(initialCount); }
-function loadMore() { loadMoreBtn.disabled = true; showBatch(increment); }
 
-// Modal & aviso
-modalClose.addEventListener('click', () => { modalOverlay.style.display = 'none'; isModalOpen = false; });
-modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay && isModalOpen) warningOverlay.style.display = 'flex'; });
-warningYes.addEventListener('click', () => { modalOverlay.style.display = 'none'; warningOverlay.style.display = 'none'; isModalOpen = false; });
-warningNo.addEventListener('click', () => { warningOverlay.style.display = 'none'; });
-continuarBtn.addEventListener('click', () => { const st = allStories.find(s => s.id === currentStoryId); if (st) { modalFullText.innerHTML = formatarTextoParaLeitura(st.cartao.historiaCompleta); modalFullText.querySelectorAll('p[data-index]').forEach(p => p.addEventListener('click', () => markReadingPositionParagraph(p.dataset.index))); setTimeout(destacarParagrafo, 100); } });
+function initialLoad() {
+  container.innerHTML = '';
+  currentOffset = 0;
+  showBatch(initialCount);
+}
 
-// Inicialização
-document.addEventListener('DOMContentLoaded', async () => { await exibirUsuarioLogado(); await fetchCategories(); await fetchStoriesFromSupabase(); initialLoad(); searchBar.addEventListener('input', initialLoad); categoryFilter.addEventListener('change', initialLoad); sortFilter.addEventListener('change', initialLoad); loadMoreBtn.addEventListener('click', loadMore); });
+function loadMore() {
+  loadMoreBtn.disabled = true;
+  showBatch(increment);
+}
+
+// [8] Modal & aviso
+modalClose.addEventListener('click', () => {
+  modalOverlay.style.display = 'none';
+  isModalOpen = false;
+});
+modalOverlay.addEventListener('click', e => {
+  if (e.target === modalOverlay && isModalOpen) {
+    warningOverlay.style.display = 'flex';
+  }
+});
+warningYes.addEventListener('click', () => {
+  modalOverlay.style.display = 'none';
+  warningOverlay.style.display = 'none';
+  isModalOpen = false;
+});
+warningNo.addEventListener('click', () => {
+  warningOverlay.style.display = 'none';
+});
+continuarBtn.addEventListener('click', () => {
+  const st = allStories.find(s => s.id === currentStoryId);
+  if (st) {
+    modalFullText.innerHTML = formatarTextoParaLeitura(st.cartao.historiaCompleta);
+    setTimeout(destacarPalavra, 100);
+  }
+});
+
+// [9] Inicialização
+document.addEventListener('DOMContentLoaded', async () => {
+  await exibirUsuarioLogado();
+  await fetchCategories();
+  await fetchStoriesFromSupabase();
+  initialLoad();
+
+  searchBar.addEventListener('input', initialLoad);
+  categoryFilter.addEventListener('change', initialLoad);
+  sortFilter.addEventListener('change', initialLoad);
+  loadMoreBtn.addEventListener('click', loadMore);
+});
