@@ -156,7 +156,7 @@ function createStoryCard(story) {
   const h3 = document.createElement('h3'); h3.textContent = story.cartao.tituloCartao; div.appendChild(h3);
   const sin = document.createElement('div'); sin.className = 'sheet-sinopse'; sin.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao); div.appendChild(sin);
 
-  // Botão “mais...”
+  // Botão "mais..."
   const mais = document.createElement('span'); mais.className = 'ver-mais'; mais.textContent = 'mais...';
   mais.addEventListener('click', () => {
     isModalOpen = true; currentStoryId = story.id;
@@ -167,7 +167,7 @@ function createStoryCard(story) {
       <p><strong>Autor:</strong> ${story.cartao.autorCartao}</p>
       <p><strong>Categorias:</strong> ${story.cartao.categorias.join(', ')}</p>`;
 
-    // Botão Ler completa
+    // Botão "Ler"
     const btnLer = document.createElement('button'); btnLer.textContent = 'Ler';
     btnLer.addEventListener('click', () => {
       modalFullText.innerHTML = formatarTextoParaLeitura(story.cartao.historiaCompleta);
@@ -175,14 +175,12 @@ function createStoryCard(story) {
         p.addEventListener('click', () => markReadingPositionParagraph(p.dataset.index))
       );
       setTimeout(destacarParagrafo, 100);
-    });
-    modalFullText.appendChild(btnLer);
+    }); modalFullText.appendChild(btnLer);
 
     // Botão continuar
     continuarBtn.style.display = localStorage.getItem(`readingPosition_${story.id}`) ? 'inline-block' : 'none';
     modalOverlay.style.display = 'flex';
-  });
-  div.appendChild(mais);
+  }); div.appendChild(mais);
 
   // Likes
   const likeCont = document.createElement('div'); likeCont.style.marginTop = '10px';
@@ -205,16 +203,13 @@ function createStoryCard(story) {
     localStorage.setItem('likedStories', JSON.stringify(likedStories));
     userLiked = !userLiked;
     updateUI();
-  });
-  likeCont.append(likeBtn, likeCt);
-  div.appendChild(likeCont);
+  }); likeCont.append(likeBtn, likeCt); div.appendChild(likeCont);
 
   // Categorias
   const catCont = document.createElement('div'); catCont.className = 'sheet-categories';
   (story.cartao.categorias.length ? story.cartao.categorias : ['Sem Categoria']).forEach(c => {
     const badge = document.createElement('span'); badge.className = 'badge'; badge.textContent = c; catCont.appendChild(badge);
-  });
-  div.appendChild(catCont);
+  }); div.appendChild(catCont);
 
   return div;
 }
@@ -229,8 +224,8 @@ function matchesSearch(story, txt) {
 function getFilteredStories() {
   let arr = allStories.filter(st => matchesSearch(st, searchBar.value));
   if (categoryFilter.value) arr = arr.filter(st => st.cartao.categorias.includes(categoryFilter.value));
-  if (sortFilter.value === 'date') arr.sort((a,b) => b.cartao.dataCartao.localeCompare(a.cartao.dataCartao));
-  else if (sortFilter.value === 'popularity') arr.sort((a,b) => b.cartao.likes - a.cartao.likes);
+  if (sortFilter.value === 'date') arr.sort((a, b) => b.cartao.dataCartao.localeCompare(a.cartao.dataCartao));
+  else if (sortFilter.value === 'popularity') arr.sort((a, b) => b.cartao.likes - a.cartao.likes);
   return arr;
 }
 
