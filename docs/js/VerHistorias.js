@@ -209,8 +209,9 @@ function createStoryCard(story) {
   const likeCt  = document.createElement('span');
   let userLiked = likedStories.includes(story.id);
   function updateUI() {
-    // Emoji invertido conforme solicitado:
-    likeBtn.textContent = userLiked ? '🤍' : '❤️';
+    // Outline se não curtiu (far), preenchido em vermelho se curtiu (fas)
+    likeBtn.innerHTML = `<i class="${userLiked ? 'fas' : 'far'} fa-heart"></i>`;
+    likeBtn.style.color = userLiked ? 'red' : 'inherit';
     likeCt.textContent = ` ${story.cartao.likes} curtida(s)`;
   }
   updateUI();
@@ -342,3 +343,4 @@ document.addEventListener('DOMContentLoaded', async () => {
   sortFilter.addEventListener('change', initialLoad);
   loadMoreBtn.addEventListener('click', loadMore);
 });
+
