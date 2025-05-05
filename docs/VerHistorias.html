@@ -1,316 +1,121 @@
-// js/VerHistorias.js
-import { supabase } from './supabase.js';
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StoryFlow – Ler Histórias</title>
+  <meta name="description" content="Leia as histórias da comunidade em StoryFlow, filtre por categoria, pesquise por título ou autor e navegue entre cartões.">
 
-let allStories       = [];
-let currentOffset    = 0;
-const initialCount   = 20;
-const increment      = 5;
+  <!-- Font Awesome -->
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
-let isUserLoggedIn   = false;
-let currentStoryId   = null;
-let categoryMap      = {};  // id → nome
+  <!-- Seu CSS -->
+  <link rel="stylesheet" href="css/VerHistorias.css">
+</head>
+<body>
 
-const container      = document.getElementById('storiesContainer');
-const categoryFilter = document.getElementById('category-filter');
-const sortFilter     = document.getElementById('sort-filter');
-const searchBar      = document.getElementById('searchBar');
-const loadMoreBtn    = document.getElementById('loadMoreBtn');
+  <!-- NAVBAR -->
+ <nav class="navbar">
+  <a href="index.html"><i class="fas fa-home"></i> Início</a>
 
-const modalOverlay   = document.getElementById('modalOverlay');
-const modalClose     = document.getElementById('modalClose');
-const modalTitle     = document.getElementById('modalTitle');
-const modalFullText  = document.getElementById('modalFullText');
-const modalInfo      = document.getElementById('modalInfo');
-const warningOverlay = document.getElementById('warningOverlay');
-const warningYes     = document.getElementById('warningYes');
-const warningNo      = document.getElementById('warningNo');
-const continuarBtn   = document.getElementById('continuarBtn');
+  <div class="dropdown">
+    <a href="#"><i class="fas fa-pencil-alt"></i> Criar História</a>
+    <div class="dropdown-content">
+      <a href="diario.html">Escrever Diário</a>
+      <a href="historia.html">Escrever História</a>
+    </div>
+  </div>
 
-// [1] Exibe usuário logado / login
-async function exibirUsuarioLogado() {
-  const area = document.getElementById('userMenuArea');
-  const { data: { session }, error } = await supabase.auth.getSession();
-  if (error || !session) {
-    isUserLoggedIn = false;
-    area.innerHTML = `<a href="Criacao.html"><i class="fas fa-user"></i> Login</a>`;
-    return;
-  }
-  isUserLoggedIn = true;
-  const { data: profile, error: errP } = await supabase
-    .from('profiles').select('username').eq('id', session.user.id).single();
-  const nome = profile?.username || session.user.email;
-  area.textContent = nome;
-  area.style.cursor = 'pointer';
-  area.onclick = () => {
-    if (confirm('Deseja fazer logout?')) {
-      supabase.auth.signOut().then(() => location.reload());
-    }
-  };
-}
+  <div class="dropdown">
+    <a href="#"><i class="fas fa-book"></i> Histórias</a>
+    <div class="dropdown-content">
+      <a href="historiasqueescrevi.html">Minhas Histórias</a>
+      <a href="VerHistorias.html">Ler Histórias</a>
+    </div>
+  </div>
 
-// [2] Carrega categorias (id → nome)
-async function fetchCategories() {
-  const { data, error } = await supabase
-    .from('categorias')
-    .select('id, nome');
-  if (error) {
-    console.error('Erro ao carregar categorias:', error);
-    return;
-  }
-  categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
-}
+  <!-- Área de login / usuário -->
+  <div id="userMenuArea" class="user-area"></div>
 
-// [3] Busca histórias + cartões + categorias manualmente
-async function fetchStoriesFromSupabase() {
-  // 3.1) Puxa todas as histórias
-  const { data: historias, error: errH } = await supabase
-    .from('historias')
-    .select('id, titulo, descricao, data_criacao, likes')
-    .order('data_criacao', { ascending: false });
-  if (errH) {
-    console.error('Erro ao carregar histórias:', errH);
-    container.innerHTML = '<p>Erro ao carregar histórias.</p>';
-    return;
-  }
+  <!-- Formulário de busca -->
+  <form id="searchForm" class="search-box">
+    <input
+      type="text"
+      id="searchBar"
+      placeholder="Pesquisar por título ou autor…"
+      autocomplete="off">
+    <button type="submit" id="searchBtn">
+      <i class="fas fa-search"></i>
+    </button>
+  </form>
+</nav>
 
-  // 3.2) Puxa todos os cartões
-  const { data: cartoes, error: errC } = await supabase
-    .from('cartoes')
-    .select('historia_id, titulo_cartao, sinopse_cartao, autor_cartao, data_criacao');
-  if (errC) {
-    console.error('Erro ao carregar cartões:', errC);
-    return;
-  }
-  const cartaoMap = Object.fromEntries(cartoes.map(c => [c.historia_id, c]));
+  <!-- FILTROS -->
+  <div class="filter-bar">
+    <label for="category-filter">Categoria:</label>
+    <select id="category-filter" aria-label="Filtrar por categoria">
+      <option value="">Todas as categorias</option>
+      <option value="Fantasia">Fantasia</option>
+      <option value="Terror">Terror</option>
+      <option value="Comédia">Comédia</option>
+      <option value="Ficção Científica">Ficção Científica</option>
+      <option value="Drama">Drama</option>
+    </select>
 
-  // 3.3) Puxa todas as ligações história–categoria
-  const { data: hcData, error: errHC } = await supabase
-    .from('historia_categorias')
-    .select('historia_id, categoria_id');
-  if (errHC) {
-    console.error('Erro ao carregar categorias de história:', errHC);
-    return;
-  }
-  const hcMap = {};
-  hcData.forEach(({ historia_id, categoria_id }) => {
-    if (!hcMap[historia_id]) hcMap[historia_id] = [];
-    hcMap[historia_id].push(categoryMap[categoria_id]);
-  });
+    <label for="sort-filter">Ordenar por:</label>
+    <select id="sort-filter" aria-label="Ordenar histórias">
+      <option value="date">Data</option>
+      <option value="popularity">Popularidade</option>
+    </select>
+  </div>
 
-  // Monta allStories
-  allStories = historias.map(h => {
-    const card = cartaoMap[h.id] || {};
-    const cats = hcMap[h.id] || [];
-    return {
-      id: h.id,
-      cartao: {
-        tituloCartao:     card.titulo_cartao   || h.titulo    || 'Sem título',
-        sinopseCartao:    card.sinopse_cartao  || '',
-        historiaCompleta: h.descricao         || '',
-        dataCartao:       (card.data_criacao || h.data_criacao).split('T')[0],
-        autorCartao:      card.autor_cartao    || 'Anónimo',
-        categorias:       cats,
-        likes:            h.likes              || 0
-      }
-    };
-  });
-}
+  <!-- SEÇÃO DE HISTÓRIAS -->
+  <main>
+    <section class="stories-section">
+      <h2>Histórias da Comunidade</h2>
+      <div id="storiesContainer" class="stories-container" aria-live="polite"></div>
+      <div class="pagination">
+        <button id="loadMoreBtn" aria-label="Carregar mais histórias">Carregar Mais</button>
+      </div>
+    </section>
+  </main>
 
-// [4] Formatação de texto
-function formatarPor4Linhas(text) {
-  const lines = text.split('\n'), paras = [];
-  for (let i = 0; i < lines.length; i += 4) {
-    paras.push(lines.slice(i, i + 4).join('<br>'));
-  }
-  return paras.map(p => `<p style="text-align: justify;">${p}</p>`).join('');
-}
-function formatarTextoParaLeitura(text) {
-  const lines = text.split('\n'), paras = [], spans = [];
-  let idx = 0;
-  lines.forEach((ln, i) => {
-    ln.split(' ').forEach(w => {
-      spans.push(`<span data-index="${idx++}" onclick="markReadingPosition(this)">${w}</span>`);
+  <!-- MODAL DE LEITURA -->
+  <div id="modalOverlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle" style="display:none;">
+    <div class="modal-content">
+      <button id="modalClose" class="modal-close" aria-label="Fechar modal">&times;</button>
+      <h2 id="modalTitle">Título da História</h2>
+      <div id="modalFullText" class="modal-text"></div>
+      <button id="continuarBtn" class="continuar-btn" style="display:none;">Continuar</button>
+      <div id="modalInfo" class="modal-info"></div>
+    </div>
+  </div>
+
+  <!-- AVISO AO CLICAR FORA -->
+  <div id="warningOverlay" class="warning-overlay" style="display:none;" role="alertdialog" aria-modal="true" aria-labelledby="warningText">
+    <div class="warning-box">
+      <p id="warningText">Deseja fechar a leitura?</p>
+      <button id="warningYes">Sim</button>
+      <button id="warningNo">Não</button>
+    </div>
+  </div>
+
+  <footer>
+    <small>© 2025 StoryFlow – Turma Tis7 | <a href="Sobre.html">Termos de uso</a></small>
+  </footer>
+
+  <!-- Scripts -->
+  <script type="module" src="js/supabase.js"></script>
+  <!-- <script type="module" src="js/userDisplay.js"></script> -->
+  <script type="module" src="js/VerHistorias.js"></script>
+  <script>
+    // Intercepta o submit da busca para evitar reload de página
+    document.getElementById('searchForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const event = new Event('input');
+      document.getElementById('searchBar').dispatchEvent(event);
     });
-    if ((i+1)%4===0 || i===lines.length-1) {
-      paras.push(`<p style="text-align: justify;">${spans.join(' ')}</p>`);
-      spans.length = 0;
-    }
-  });
-  return paras.join('');
-}
-function markReadingPosition(el) {
-  localStorage.setItem(`readingPosition_${currentStoryId}`, el.dataset.index);
-}
-function destacarPalavra() {
-  const saved = localStorage.getItem(`readingPosition_${currentStoryId}`);
-  if (saved) {
-    const span = modalFullText.querySelector(`[data-index="${saved}"]`);
-    if (span) {
-      span.style.background = 'yellow';
-      span.scrollIntoView({ behavior:'smooth', block:'center' });
-    }
-  }
-}
-
-// [5] Cria o cartão de cada história
-function createStoryCard(story) {
-  const div = document.createElement('div');
-  div.className = 'sheet';
-
-  // Título
-  const h3 = document.createElement('h3');
-  h3.textContent = story.cartao.tituloCartao;
-  div.appendChild(h3);
-
-  // Sinopse
-  const sin = document.createElement('div');
-  sin.className = 'sheet-sinopse';
-  sin.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao);
-  div.appendChild(sin);
-
-  // “mais...”
-  const mais = document.createElement('span');
-  mais.className = 'ver-mais';
-  mais.textContent = 'mais...';
-  mais.onclick = () => {
-    currentStoryId = story.id;
-    modalTitle.textContent = story.cartao.tituloCartao;
-    modalFullText.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao);
-    modalInfo.innerHTML = `
-      <p><strong>Data:</strong> ${story.cartao.dataCartao}</p>
-      <p><strong>Autor:</strong> ${story.cartao.autorCartao}</p>
-      <p><strong>Categorias:</strong> ${story.cartao.categorias.join(', ')}</p>`;
-    const btnLer = document.createElement('button');
-    btnLer.textContent = 'Ler';
-    btnLer.onclick = () => {
-      modalFullText.innerHTML = formatarTextoParaLeitura(story.cartao.historiaCompleta);
-      setTimeout(destacarPalavra, 100);
-    };
-    modalFullText.appendChild(btnLer);
-    const pos = localStorage.getItem(`readingPosition_${story.id}`);
-    continuarBtn.style.display = pos ? 'inline-block' : 'none';
-    modalOverlay.style.display = 'flex';
-  };
-  div.appendChild(mais);
-
-  // Likes (só para quem estiver logado)
-  if (isUserLoggedIn) {
-    const likeCont = document.createElement('div');
-    likeCont.style.marginTop = '8px';
-    const likeBtn = document.createElement('button');
-    likeBtn.className = 'like-btn';
-    const likeCt  = document.createElement('span');
-    let userLiked = false;
-
-    function updateUI() {
-      likeBtn.textContent = userLiked ? '❤️' : '🤍';
-      likeCt.textContent = ` ${story.cartao.likes}`;
-    }
-    updateUI();
-
-    likeBtn.onclick = async () => {
-      story.cartao.likes += userLiked ? -1 : 1;
-      userLiked = !userLiked;
-      const { error } = await supabase
-        .from('historias')
-        .update({ likes: story.cartao.likes })
-        .eq('id', story.id);
-      if (error) console.error('Erro ao atualizar likes:', error);
-      updateUI();
-    };
-
-    likeCont.append(likeBtn, likeCt);
-    div.appendChild(likeCont);
-  }
-
-  // Categorias
-  const catCont = document.createElement('div');
-  catCont.className = 'sheet-categories';
-  (story.cartao.categorias.length ? story.cartao.categorias : ['Sem Categoria'])
-    .forEach(c => {
-      const badge = document.createElement('span');
-      badge.className = 'badge';
-      badge.textContent = c;
-      catCont.appendChild(badge);
-    });
-  div.appendChild(catCont);
-
-  return div;
-}
-
-// Placeholder
-function createPlaceholderCard() {
-  const div = document.createElement('div');
-  div.className = 'sheet sheet-placeholder';
-  div.innerHTML = '<h3>Placeholder</h3><p>(sem história)</p>';
-  return div;
-}
-
-// [6] Filtrar / ordenar / pesquisar
-function matchesSearch(story, txt) {
-  if (!txt) return true;
-  txt = txt.toLowerCase();
-  return story.cartao.tituloCartao.toLowerCase().includes(txt)
-      || story.cartao.autorCartao.toLowerCase().includes(txt);
-}
-function getFilteredStories() {
-  let arr = allStories.filter(st => matchesSearch(st, searchBar.value));
-  if (categoryFilter.value) {
-    arr = arr.filter(st => st.cartao.categorias.includes(categoryFilter.value));
-  }
-  if (sortFilter.value === 'date') {
-    arr.sort((a, b) => b.cartao.dataCartao.localeCompare(a.cartao.dataCartao));
-  } else if (sortFilter.value === 'popularity') {
-    arr.sort((a, b) => b.cartao.likes - a.cartao.likes);
-  }
-  return arr;
-}
-
-// [7] Paginação
-function showBatch(count) {
-  const filtered = getFilteredStories();
-  const slice = filtered.slice(currentOffset, currentOffset + count);
-  const frag = document.createDocumentFragment();
-  slice.forEach(s => frag.appendChild(createStoryCard(s)));
-  for (let i = slice.length; i < count; i++) {
-    frag.appendChild(createPlaceholderCard());
-  }
-  container.appendChild(frag);
-  currentOffset += count;
-  loadMoreBtn.disabled = false;
-}
-function initialLoad() {
-  container.innerHTML = '';
-  currentOffset = 0;
-  showBatch(initialCount);
-}
-function loadMore() {
-  loadMoreBtn.disabled = true;
-  showBatch(increment);
-}
-
-// [8] Modal & aviso
-modalClose.onclick = () => { modalOverlay.style.display = 'none'; };
-modalOverlay.onclick = e => { if (e.target === modalOverlay) warningOverlay.style.display = 'flex'; };
-warningYes.onclick   = () => { modalOverlay.style.display = 'none'; warningOverlay.style.display = 'none'; };
-warningNo.onclick    = () => { warningOverlay.style.display = 'none'; };
-continuarBtn.onclick = () => {
-  const st = allStories.find(s => s.id === currentStoryId);
-  if (st) {
-    modalFullText.innerHTML = formatarTextoParaLeitura(st.cartao.historiaCompleta);
-    setTimeout(destacarPalavra, 100);
-  }
-};
-
-// [9] Inicialização
-document.addEventListener('DOMContentLoaded', async () => {
-  await exibirUsuarioLogado();
-  await fetchCategories();
-  await fetchStoriesFromSupabase();
-  initialLoad();
-
-  searchBar.oninput       = initialLoad;
-  categoryFilter.onchange = initialLoad;
-  sortFilter.onchange     = initialLoad;
-  loadMoreBtn.onclick     = loadMore;
-});
+  </script>
+</body>
+</html>
