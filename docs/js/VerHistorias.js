@@ -66,6 +66,7 @@ async function fetchCategories() {
 
 // [3] Busca histórias + cartões + categorias
 async function fetchStoriesFromSupabase() {
+  // Carrega todas as histórias
   const { data: historias, error: errH } = await supabase
     .from('historias')
     .select('id, titulo, descricao, user_id, data_criacao')
@@ -76,6 +77,7 @@ async function fetchStoriesFromSupabase() {
     return;
   }
 
+  // Carrega todos os cartões
   const { data: cartoes, error: errC } = await supabase
     .from('cartoes')
     .select('historia_id, titulo_cartao, sinopse_cartao, autor_cartao, data_criacao');
@@ -85,6 +87,7 @@ async function fetchStoriesFromSupabase() {
   }
   const cartaoMap = Object.fromEntries(cartoes.map(c => [c.historia_id, c]));
 
+  // Carrega todas as relações história–categoria
   const { data: hcData, error: errHC } = await supabase
     .from('historia_categorias')
     .select('historia_id, categoria_id');
@@ -98,6 +101,7 @@ async function fetchStoriesFromSupabase() {
     hcMap[historia_id].push(categoryMap[categoria_id]);
   });
 
+  // Monta allStories usando apenas dados de histórias e cartões
   allStories = historias.map(h => {
     const c = cartaoMap[h.id] || {};
     return {
@@ -187,8 +191,7 @@ function createStoryCard(story) {
     modalInfo.innerHTML = `
       <p><strong>Data:</strong> ${story.cartao.dataCartao}</p>
       <p><strong>Autor:</strong> ${story.cartao.autorCartao}</p>
-      <p><strong>Categorias:</strong> ${story.cartao.categorias.join(', ')}</p>
-    `;
+      <p><strong>Categorias:</strong> ${story.cartao.categorias.join(', ')}</p>`;
     const btnLer = document.createElement('button');
     btnLer.textContent = 'Ler';
     btnLer.addEventListener('click', () => {
@@ -202,33 +205,37 @@ function createStoryCard(story) {
   });
   div.appendChild(mais);
 
-  // Likes
-  const likeCont = document.createElement('div');
-  likeCont.style.marginTop = '10px';
-  const likeBtn = document.createElement('button');
-  const likeCt  = document.createElement('span');
-  let userLiked = likedStories.includes(story.id);
-  function updateUI() {
-    // Outline se não curtiu (far), preenchido em vermelho se curtiu (fas)
-    likeBtn.innerHTML = `<i class="${userLiked ? 'fas' : 'far'} fa-heart"></i>`;
-    likeBtn.style.color = userLiked ? 'red' : 'inherit';
-    likeCt.textContent = ` ${story.cartao.likes} curtida(s)`;
+// Likes
+const likeCont = document.createElement('div');
+likeCont.style.marginTop = '10px';
+const likeBtn = document.createElement('button');
+const likeCt  = document.createElement('span');
+let userLiked = likedStories.includes(story.id);
+
+function updateUI() {
+  // ⬛ quando curtido, ⬜ quando não
+  likeBtn.textContent = userLiked ? '⬛' : '⬜';
+  likeCt.textContent = ` ${story.cartao.likes} curtida(s)`;
+}
+
+updateUI();
+
+likeBtn.addEventListener('click', () => {
+  if (userLiked) {
+    story.cartao.likes = Math.max(story.cartao.likes - 1, 0);
+    likedStories = likedStories.filter(i => i !== story.id);
+  } else {
+    story.cartao.likes++;
+    likedStories.push(story.id);
   }
+  userLiked = !userLiked;
+  localStorage.setItem('likedStories', JSON.stringify(likedStories));
   updateUI();
-  likeBtn.addEventListener('click', () => {
-    if (userLiked) {
-      story.cartao.likes = Math.max(story.cartao.likes - 1, 0);
-      likedStories = likedStories.filter(i => i !== story.id);
-    } else {
-      story.cartao.likes++;
-      likedStories.push(story.id);
-    }
-    localStorage.setItem('likedStories', JSON.stringify(likedStories));
-    userLiked = !userLiked;
-    updateUI();
-  });
-  likeCont.append(likeBtn, likeCt);
-  div.appendChild(likeCont);
+});
+
+likeCont.append(likeBtn, likeCt);
+div.appendChild(likeCont);
+
 
   // Categorias
   const catCont = document.createElement('div');
@@ -343,4 +350,3 @@ document.addEventListener('DOMContentLoaded', async () => {
   sortFilter.addEventListener('change', initialLoad);
   loadMoreBtn.addEventListener('click', loadMore);
 });
-
