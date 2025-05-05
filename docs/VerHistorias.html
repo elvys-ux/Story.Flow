@@ -5,51 +5,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>StoryFlow – Ler Histórias</title>
   <meta name="description" content="Leia as histórias da comunidade em StoryFlow, filtre por categoria, pesquise por título ou autor e navegue entre cartões.">
-
   <!-- Font Awesome -->
-  <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <!-- Seu CSS -->
   <link rel="stylesheet" href="css/VerHistorias.css">
 </head>
 <body>
-
   <!-- NAVBAR -->
- <nav class="navbar">
-  <a href="index.html"><i class="fas fa-home"></i> Início</a>
-
-  <div class="dropdown">
-    <a href="#"><i class="fas fa-pencil-alt"></i> Criar História</a>
-    <div class="dropdown-content">
-      <a href="diario.html">Escrever Diário</a>
-      <a href="historia.html">Escrever História</a>
+  <nav class="navbar">
+    <a href="index.html"><i class="fas fa-home"></i> Início</a>
+    <div class="dropdown">
+      <a href="#"><i class="fas fa-pencil-alt"></i> Criar História</a>
+      <div class="dropdown-content">
+        <a href="diario.html">Escrever Diário</a>
+        <a href="historia.html">Escrever História</a>
+      </div>
     </div>
-  </div>
-
-  <div class="dropdown">
-    <a href="#"><i class="fas fa-book"></i> Histórias</a>
-    <div class="dropdown-content">
-      <a href="historiasqueescrevi.html">Minhas Histórias</a>
-      <a href="VerHistorias.html">Ler Histórias</a>
+    <div class="dropdown">
+      <a href="#"><i class="fas fa-book"></i> Histórias</a>
+      <div class="dropdown-content">
+        <a href="historiasqueescrevi.html">Minhas Histórias</a>
+        <a href="VerHistorias.html">Ler Histórias</a>
+      </div>
     </div>
-  </div>
-
-  <!-- Área de login / usuário -->
-  <div id="userMenuArea" class="user-area"></div>
-
-  <!-- Formulário de busca -->
-  <form id="searchForm" class="search-box">
-    <input
-      type="text"
-      id="searchBar"
-      placeholder="Pesquisar por título ou autor…"
-      autocomplete="off">
-    <button type="submit" id="searchBtn">
-      <i class="fas fa-search"></i>
-    </button>
-  </form>
-</nav>
+    <div id="userMenuArea" class="user-area"></div>
+    <form id="searchForm" class="search-box">
+      <input type="text" id="searchBar" placeholder="Pesquisar por título ou autor…" autocomplete="off">
+      <button type="submit" id="searchBtn"><i class="fas fa-search"></i></button>
+    </form>
+  </nav>
 
   <!-- FILTROS -->
   <div class="filter-bar">
@@ -62,7 +46,6 @@
       <option value="Ficção Científica">Ficção Científica</option>
       <option value="Drama">Drama</option>
     </select>
-
     <label for="sort-filter">Ordenar por:</label>
     <select id="sort-filter" aria-label="Ordenar histórias">
       <option value="date">Data</option>
@@ -107,15 +90,6 @@
 
   <!-- Scripts -->
   <script type="module" src="js/supabase.js"></script>
-  <!-- <script type="module" src="js/userDisplay.js"></script> -->
   <script type="module" src="js/VerHistorias.js"></script>
-  <script>
-    // Intercepta o submit da busca para evitar reload de página
-    document.getElementById('searchForm').addEventListener('submit', e => {
-      e.preventDefault();
-      const event = new Event('input');
-      document.getElementById('searchBar').dispatchEvent(event);
-    });
-  </script>
 </body>
 </html>
