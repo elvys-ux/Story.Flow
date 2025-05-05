@@ -7,9 +7,7 @@ const increment    = 5;
 
 const container      = document.getElementById('storiesContainer');
 const categoryFilter = document.getElementById('category-filter');
-const sortFilter     = document.getElementById('sort-filter');
-const searchBar      = document.getElementById('searchBar');
-const loadMoreBtn    = document.getElementById('loadMoreBtn');
+const sortFilter     = document.getElementById('sort-filter')eu oreBtn');
 
 const modalOverlay   = document.getElementById('modalOverlay');
 const modalClose     = document.getElementById('modalClose');
@@ -186,7 +184,6 @@ function createStoryCard(story) {
     btnLer.textContent = 'Ler';
     btnLer.addEventListener('click', () => {
       modalFullText.innerHTML = formatarTextoParaLeitura(story.cartao.historiaCompleta);
-      // adicionar listeners em parágrafos
       modalFullText.querySelectorAll('p[data-index]').forEach(p => {
         p.addEventListener('click', () => markReadingPositionParagraph(p.dataset.index));
       });
@@ -212,7 +209,7 @@ function createStoryCard(story) {
   updateUI();
   likeBtn.addEventListener('click', async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return; // não logado
+    if (!session) return;
     const userId = session.user.id;
     if (userLiked) {
       await supabase.from('likes').delete().match({ historia_id: story.id, user_id: userId });
@@ -320,7 +317,6 @@ continuarBtn.addEventListener('click', () => {
 });
 
 // [8] Inicialização
-js
 document.addEventListener('DOMContentLoaded', async () => {
   await exibirUsuarioLogado();
   await fetchCategories();
