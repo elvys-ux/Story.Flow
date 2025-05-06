@@ -1,43 +1,43 @@
 // js/VerHistorias.js
 import { supabase } from './supabase.js';
 
-let sessionUserId   = null;
-let allStories      = [];
-let likedStories    = [];   // IDs de histórias curtidas pelo utilizador atual
-let currentOffset   = 0;
-const initialCount  = 20;
-const increment     = 5;
+let sessionUserId = null;
+let allStories    = [];
+let likedStories  = [];   // IDs das histórias curtidas pelo utilizador atual
+let currentOffset = 0;
+const initialCount = 20;
+const increment    = 5;
 
 // Elementos do DOM
-const container       = document.getElementById('storiesContainer');
-const categoryFilter  = document.getElementById('category-filter');
-const sortFilter      = document.getElementById('sort-filter');
-const searchBar       = document.getElementById('searchBar');
-const loadMoreBtn     = document.getElementById('loadMoreBtn');
+const container      = document.getElementById('storiesContainer');
+const categoryFilter = document.getElementById('category-filter');
+const sortFilter     = document.getElementById('sort-filter');
+const searchBar      = document.getElementById('searchBar');
+const loadMoreBtn    = document.getElementById('loadMoreBtn');
 
-const modalOverlay    = document.getElementById('modalOverlay');
-const modalClose      = document.getElementById('modalClose');
-const modalTitle      = document.getElementById('modalTitle');
-const modalFullText   = document.getElementById('modalFullText');
-const modalInfo       = document.getElementById('modalInfo');
-const warningOverlay  = document.getElementById('warningOverlay');
-const warningYes      = document.getElementById('warningYes');
-const warningNo       = document.getElementById('warningNo');
-const continuarBtn    = document.getElementById('continuarBtn');
+const modalOverlay   = document.getElementById('modalOverlay');
+const modalClose     = document.getElementById('modalClose');
+const modalTitle     = document.getElementById('modalTitle');
+const modalFullText  = document.getElementById('modalFullText');
+const modalInfo      = document.getElementById('modalInfo');
+const warningOverlay = document.getElementById('warningOverlay');
+const warningYes     = document.getElementById('warningYes');
+const warningNo      = document.getElementById('warningNo');
+const continuarBtn   = document.getElementById('continuarBtn');
 
-let isModalOpen     = false;
-let currentStoryId  = null;
-let categoryMap     = {};   // id → nome
+let isModalOpen    = false;
+let currentStoryId = null;
+let categoryMap    = {};   // id → nome
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // 1) Detectar sessão e user_id
+  // 1) Checa sessão e guarda user_id
   const { data:{ session } } = await supabase.auth.getSession();
   if (session) sessionUserId = session.user.id;
-  
-  // 2) Carregar likes locais para este user
-  initializeLikes();
 
-  // 3) Carregar resto dos dados
+  // 2) Inicializa likedStories a partir do localStorage
+  initializeLikedStories();
+
+  // 3) Carrega dados
   await exibirUsuarioLogado();
   await fetchCategories();
   await fetchStoriesFromSupabase();
@@ -63,15 +63,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 });
 
-// Armazena/recupera likedStories no localStorage por user
-function initializeLikes() {
+// Lê do localStorage a lista de likes do user atual
+function initializeLikedStories() {
   if (!sessionUserId) {
     likedStories = [];
-    return;
+  } else {
+    const key = `likedStories_${sessionUserId}`;
+    likedStories = JSON.parse(localStorage.getItem(key) || '[]');
   }
-  const key = `likedStories_${sessionUserId}`;
-  const stored = localStorage.getItem(key);
-  likedStories = stored ? JSON.parse(stored) : [];
 }
 
 // [1] Exibe usuário logado / login
@@ -82,14 +81,12 @@ async function exibirUsuarioLogado() {
     area.innerHTML = `<a href="Criacao.html"><i class="fas fa-user"></i> Login</a>`;
     return;
   }
-  const userId = session.user.id;
   const { data: profile } = await supabase
     .from('profiles')
     .select('username')
-    .eq('id', userId)
+    .eq('id', session.user.id)
     .single();
-  const nome = profile?.username || session.user.email;
-  area.textContent = nome;
+  area.textContent = profile?.username || session.user.email;
   area.style.cursor = 'pointer';
   area.onclick = () => {
     if (confirm('Deseja fazer logout?')) {
@@ -110,9 +107,9 @@ async function fetchCategories() {
   categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
 }
 
-// [3] Busca histórias + cartões + categorias
+// [3] Carrega histórias + cartões + categorias
 async function fetchStoriesFromSupabase() {
-  // 3.1) Histórias
+  // Histórias
   const { data: historias, error: errH } = await supabase
     .from('historias')
     .select('id, titulo, descricao, data_criacao')
@@ -123,7 +120,7 @@ async function fetchStoriesFromSupabase() {
     return;
   }
 
-  // 3.2) Cartões (inclui likes)
+  // Cartões (com likes)
   const { data: cartoes, error: errC } = await supabase
     .from('cartoes')
     .select('historia_id, titulo_cartao, sinopse_cartao, autor_cartao, data_criacao, likes');
@@ -133,7 +130,7 @@ async function fetchStoriesFromSupabase() {
   }
   const cartaoMap = Object.fromEntries(cartoes.map(c => [c.historia_id, c]));
 
-  // 3.3) Relações história–categoria
+  // História–Categorias
   const { data: hcData, error: errHC } = await supabase
     .from('historia_categorias')
     .select('historia_id, categoria_id');
@@ -147,7 +144,7 @@ async function fetchStoriesFromSupabase() {
     hcMap[historia_id].push(categoryMap[categoria_id]);
   });
 
-  // 3.4) Montagem de allStories
+  // Monta allStories
   allStories = historias.map(h => {
     const c = cartaoMap[h.id] || {};
     return {
@@ -195,7 +192,7 @@ function destacarPalavra() {
   }
 }
 
-// [5] Criação de cards e placeholders
+// [5] Geração de cartões
 function createStoryCard(story) {
   const div = document.createElement('div');
   div.className = 'sheet';
@@ -223,8 +220,8 @@ function createStoryCard(story) {
   likeCont.style.marginTop = '10px';
   const likeBtn = document.createElement('button');
   const likeCt  = document.createElement('span');
-  let userLiked  = likedStories.includes(story.id);
 
+  let userLiked = likedStories.includes(story.id);
   function updateUI() {
     likeBtn.textContent = userLiked ? '❤️' : '🤍';
     likeCt.textContent  = ` ${story.cartao.likes} curtida(s)`;
@@ -266,7 +263,7 @@ function createPlaceholderCard() {
   return div;
 }
 
-// Abre modal detalhado
+// Abre modal de leitura
 function abrirModal(story) {
   isModalOpen    = true;
   currentStoryId = story.id;
@@ -287,23 +284,26 @@ function abrirModal(story) {
   modalOverlay.style.display = 'flex';
 }
 
-// [6] Alterna like e atualiza contador
+// [6] Alterna like e persiste no cartão
 async function toggleLike(story, updateUI) {
   if (!sessionUserId) {
     alert('Faça login para dar like.');
     return;
   }
 
-  const already = likedStories.includes(story.id);
-  story.cartao.likes += already ? -1 : 1;
+  const key = `likedStories_${sessionUserId}`;
+  let userLiked = likedStories.includes(story.id);
 
-  // Atualiza lista local de likes
-  if (already) {
+  // Atualiza contagem local
+  story.cartao.likes += userLiked ? -1 : 1;
+
+  // Atualiza lista local
+  if (userLiked) {
     likedStories = likedStories.filter(id => id !== story.id);
   } else {
     likedStories.push(story.id);
   }
-  localStorage.setItem(`likedStories_${sessionUserId}`, JSON.stringify(likedStories));
+  localStorage.setItem(key, JSON.stringify(likedStories));
 
   // Atualiza no Supabase
   const { error } = await supabase
@@ -324,7 +324,9 @@ function matchesSearch(story, txt) {
 }
 function getFilteredStories() {
   let arr = allStories.filter(st => matchesSearch(st, searchBar.value));
-  if (categoryFilter.value) arr = arr.filter(st => st.cartao.categorias.includes(categoryFilter.value));
+  if (categoryFilter.value) {
+    arr = arr.filter(st => st.cartao.categorias.includes(categoryFilter.value));
+  }
   if (sortFilter.value === 'date') {
     arr.sort((a,b) => b.cartao.dataCartao.localeCompare(a.cartao.dataCartao));
   } else if (sortFilter.value === 'popularity') {
