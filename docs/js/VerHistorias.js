@@ -64,12 +64,12 @@ async function fetchCategories() {
   categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
 }
 
-// [3] Busca histórias + cartões + categorias (com likes em cartoes)
+// [3] Busca histórias + cartões + categorias
 async function fetchStoriesFromSupabase() {
-  // Carrega histórias (sem likes)
+  // Carrega histórias básicas (título e descrição fallback)
   const { data: historias, error: errH } = await supabase
     .from('historias')
-    .select('id, titulo, descricao, user_id, data_criacao')
+    .select('id, titulo, descricao, data_criacao')
     .order('data_criacao', { ascending: false });
   if (errH) {
     console.error('Erro ao carregar histórias:', errH);
@@ -77,17 +77,23 @@ async function fetchStoriesFromSupabase() {
     return;
   }
 
-  // Carrega cartões incluindo o campo likes
+  // Carrega cartões com sinopse, likes e história completa
   const { data: cartoes, error: errC } = await supabase
     .from('cartoes')
-    .select('historia_id, titulo_cartao, sinopse_cartao, autor_cartao, data_criacao, likes');
+    .select(`
+      historia_id,
+      titulo_cartao,
+      sinopse_cartao,
+      autor_cartao,
+      data_criacao,
+      likes,
+      historia_completa
+    `);
   if (errC) {
     console.error('Erro ao carregar cartões:', errC);
     return;
   }
-  const cartaoMap = Object.fromEntries(
-    cartoes.map(c => [c.historia_id, c])
-  );
+  const cartaoMap = Object.fromEntries(cartoes.map(c => [c.historia_id, c]));
 
   // Carrega relações história–categoria
   const { data: hcData, error: errHC } = await supabase
@@ -103,18 +109,23 @@ async function fetchStoriesFromSupabase() {
     hcMap[historia_id].push(categoryMap[categoria_id]);
   });
 
-  // Monta allStories usando c.likes como fonte de verdade
+  // Monta allStories com fallback para descrição
   allStories = historias.map(h => {
     const c = cartaoMap[h.id] || {};
+    // Se não houver sinopse, pega as 4 primeiras linhas de historia_completa
+    const sinopse = c.sinopse_cartao
+      || (c.historia_completa 
+          ? c.historia_completa.split('\n').slice(0,4).join('\n')
+          : '');
     return {
       id: h.id,
       cartao: {
-        tituloCartao:     c.titulo_cartao   || h.titulo    || 'Sem título',
-        sinopseCartao:    c.sinopse_cartao  || '',
-        historiaCompleta: h.descricao       || '',
+        tituloCartao:     c.titulo_cartao      || h.titulo    || 'Sem título',
+        sinopseCartao:    sinopse,
+        historiaCompleta: c.historia_completa  || h.descricao  || '',
         dataCartao:       (c.data_criacao || h.data_criacao).split('T')[0],
-        autorCartao:      c.autor_cartao    || 'Anónimo',
-        categorias:       hcMap[h.id]       || [],
+        autorCartao:      c.autor_cartao       || 'Anónimo',
+        categorias:       hcMap[h.id]          || [],
         likes:            c.likes ?? 0
       }
     };
@@ -122,8 +133,18 @@ async function fetchStoriesFromSupabase() {
 }
 
 // [4] Formatação de texto
-function formatarPor4Linhas(text) { /* ... */ }
-function formatarTextoParaLeitura(text) { /* ... */ }
+function formatarPor4Linhas(text) {
+  return text
+    .split('\n')
+    .slice(0,4)
+    .join('<br>');
+}
+function formatarTextoParaLeitura(text) {
+  return text
+    .split('\n')
+    .map(line => `<p>${line}</p>`)
+    .join('');
+}
 function markReadingPosition(el) { /* ... */ }
 function destacarPalavra() { /* ... */ }
 
@@ -150,19 +171,11 @@ function createStoryCard(story) {
   mais.addEventListener('click', () => {
     isModalOpen = true;
     currentStoryId = story.id;
-    modalTitle.textContent   = story.cartao.tituloCartao;
-    modalFullText.innerHTML  = formatarPor4Linhas(story.cartao.sinopseCartao);
-    modalInfo.innerHTML      = `
+    modalTitle.textContent  = story.cartao.tituloCartao;
+    modalFullText.innerHTML = `<p>${story.cartao.historiaCompleta.replace(/\n/g,'</p><p>')}</p>`;
+    modalInfo.innerHTML     = `
       <p><strong>Data:</strong> ${story.cartao.dataCartao}</p>
-      <p><strong>Autor:</strong> ${story.cartao.autorCartao}</p>
       <p><strong>Categorias:</strong> ${story.cartao.categorias.join(', ')}</p>`;
-    const btnLer = document.createElement('button');
-    btnLer.textContent = 'Ler';
-    btnLer.addEventListener('click', () => {
-      modalFullText.innerHTML = formatarTextoParaLeitura(story.cartao.historiaCompleta);
-      setTimeout(destacarPalavra, 100);
-    });
-    modalFullText.appendChild(btnLer);
     const pos = localStorage.getItem(`readingPosition_${story.id}`);
     continuarBtn.style.display = pos !== null ? 'inline-block' : 'none';
     modalOverlay.style.display = 'flex';
@@ -176,7 +189,6 @@ function createStoryCard(story) {
   const likeCt  = document.createElement('span');
   let userLiked = likedStories.includes(story.id);
 
-  // Remove bordas e outline, e aumenta o tamanho do ícone
   likeBtn.style.background = 'transparent';
   likeBtn.style.border     = 'none';
   likeBtn.style.outline    = 'none';
@@ -187,19 +199,16 @@ function createStoryCard(story) {
 
   function updateUI() {
     likeBtn.textContent = userLiked ? '❤️' : '🤍';
-    likeCt.textContent   = ` ${story.cartao.likes} curtida(s)`;
+    likeCt.textContent  = ` ${story.cartao.likes} curtida(s)`;
   }
   updateUI();
 
   likeBtn.addEventListener('click', async () => {
-    if (userLiked) {
-      story.cartao.likes = Math.max(story.cartao.likes - 1, 0);
-      likedStories = likedStories.filter(i => i !== story.id);
-    } else {
-      story.cartao.likes++;
-      likedStories.push(story.id);
-    }
+    story.cartao.likes += userLiked ? -1 : 1;
     userLiked = !userLiked;
+    likedStories = userLiked
+      ? [...likedStories, story.id]
+      : likedStories.filter(i => i !== story.id);
     localStorage.setItem('likedStories', JSON.stringify(likedStories));
     updateUI();
 
@@ -209,10 +218,7 @@ function createStoryCard(story) {
       .eq('historia_id', story.id)
       .select('likes')
       .single();
-
-    if (error) {
-      console.error('Erro ao salvar like em cartoes:', error);
-    } else {
+    if (!error) {
       story.cartao.likes = data.likes;
       updateUI();
     }
@@ -224,8 +230,7 @@ function createStoryCard(story) {
   // Categorias
   const catCont = document.createElement('div');
   catCont.className = 'sheet-categories';
-  const cats = story.cartao.categorias.length ? story.cartao.categorias : ['Sem Categoria'];
-  cats.forEach(c => {
+  story.cartao.categorias.forEach(c => {
     const badge = document.createElement('span');
     badge.className = 'badge';
     badge.textContent = c;
@@ -239,88 +244,43 @@ function createStoryCard(story) {
 function createPlaceholderCard() {
   const div = document.createElement('div');
   div.className = 'sheet sheet-placeholder';
-  const h3 = document.createElement('h3');
-  h3.textContent = 'Placeholder';
-  div.appendChild(h3);
-  const p = document.createElement('p');
-  p.textContent = '(sem história)';
-  div.appendChild(p);
+  div.innerHTML = '<h3>Placeholder</h3><p>(sem história)</p>';
   return div;
 }
 
 // [6] Filtrar / ordenar / pesquisar
 function matchesSearch(story, txt) {
-  if (!txt) return true;
   txt = txt.toLowerCase();
-  return story.cartao.tituloCartao.toLowerCase().includes(txt)
-      || story.cartao.autorCartao.toLowerCase().includes(txt);
+  return story.cartao.tituloCartao.toLowerCase().includes(txt);
 }
-
 function getFilteredStories() {
   let arr = allStories.filter(st => matchesSearch(st, searchBar.value));
   if (categoryFilter.value) {
     arr = arr.filter(st => st.cartao.categorias.includes(categoryFilter.value));
   }
-  if (sortFilter.value === 'date') {
-    arr.sort((a, b) => b.cartao.dataCartao.localeCompare(a.cartao.dataCartao));
-  } else if (sortFilter.value === 'popularity') {
-    arr.sort((a, b) => b.cartao.likes - a.cartao.likes);
+  if (sortFilter.value === 'popularity') {
+    arr.sort((a,b)=>b.cartao.likes-a.cartao.likes);
   }
   return arr;
 }
 
 // [7] Paginação
 function showBatch(count) {
-  const filtered = getFilteredStories();
-  const slice    = filtered.slice(currentOffset, currentOffset + count);
-  const frag     = document.createDocumentFragment();
-
-  slice.forEach(s => frag.appendChild(createStoryCard(s)));
-  for (let i = slice.length; i < count; i++) {
-    frag.appendChild(createPlaceholderCard());
-  }
-
-  container.appendChild(frag);
+  const slice = getFilteredStories().slice(currentOffset, currentOffset+count);
+  slice.forEach(s=>container.appendChild(createStoryCard(s)));
   currentOffset += count;
-  loadMoreBtn.disabled = false;
 }
-
 function initialLoad() {
-  container.innerHTML = '';
-  currentOffset = 0;
-  showBatch(initialCount);
+  container.innerHTML=''; currentOffset=0; showBatch(initialCount);
 }
-
 function loadMore() {
-  loadMoreBtn.disabled = true;
   showBatch(increment);
 }
 
 // [8] Modal & aviso
-modalClose.addEventListener('click', () => {
-  modalOverlay.style.display = 'none';
-  isModalOpen = false;
-});
-modalOverlay.addEventListener('click', e => {
-  if (e.target === modalOverlay && isModalOpen) {
-    warningOverlay.style.display = 'flex';
-  }
-});
-warningYes.addEventListener('click', () => {
-  modalOverlay.style.display   = 'none';
-  warningOverlay.style.display = 'none';
-  isModalOpen = false;
-});
-warningNo.addEventListener('click', () => {
-  warningOverlay.style.display = 'none';
-});
-continuarBtn.addEventListener('click', () => {
-  const st = allStories.find(s => s.id === currentStoryId);
-  if (st) {
-    modalFullText.innerHTML = formatarTextoParaLeitura(st.cartao.historiaCompleta);
-    setTimeout(destacarPalavra, 100);
-  }
-});
+modalClose.addEventListener('click', ()=>modalOverlay.style.display='none');
+warningYes.addEventListener('click', ()=>{modalOverlay.style.display='none';warningOverlay.style.display='none';});
+warningNo.addEventListener('click', ()=>warningOverlay.style.display='none');
 
 // [9] Inicialização
 document.addEventListener('DOMContentLoaded', async () => {
@@ -328,9 +288,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   await fetchCategories();
   await fetchStoriesFromSupabase();
   initialLoad();
-
+  loadMoreBtn.addEventListener('click', loadMore);
   searchBar.addEventListener('input', initialLoad);
   categoryFilter.addEventListener('change', initialLoad);
   sortFilter.addEventListener('change', initialLoad);
-  loadMoreBtn.addEventListener('click', loadMore);
 });
