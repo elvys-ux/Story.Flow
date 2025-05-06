@@ -1,17 +1,19 @@
-
 // js/historia.js
 import { supabase } from './supabase.js';
 
 let openMenu = null,
     menuTimeout = null,
     isTitleListVisible = false,
-    currentCardId = null;
+    currentCardId = null,
+    sessionUserId = null;  // ID do utilizador autenticado
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // [1] Autenticação
   await exibirUsuarioLogado();
+  // [2] Carregar só as histórias desse utilizador
   await mostrarHistorias();
 
-  // Submissão do formulário de criação/edição de história
+  // [3] Submissão do formulário de criação/edição de história
   document.getElementById('storyForm')
     .addEventListener('submit', async e => {
       e.preventDefault();
@@ -24,7 +26,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       await salvarHistoria(titulo, descricao);
     });
 
-  // Botão “Nova História”
+  // [4] Botão “Nova História”
   document.getElementById('novaHistoriaBtn')
     .addEventListener('click', () => {
       if (!confirm('Começar nova história?')) return;
@@ -32,7 +34,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       removerExibicaoHistoria();
     });
 
-  // Fechar modal “Ler Mais”
+  // [5] Fechar modal “Ler Mais”
   document.getElementById('closeModal')
     .addEventListener('click', () => {
       document.getElementById('modalOverlay').style.display = 'none';
@@ -43,13 +45,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('modalOverlay').style.display = 'none';
     });
 
-  // Hover na borda esquerda abre a lista
+  // [6] Hover na borda esquerda abre lista lateral
   document.body.addEventListener('mousemove', e => {
     if (e.clientX < 50) toggleTitleList(true);
   });
   document.body.addEventListener('mouseleave', () => toggleTitleList(false));
 
-  // Cliques gerais: fecha menu de contexto e lista lateral
+  // [7] Cliques fora fecham menu e lista lateral
   document.addEventListener('click', e => {
     if (openMenu &&
         !openMenu.menu.contains(e.target) &&
@@ -62,11 +64,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Estado inicial: oculta cartão e modal
+  // [8] Estado inicial: oculta cartão e modal
   document.getElementById('cartaoContainer').style.display = 'none';
   document.getElementById('modalOverlay').style.display   = 'none';
 
-  // Botões do cartão
+  // [9] Botões do cartão
   document.getElementById('btnPublicarCartao')
     .addEventListener('click', () => {
       if (currentCardId !== null) publicarCartao(currentCardId);
@@ -78,26 +80,30 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btnVoltar')
     .addEventListener('click', () => {
       document.getElementById('cartaoContainer').style.display = 'none';
-      document.getElementById('storyContainer').style.display  = 'block';
+      document.getElementById('storyContainer').style.display = 'block';
       currentCardId = null;
     });
 });
 
-// [1] Exibe usuário logado ou link de login
+// [1] Exibe usuário logado e guarda sessionUserId
 async function exibirUsuarioLogado() {
   const area = document.getElementById('userMenuArea');
   area.innerHTML = '';
-  const { data:{ user } } = await supabase.auth.getUser();
-  if (!user) {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
     area.innerHTML = `
       <a href="Criacao.html" style="color:white">
         <i class="fas fa-user"></i> Login
       </a>`;
     return;
   }
+  sessionUserId = session.user.id;
   const { data: profile } = await supabase
-    .from('profiles').select('username').eq('id', user.id).single();
-  const nome = profile?.username || user.email;
+    .from('profiles')
+    .select('username')
+    .eq('id', sessionUserId)
+    .single();
+  const nome = profile?.username || session.user.email;
   area.innerHTML = `
     <span id="user-name" style="cursor:pointer">${nome}</span>
     <div id="logout-menu" style="display:none; margin-top:5px">
@@ -121,14 +127,16 @@ function toggleTitleList(show) {
   isTitleListVisible = show;
 }
 
-// [3] Carrega lista de histórias e anexa menu de contexto
+// [3] Carrega apenas as histórias do utilizador autenticado
 async function mostrarHistorias() {
+  if (!sessionUserId) return;
   const { data: stories, error } = await supabase
     .from('historias')
     .select('id, titulo')
+    .eq('user_id', sessionUserId)
     .order('data_criacao', { ascending: false });
   if (error) {
-    console.error(error);
+    console.error('Erro ao carregar histórias:', error);
     return;
   }
   const ul = document.getElementById('titleListUl');
@@ -146,6 +154,7 @@ async function mostrarHistorias() {
   });
 }
 
+// [Menu de contexto]
 function showMenu(li, id) {
   hideMenu();
   const menu = document.createElement('div');
@@ -207,62 +216,88 @@ function hideMenu() {
   openMenu = null;
 }
 
-// [4] Criar / atualizar / listar histórias
+// [4] Criar ou atualizar história
 async function salvarHistoria(titulo, descricao) {
-  const form   = document.getElementById('storyForm');
-  const editId = form.dataset.editId;
-  const { data:{ user } } = await supabase.auth.getUser();
-  if (!user) {
+  if (!sessionUserId) {
     alert('Faça login para salvar.');
     return;
   }
+  const form   = document.getElementById('storyForm');
+  const editId = form.dataset.editId;
 
   if (editId) {
-    await supabase.from('historias')
+    const { error } = await supabase
+      .from('historias')
       .update({ titulo, descricao })
-      .eq('id', editId);
+      .eq('id', editId)
+      .eq('user_id', sessionUserId);
+    if (error) {
+      console.error('Erro ao atualizar história:', error);
+      alert('Não foi possível atualizar.');
+      return;
+    }
     alert('História atualizada!');
     exibirHistoriaNoContainer(editId);
   } else {
-    const { error } = await supabase.from('historias')
-      .insert([{ titulo, descricao, user_id: user.id }]);
+    const { error } = await supabase
+      .from('historias')
+      .insert([{ titulo, descricao, user_id: sessionUserId }]);
     if (error) {
-      alert('Erro ao salvar história.');
-      console.error(error);
+      console.error('Erro ao salvar história:', error);
+      alert('Não foi possível salvar.');
       return;
     }
     alert('História salva!');
     removerExibicaoHistoria();
   }
 
- 
   await mostrarHistorias();
 }
 
+// [5] Pré-preenche formulário para edição
 async function editarHistoria(id) {
-  const { data: h } = await supabase.from('historias')
-    .select('*').eq('id', id).single();
+  if (!sessionUserId) return;
+  const { data: h, error } = await supabase
+    .from('historias')
+    .select('titulo, descricao')
+    .eq('id', id)
+    .eq('user_id', sessionUserId)
+    .single();
+  if (error) {
+    console.error('Erro ao buscar para edição:', error);
+    return;
+  }
   document.getElementById('titulo').value    = h.titulo;
   document.getElementById('descricao').value = h.descricao;
   const form = document.getElementById('storyForm');
   form.dataset.editId = id;
   form.querySelector('button[type="submit"]').textContent = 'Atualizar';
-  exibirHistoriaNoContainer(id);
 }
 
+// [6] Excluir história
 async function excluirHistoria(id) {
   if (!confirm('Deseja excluir a história?')) return;
-  await supabase.from('historias').delete().eq('id', id);
-  alert('História excluída!');
+  if (!sessionUserId) return;
+  const { error } = await supabase
+    .from('historias')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', sessionUserId);
+  if (error) {
+    console.error('Erro ao excluir história:', error);
+    alert('Não foi possível excluir.');
+    return;
+  }
+  alert('História excluída!');  
   limparFormulario();
   removerExibicaoHistoria();
   await mostrarHistorias();
 }
 
+// [7] Limpar e remover exibição
 function removerExibicaoHistoria() {
   document.querySelectorAll('.exibicao-historia').forEach(el => el.remove());
 }
-
 function limparFormulario() {
   document.getElementById('titulo').value    = '';
   document.getElementById('descricao').value= '';
@@ -271,9 +306,19 @@ function limparFormulario() {
   form.querySelector('button[type="submit"]').textContent = 'Salvar';
 }
 
+// [8] Exibir título e descrição na área principal
 async function exibirHistoriaNoContainer(id) {
-  const { data: h } = await supabase.from('historias')
-    .select('titulo, descricao').eq('id', id).single();
+  if (!sessionUserId) return;
+  const { data: h, error } = await supabase
+    .from('historias')
+    .select('titulo, descricao')
+    .eq('id', id)
+    .eq('user_id', sessionUserId)
+    .single();
+  if (error) {
+    console.error('Erro ao exibir história:', error);
+    return;
+  }
   removerExibicaoHistoria();
   const cont = document.getElementById('storyContainer');
   const div = document.createElement('div');
@@ -282,26 +327,22 @@ async function exibirHistoriaNoContainer(id) {
   cont.appendChild(div);
 }
 
-// [5] Formulário de Cartão + modal “Ler Mais”
+// [9] Formulário de Cartão + modal “Ler Mais”
 async function mostrarCartaoForm(id) {
   currentCardId = id;
   await carregarCategoriasCartao();
-
   document.getElementById('storyContainer').style.display   = 'none';
   document.getElementById('cartaoContainer').style.display = 'block';
 
-  // Busca diretamente na tabela de cartões
   const { data: cart, error } = await supabase
     .from('cartoes')
     .select('*')
     .eq('historia_id', id)
     .single();
-
   if (error && error.code !== 'PGRST116') {
     console.error('Erro ao carregar cartão:', error);
     return;
   }
-
   const cartao = cart || {};
   document.getElementById('titulo_cartao').value  = cartao.titulo_cartao  || '';
   document.getElementById('sinopse_cartao').value = cartao.sinopse_cartao || '';
@@ -310,19 +351,15 @@ async function mostrarCartaoForm(id) {
     : new Date().toISOString().split('T')[0];
   document.getElementById('autor_cartao').value   = cartao.autor_cartao   || '';
 
-  // Marcar as categorias associadas
   const { data: savedCats } = await supabase
     .from('historia_categorias')
     .select('categoria_id')
     .eq('historia_id', id);
-
   document.querySelectorAll('.categorias input').forEach(chk => chk.checked = false);
-  if (savedCats) {
-    savedCats.forEach(s => {
-      const chk = document.querySelector(`.categorias input[value="${s.categoria_id}"]`);
-      if (chk) chk.checked = true;
-    });
-  }
+  (savedCats||[]).forEach(s => {
+    const chk = document.querySelector(`.categorias input[value="${s.categoria_id}"]`);
+    if (chk) chk.checked = true;
+  });
 }
 
 async function carregarCategoriasCartao() {
@@ -367,6 +404,7 @@ async function publicarCartao(id) {
     return;
   }
 
+  // Upsert do cartão
   await supabase.from('cartoes').upsert({
     historia_id:     id,
     titulo_cartao:   titulo,
@@ -375,13 +413,13 @@ async function publicarCartao(id) {
     data_criacao:    dataC
   });
 
-  const { data:{ user } } = await supabase.auth.getUser();
+  // Associa categorias
   await supabase.from('historia_categorias').delete().eq('historia_id', id);
   await supabase.from('historia_categorias')
     .insert(cats.map(catId => ({
       historia_id:   id,
       categoria_id:  catId,
-      user_id:       user.id
+      user_id:       sessionUserId
     })));
 
   alert('Cartão publicado com sucesso!');
@@ -410,6 +448,6 @@ async function lerMais(id) {
       .select('categoria_id')
       .eq('historia_id', id);
     document.getElementById('modalCartaoCategorias').textContent =
-      cats2.map(x => x.categoria_id).join(', ');
+      (cats2||[]).map(x => categoryMap[x.categoria_id]).join(', ');
   }
 }
