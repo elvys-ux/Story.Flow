@@ -75,7 +75,7 @@ async function fetchCategories() {
   categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
 }
 
-// [3] Busca histórias e cartoes
+// [3] Busca histórias e cartões
 async function fetchStoriesFromSupabase() {
   const { data: historias, error: errH } = await supabase
     .from('historias')
@@ -148,7 +148,6 @@ async function toggleLike(story) {
       console.error('Erro ao remover like:', error);
       return;
     }
-    // Remove do array e decrementa contador
     userLikedStories = userLikedStories.filter(id => id !== story.id);
     story.cartao.likes = Math.max(story.cartao.likes - 1, 0);
   } else {
@@ -159,12 +158,10 @@ async function toggleLike(story) {
       console.error('Erro ao adicionar like:', error);
       return;
     }
-    // Adiciona ao array e incrementa contador
     userLikedStories.push(story.id);
     story.cartao.likes++;
   }
   return !liked;
-}
 }
 
 // [6] Criação de cards e placeholders
@@ -188,7 +185,7 @@ function createStoryCard(story) {
     isModalOpen = true;
     currentStoryId = story.id;
     modalTitle.textContent = story.cartao.tituloCartao;
-    modalFullText.innerHTML = formatarPor4Linhas(story.cartao.sinopse_cartao);
+    modalFullText.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao);
     modalInfo.innerHTML = `
       <p><strong>Data:</strong> ${story.cartao.dataCartao}</p>
       <p><strong>Autor:</strong> ${story.cartao.autorCartao}</p>
@@ -201,7 +198,7 @@ function createStoryCard(story) {
     });
     modalFullText.appendChild(btnLer);
     const pos = localStorage.getItem(`readingPosition_${story.id}`);
-    continuarBtn.style.display = pos ? 'inline-block' : 'none';
+    continuarBtn.style.display = pos !== null ? 'inline-block' : 'none';
     modalOverlay.style.display = 'flex';
   });
   div.appendChild(mais);
@@ -348,4 +345,3 @@ document.addEventListener('DOMContentLoaded', async () => {
   sortFilter.addEventListener('change', initialLoad);
   loadMoreBtn.addEventListener('click', loadMore);
 });
-
