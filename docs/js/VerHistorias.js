@@ -66,7 +66,7 @@ async function fetchCategories() {
 
 // [3] Busca histórias + cartões + categorias (com conteúdo em cartoes)
 async function fetchStoriesFromSupabase() {
-  // Carrega histórias (sem sinopse nem conteudo)
+  // 1) Carrega histórias, incluindo 'descricao' para fallback
   const { data: historias, error: errH } = await supabase
     .from('historias')
     .select('id, titulo, descricao, user_id, data_criacao')
@@ -77,7 +77,7 @@ async function fetchStoriesFromSupabase() {
     return;
   }
 
-  // Carrega cartões incluindo likes, sinopse e história completa
+  // 2) Carrega cartões incluindo sinopse, likes e história completa
   const { data: cartoes, error: errC } = await supabase
     .from('cartoes')
     .select(`
@@ -95,7 +95,7 @@ async function fetchStoriesFromSupabase() {
   }
   const cartaoMap = Object.fromEntries(cartoes.map(c => [c.historia_id, c]));
 
-  // Carrega relações história–categoria
+  // 3) Carrega relações história–categoria
   const { data: hcData, error: errHC } = await supabase
     .from('historia_categorias')
     .select('historia_id, categoria_id');
@@ -109,15 +109,15 @@ async function fetchStoriesFromSupabase() {
     hcMap[historia_id].push(categoryMap[categoria_id]);
   });
 
-  // Monta allStories usando c.* como fonte de verdade
+  // 4) Monta allStories usando cartoes.historia_completa ou fallback em historias.descricao
   allStories = historias.map(h => {
     const c = cartaoMap[h.id] || {};
     return {
       id: h.id,
       cartao: {
         tituloCartao:     c.titulo_cartao      || h.titulo    || 'Sem título',
-        sinopseCartao:    c.sinopse_cartao     || '', 
-        historiaCompleta: c.historia_completa  ?? h.descricao ?? '',
+        sinopseCartao:    c.sinopse_cartao     || '',
+        historiaCompleta: c.historia_completa  || h.descricao  || '',
         dataCartao:       (c.data_criacao || h.data_criacao).split('T')[0],
         autorCartao:      c.autor_cartao       || 'Anónimo',
         categorias:       hcMap[h.id]          || [],
@@ -149,16 +149,16 @@ function createStoryCard(story) {
   sin.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao);
   div.appendChild(sin);
 
-  // “mais...”
+  // “mais...” (abre modal)
   const mais = document.createElement('span');
   mais.className = 'ver-mais';
   mais.textContent = 'mais...';
   mais.addEventListener('click', () => {
     isModalOpen = true;
     currentStoryId = story.id;
-    modalTitle.textContent   = story.cartao.tituloCartao;
-    modalFullText.innerHTML  = formatarPor4Linhas(story.cartao.sinopseCartao);
-    modalInfo.innerHTML      = `
+    modalTitle.textContent = story.cartao.tituloCartao;
+    modalFullText.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao);
+    modalInfo.innerHTML = `
       <p><strong>Data:</strong> ${story.cartao.dataCartao}</p>
       <p><strong>Autor:</strong> ${story.cartao.autorCartao}</p>
       <p><strong>Categorias:</strong> ${story.cartao.categorias.join(', ')}</p>`;
@@ -192,7 +192,7 @@ function createStoryCard(story) {
 
   function updateUI() {
     likeBtn.textContent = userLiked ? '❤️' : '🤍';
-    likeCt.textContent   = ` ${story.cartao.likes} curtida(s)`;
+    likeCt.textContent  = ` ${story.cartao.likes} curtida(s)`;
   }
   updateUI();
 
@@ -258,7 +258,7 @@ function matchesSearch(story, txt) {
   if (!txt) return true;
   txt = txt.toLowerCase();
   return story.cartao.tituloCartao.toLowerCase().includes(txt)
-      || story.cartao.autorCartao.toLowerCase().includes(txt);
+    || story.cartao.autorCartao.toLowerCase().includes(txt);
 }
 
 function getFilteredStories() {
