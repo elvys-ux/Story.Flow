@@ -29,18 +29,22 @@ let isModalOpen    = false;
 let currentStoryId = null;
 let categoryMap    = {};  // id → nome
 
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', init);
+
+async function init() {
   await exibirUsuarioLogado();
   await fetchUserLikes();
   await fetchCategories();
   await fetchStoriesFromSupabase();
   initialLoad();
 
+  // Filtros e paginação
   searchBar.addEventListener('input', initialLoad);
   categoryFilter.addEventListener('change', initialLoad);
   sortFilter.addEventListener('change', initialLoad);
   loadMoreBtn.addEventListener('click', () => { loadMoreBtn.disabled = true; showBatch(increment); });
 
+  // Modal & aviso
   modalClose.onclick = () => { modalOverlay.style.display = 'none'; isModalOpen = false; };
   modalOverlay.onclick = e => { if (e.target === modalOverlay && isModalOpen) warningOverlay.style.display = 'flex'; };
   warningYes.onclick = () => { modalOverlay.style.display = 'none'; warningOverlay.style.display = 'none'; isModalOpen = false; };
@@ -52,9 +56,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       setTimeout(destacarPalavra, 100);
     }
   };
-});
+}
 
-// [1] Exibe usuário logado e guarda sessionUserId
+// [1] Autenticação
 async function exibirUsuarioLogado() {
   const area = document.getElementById('userMenuArea');
   const { data:{ session } } = await supabase.auth.getSession();
@@ -77,7 +81,7 @@ async function exibirUsuarioLogado() {
   };
 }
 
-// [1.1] Carrega os likes do utilizador de user_likes
+// [2] Likes individuais
 async function fetchUserLikes() {
   if (!sessionUserId) { likedStories = []; return; }
   const { data, error } = await supabase
@@ -92,7 +96,7 @@ async function fetchUserLikes() {
   }
 }
 
-// [2] Carrega categorias
+// [3] Categorias
 async function fetchCategories() {
   const { data, error } = await supabase
     .from('categorias')
@@ -104,9 +108,9 @@ async function fetchCategories() {
   }
 }
 
-// [3] Carrega histórias, cartões e categorias
+// [4] Histórico + Cartões + Categorias
 async function fetchStoriesFromSupabase() {
-  // 3.1) Histórias
+  // Histórias
   const { data: historias, error: errH } = await supabase
     .from('historias')
     .select('id, titulo, descricao, data_criacao')
@@ -116,8 +120,7 @@ async function fetchStoriesFromSupabase() {
     container.innerHTML = '<p>Erro ao carregar histórias.</p>';
     return;
   }
-
-  // 3.2) Cartões (inclui likes)
+  // Cartões (inclui likes)
   const { data: cartoes, error: errC } = await supabase
     .from('cartoes')
     .select('historia_id, titulo_cartao, sinopse_cartao, autor_cartao, data_criacao, likes');
@@ -127,7 +130,7 @@ async function fetchStoriesFromSupabase() {
   }
   const cartaoMap = Object.fromEntries(cartoes.map(c => [c.historia_id, c]));
 
-  // 3.3) Relação história–categorias
+  // História–Categorias
   const { data: hcData, error: errHC } = await supabase
     .from('historia_categorias')
     .select('historia_id, categoria_id');
@@ -141,7 +144,7 @@ async function fetchStoriesFromSupabase() {
     hcMap[historia_id].push(categoryMap[categoria_id]);
   });
 
-  // 3.4) Montagem de allStories
+  // Montagem
   allStories = historias.map(h => {
     const c = cartaoMap[h.id] || {};
     return {
@@ -159,25 +162,23 @@ async function fetchStoriesFromSupabase() {
   });
 }
 
-// [4] Formatação de texto
+// [5] Formatação de texto
 function formatarPor4Linhas(text) {
   if (!text) return '<p>(sem sinopse)</p>';
-  const linhas = text.split('\n');
-  return linhas.slice(0, 4)
-    .map(l => `<p style="text-align:justify">${l}</p>`)
-    .join('');
+  return text.split('\n').slice(0,4)
+    .map(l => `<p style="text-align:justify">${l}</p>`).join('');
 }
 function formatarTextoParaLeitura(text) {
   if (!text) return '<p>(sem conteúdo)</p>';
   let idx = 0;
-  return text.split('\n').map((lin, i) => {
-    const spans = lin.split(' ')
+  return text.split('\n').map(l => {
+    const spans = l.split(' ')
       .map(w => `<span data-index="${idx++}" onclick="markReadingPosition(this)">${w}</span>`)
       .join(' ');
     return `<p style="text-align:justify">${spans}</p>`;
   }).join('');
 }
-window.markReadingPosition = function(el) {
+window.markReadingPosition = el => {
   localStorage.setItem(`readingPosition_${currentStoryId}`, el.dataset.index);
 };
 function destacarPalavra() {
@@ -191,7 +192,7 @@ function destacarPalavra() {
   }
 }
 
-// [5] Criação de cards e placeholders
+// [6] Criação de Cards
 function createStoryCard(story) {
   const div = document.createElement('div');
   div.className = 'sheet';
@@ -226,6 +227,7 @@ function createStoryCard(story) {
     likeCt.textContent  = ` ${story.cartao.likes} curtida(s)`;
   }
   updateUI();
+
   Object.assign(likeBtn.style, {
     background:'transparent',
     border:'none',
@@ -261,7 +263,7 @@ function createPlaceholderCard() {
   return div;
 }
 
-// Abre modal detalhado
+// Modal detalhado
 function abrirModal(story) {
   isModalOpen    = true;
   currentStoryId = story.id;
@@ -282,37 +284,37 @@ function abrirModal(story) {
   modalOverlay.style.display = 'flex';
 }
 
-// Alterna like no Supabase e atualiza UI
+// [7] Toggle Like
 async function toggleLike(story, updateUI) {
-  const { data:{ session } } = await supabase.auth.getSession();
-  if (!session) { alert('Faça login para dar like.'); return; }
-  const uid = session.user.id;
+  if (!sessionUserId) { alert('Faça login para dar like.'); return; }
   const already = likedStories.includes(story.id);
 
   if (already) {
     await supabase
       .from('user_likes')
       .delete()
-      .match({ user_id: uid, historia_id: story.id });
+      .match({ user_id: sessionUserId, historia_id: story.id });
     likedStories = likedStories.filter(id => id !== story.id);
   } else {
     await supabase
       .from('user_likes')
-      .insert({ user_id: uid, historia_id: story.id });
+      .insert({ user_id: sessionUserId, historia_id: story.id });
     likedStories.push(story.id);
   }
 
-  // Ler nova contagem de likes (inclui primary key para evitar 406)
+  // Recarrega contagem de likes (incluímos a PK no select para evitar 406)
   const { data, error } = await supabase
     .from('cartoes')
     .select('historia_id, likes')
     .eq('historia_id', story.id)
     .single();
-  if (!error && data) story.cartao.likes = data.likes;
+  if (!error && data) {
+    story.cartao.likes = data.likes;
+  }
   updateUI();
 }
 
-// [6] Filtrar / ordenar / pesquisar
+// [8] Filtrar / ordenar / pesquisar
 function matchesSearch(story, txt) {
   if (!txt) return true;
   txt = txt.toLowerCase();
@@ -325,22 +327,20 @@ function getFilteredStories() {
     arr = arr.filter(st => st.cartao.categorias.includes(categoryFilter.value));
   }
   if (sortFilter.value === 'date') {
-    arr.sort((a, b) => b.cartao.dataCartao.localeCompare(a.cartao.dataCartao));
+    arr.sort((a,b) => b.cartao.dataCartao.localeCompare(a.cartao.dataCartao));
   } else if (sortFilter.value === 'popularity') {
-    arr.sort((a, b) => b.cartao.likes - a.cartao.likes);
+    arr.sort((a,b) => b.cartao.likes - a.cartao.likes);
   }
   return arr;
 }
 
-// [7] Paginação
+// [9] Paginação
 function showBatch(count) {
   const filtered = getFilteredStories();
   const slice    = filtered.slice(currentOffset, currentOffset + count);
   const frag     = document.createDocumentFragment();
   slice.forEach(s => frag.appendChild(createStoryCard(s)));
-  for (let i = slice.length; i < count; i++) {
-    frag.appendChild(createPlaceholderCard());
-  }
+  for (let i = slice.length; i < count; i++) frag.appendChild(createPlaceholderCard());
   container.appendChild(frag);
   currentOffset += count;
   loadMoreBtn.disabled = false;
