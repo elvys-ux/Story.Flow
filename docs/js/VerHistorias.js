@@ -20,9 +20,10 @@ const modalInfo      = document.getElementById('modalInfo');
 const warningOverlay = document.getElementById('warningOverlay');
 const warningYes     = document.getElementById('warningYes');
 const warningNo      = document.getElementById('warningNo');
+const continuarBtn   = document.getElementById('continuarBtn');
 
-let isModalOpen    = false;
-let currentStoryId = null;
+let isModalOpen     = false;
+let currentStoryId  = null;
 
 // Likes isolados por usuário
 let likedStories = [];
@@ -37,21 +38,17 @@ async function exibirUsuarioLogado() {
     area.innerHTML = `<a href="Criacao.html"><i class="fas fa-user"></i> Login</a>`;
     return;
   }
-
   const userId = session.user.id;
   likedKey = `likedStories_${userId}`;
   likedStories = JSON.parse(localStorage.getItem(likedKey) || '[]');
 
-  const { data: profile, error: profErr } = await supabase
+  const { data: profile } = await supabase
     .from('profiles')
     .select('username')
     .eq('id', userId)
     .single();
 
-  const nome = profErr || !profile?.username
-    ? session.user.email
-    : profile.username;
-
+  const nome = profile?.username || session.user.email;
   area.textContent = nome;
   area.style.cursor = 'pointer';
   area.onclick = () => {
@@ -136,7 +133,7 @@ async function fetchStoriesFromSupabase() {
   });
 }
 
-// [4] Formatação de texto
+// [4] Formatadores de texto
 function formatarPor4Linhas(text) {
   return text.split('\n').slice(0, 4).join('<br>');
 }
@@ -144,7 +141,7 @@ function formatarTextoParaLeitura(text) {
   return text.split('\n').map(l => `<p>${l}</p>`).join('');
 }
 
-// [5] Criação de cartão
+// [5] Criação de cartão com lógica de like
 function createStoryCard(story) {
   const div = document.createElement('div');
   div.className = 'sheet';
@@ -181,7 +178,7 @@ function createStoryCard(story) {
   updateLikeUI();
 
   likeBtn.onclick = async () => {
-    // Optimistic UI
+    // *Optimistic UI*
     story.cartao.likes += userLiked ? -1 : 1;
     userLiked = !userLiked;
     updateLikeUI();
@@ -191,31 +188,23 @@ function createStoryCard(story) {
     else likedStories = likedStories.filter(id => id !== story.id);
     localStorage.setItem(likedKey, JSON.stringify(likedStories));
 
-    // Persiste no Supabase e lê resultado
-    const { data, error } = await supabase
+    // Persiste no Supabase
+    const { error } = await supabase
       .from('cartoes')
       .update({ likes: story.cartao.likes })
-      .eq('historia_id', story.id)
-      .select('likes')
-      .single();
-
-    if (error) {
-      console.error('Falha ao salvar curtida:', error);
-      return;
-    }
-    // sincronia
-    story.cartao.likes = data.likes;
-    updateLikeUI();
+      .eq('historia_id', story.id);
+    if (error) console.error('Falha ao salvar like:', error);
   };
 
   div.querySelector('.ver-mais').onclick = () => openModal(story);
   return div;
 }
 
-// [6] Modal “mais…” + “Ler”
+// [6] Modal “mais...” e “Ler”
 function openModal(story) {
   isModalOpen    = true;
   currentStoryId = story.id;
+
   modalTitle.textContent = story.cartao.tituloCartao;
   modalFullText.innerHTML = `
     <div>${formatarPor4Linhas(story.cartao.sinopseCartao)}</div>
@@ -228,10 +217,11 @@ function openModal(story) {
   document.getElementById('btnLer').onclick = () => {
     modalFullText.innerHTML = formatarTextoParaLeitura(story.cartao.historiaCompleta);
   };
+
   modalOverlay.style.display = 'flex';
 }
 
-// [7] Fecha modal / aviso
+// [7] Fecha modal e aviso
 modalClose.onclick = () => { modalOverlay.style.display = 'none'; isModalOpen = false; };
 modalOverlay.onclick = e => {
   if (e.target === modalOverlay && isModalOpen) warningOverlay.style.display = 'flex';
@@ -243,12 +233,13 @@ warningYes.onclick = () => {
 };
 warningNo.onclick = () => warningOverlay.style.display = 'none';
 
-// [8] Filtrar / ordenar / paginar
+// [8] Filtrar, ordenar e paginação
 function matchesSearch(story, txt) {
   txt = txt.toLowerCase();
   return story.cartao.tituloCartao.toLowerCase().includes(txt)
       || (story.cartao.autorCartao || '').toLowerCase().includes(txt);
 }
+
 function showBatch(count) {
   const filtered = allStories
     .filter(s => matchesSearch(s, searchBar.value))
@@ -258,11 +249,23 @@ function showBatch(count) {
       return b.cartao.dataCartao.localeCompare(a.cartao.dataCartao);
     });
 
-  container.innerHTML = ''; // limpa antes de adicionar
-  filtered.slice(0, currentOffset + count).forEach(s => container.appendChild(createStoryCard(s)));
+  // se for primeira vez, limpa container
+  if (currentOffset === 0) container.innerHTML = '';
+
+  const slice = filtered.slice(currentOffset, currentOffset + count);
+  slice.forEach(s => container.appendChild(createStoryCard(s)));
+
+  for (let i = slice.length; i < count; i++) {
+    const ph = document.createElement('div');
+    ph.className = 'sheet sheet-placeholder';
+    ph.innerHTML = '<h3>Placeholder</h3><p>(sem história)</p>';
+    container.appendChild(ph);
+  }
+
   currentOffset += count;
   loadMoreBtn.disabled = false;
 }
+
 function initialLoad() {
   currentOffset = 0;
   showBatch(initialCount);
