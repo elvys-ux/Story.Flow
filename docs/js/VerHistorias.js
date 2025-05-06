@@ -25,40 +25,28 @@ const continuarBtn   = document.getElementById('continuarBtn');
 let isModalOpen     = false;
 let currentStoryId  = null;
 
-// likes isolados por usuário
-let likedStories = [];
-let likedKey     = null;
-
+let likedStories = JSON.parse(localStorage.getItem('likedStories') || '[]');
 let categoryMap  = {};  // id → nome
 
-// [1] Exibe usuário logado / login e carrega likes do usuário
+// [1] Exibe usuário logado / login
 async function exibirUsuarioLogado() {
   const area = document.getElementById('userMenuArea');
   const { data: { session } } = await supabase.auth.getSession();
-
   if (!session) {
     area.innerHTML = `<a href="Criacao.html"><i class="fas fa-user"></i> Login</a>`;
-    likedKey = null;
-    likedStories = [];
     return;
   }
-
   const userId = session.user.id;
-  likedKey = `likedStories_${userId}`;
-  likedStories = JSON.parse(localStorage.getItem(likedKey) || '[]');
-
   const { data: profile } = await supabase
     .from('profiles')
     .select('username')
     .eq('id', userId)
     .single();
-
   const nome = profile?.username || session.user.email;
   area.textContent = nome;
   area.style.cursor = 'pointer';
   area.onclick = () => {
     if (confirm('Deseja fazer logout?')) {
-      localStorage.removeItem(likedKey);
       supabase.auth.signOut().then(() => location.href = 'Criacao.html');
     }
   };
@@ -78,6 +66,7 @@ async function fetchCategories() {
 
 // [3] Busca histórias + cartões + categorias
 async function fetchStoriesFromSupabase() {
+  // Carrega histórias
   const { data: historias, error: errH } = await supabase
     .from('historias')
     .select('id, titulo, descricao, data_criacao')
@@ -88,6 +77,7 @@ async function fetchStoriesFromSupabase() {
     return;
   }
 
+  // Carrega cartões
   const { data: cartoes, error: errC } = await supabase
     .from('cartoes')
     .select(`
@@ -103,9 +93,9 @@ async function fetchStoriesFromSupabase() {
     console.error('Erro ao carregar cartões:', errC);
     return;
   }
-
   const cartaoMap = Object.fromEntries(cartoes.map(c => [c.historia_id, c]));
 
+  // Carrega relações história–categoria
   const { data: hcData, error: errHC } = await supabase
     .from('historia_categorias')
     .select('historia_id, categoria_id');
@@ -113,17 +103,17 @@ async function fetchStoriesFromSupabase() {
     console.error('Erro ao carregar categorias de história:', errHC);
     return;
   }
-
   const hcMap = {};
   hcData.forEach(({ historia_id, categoria_id }) => {
     hcMap[historia_id] = hcMap[historia_id] || [];
     hcMap[historia_id].push(categoryMap[categoria_id]);
   });
 
+  // Monta allStories
   allStories = historias.map(h => {
     const c = cartaoMap[h.id] || {};
     const sinopse = c.sinopse_cartao
-      || (c.historia_completa || '').split('\n').slice(0, 4).join('\n')
+      || (c.historia_completa || '').split('\n').slice(0,4).join('\n')
       || '';
     return {
       id: h.id,
@@ -142,7 +132,7 @@ async function fetchStoriesFromSupabase() {
 
 // [4] Formatação de texto
 function formatarPor4Linhas(text) {
-  return text.split('\n').slice(0, 4).join('<br>');
+  return text.split('\n').slice(0,4).join('<br>');
 }
 function formatarTextoParaLeitura(text) {
   return text.split('\n').map(l => `<p>${l}</p>`).join('');
@@ -188,14 +178,31 @@ function createStoryCard(story) {
   likeBtn.onclick = async () => {
     story.cartao.likes += userLiked ? -1 : 1;
     userLiked = !userLiked;
+    // atualiza localStorage
     if (userLiked) likedStories.push(story.id);
     else likedStories = likedStories.filter(id => id !== story.id);
-    localStorage.setItem(likedKey, JSON.stringify(likedStories));
-    updateLikeUI();
-    await supabase
+    localStorage.setItem('likedStories', JSON.stringify(likedStories));
+
+    // persiste no Supabase e aguarda confirmação
+    const { data, error } = await supabase
       .from('cartoes')
       .update({ likes: story.cartao.likes })
-      .eq('historia_id', story.id);
+      .eq('historia_id', story.id)
+      .select('likes')
+      .single();
+
+    if (error) {
+      console.error('Erro ao salvar like no Supabase:', error);
+      // reverte em caso de falha
+      story.cartao.likes += userLiked ? -1 : 1;
+      userLiked = !userLiked;
+      likedStories = JSON.parse(localStorage.getItem('likedStories') || '[]');
+      localStorage.setItem('likedStories', JSON.stringify(likedStories));
+    } else {
+      // sincroniza valor retornado pelo banco
+      story.cartao.likes = data.likes;
+    }
+    updateLikeUI();
   };
 
   // “mais...” abre modal
@@ -205,8 +212,8 @@ function createStoryCard(story) {
 
 // [6] Modal: sinopse + botão “Ler”
 function openModal(story) {
-  isModalOpen    = true;
-  currentStoryId = story.id;
+  isModalOpen     = true;
+  currentStoryId  = story.id;
   modalTitle.textContent = story.cartao.tituloCartao;
   modalFullText.innerHTML = `
     <div>${formatarPor4Linhas(story.cartao.sinopseCartao)}</div>
@@ -228,18 +235,19 @@ modalOverlay.onclick = e => {
   if (e.target === modalOverlay && isModalOpen) warningOverlay.style.display = 'flex';
 };
 warningYes.onclick = () => {
-  modalOverlay.style.display   = 'none';
+  modalOverlay.style.display = 'none';
   warningOverlay.style.display = 'none';
-  isModalOpen                  = false;
+  isModalOpen = false;
 };
 warningNo.onclick = () => warningOverlay.style.display = 'none';
 
-// [8] Filtros, ordenação e paginação
+// [8] Filtrar / ordenar / paginação
 function matchesSearch(story, txt) {
   txt = txt.toLowerCase();
   return story.cartao.tituloCartao.toLowerCase().includes(txt)
       || (story.cartao.autorCartao || '').toLowerCase().includes(txt);
 }
+
 function showBatch(count) {
   const filtered = allStories
     .filter(st => matchesSearch(st, searchBar.value))
@@ -250,16 +258,18 @@ function showBatch(count) {
     });
 
   const slice = filtered.slice(currentOffset, currentOffset + count);
-  slice.forEach(st => container.appendChild(createStoryCard(st)));
+  slice.forEach(story => container.appendChild(createStoryCard(story)));
   for (let i = slice.length; i < count; i++) {
     const ph = document.createElement('div');
     ph.className = 'sheet sheet-placeholder';
     ph.innerHTML = '<h3>Placeholder</h3><p>(sem história)</p>';
     container.appendChild(ph);
   }
+
   currentOffset += count;
   loadMoreBtn.disabled = false;
 }
+
 function initialLoad() {
   container.innerHTML = '';
   currentOffset = 0;
