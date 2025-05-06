@@ -1,11 +1,12 @@
 // js/VerHistorias.js
 import { supabase } from './supabase.js';
 
-let allStories       = [];
-let likedStories     = [];  // IDs de histórias que o utilizador já gostou
-let currentOffset    = 0;
-const initialCount   = 20;
-const increment      = 5;
+let sessionUserId = null;
+let allStories    = [];
+let likedStories  = [];   // IDs das histórias curtidas pelo utilizador
+let currentOffset = 0;
+const initialCount = 20;
+const increment    = 5;
 
 // Elementos do DOM
 const container      = document.getElementById('storiesContainer');
@@ -26,42 +27,65 @@ const continuarBtn   = document.getElementById('continuarBtn');
 
 let isModalOpen    = false;
 let currentStoryId = null;
+let categoryMap    = {};  // id → nome
 
-// [1] Exibe usuário logado / login
+document.addEventListener('DOMContentLoaded', async () => {
+  await exibirUsuarioLogado();
+  await fetchUserLikes();
+  await fetchCategories();
+  await fetchStoriesFromSupabase();
+  initialLoad();
+
+  searchBar.addEventListener('input', initialLoad);
+  categoryFilter.addEventListener('change', initialLoad);
+  sortFilter.addEventListener('change', initialLoad);
+  loadMoreBtn.addEventListener('click', () => { loadMoreBtn.disabled = true; showBatch(increment); });
+
+  modalClose.onclick = () => { modalOverlay.style.display = 'none'; isModalOpen = false; };
+  modalOverlay.onclick = e => { if (e.target === modalOverlay && isModalOpen) warningOverlay.style.display = 'flex'; };
+  warningYes.onclick = () => { modalOverlay.style.display = 'none'; warningOverlay.style.display = 'none'; isModalOpen = false; };
+  warningNo.onclick  = () => { warningOverlay.style.display = 'none'; };
+  continuarBtn.onclick = () => {
+    const st = allStories.find(s => s.id === currentStoryId);
+    if (st) {
+      modalFullText.innerHTML = formatarTextoParaLeitura(st.cartao.historiaCompleta);
+      setTimeout(destacarPalavra, 100);
+    }
+  };
+});
+
+// [1] Exibe usuário logado e guarda sessionUserId
 async function exibirUsuarioLogado() {
   const area = document.getElementById('userMenuArea');
   const { data:{ session } } = await supabase.auth.getSession();
   if (!session) {
     area.innerHTML = `<a href="Criacao.html"><i class="fas fa-user"></i> Login</a>`;
-  } else {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('username')
-      .eq('id', session.user.id)
-      .single();
-    area.textContent = profile?.username || session.user.email;
-    area.style.cursor = 'pointer';
-    area.onclick = () => {
-      if (confirm('Deseja fazer logout?')) {
-        supabase.auth.signOut().then(() => location.href = 'Criacao.html');
-      }
-    };
-  }
-}
-
-// [1.1] Carrega likes do utilizador
-async function fetchUserLikes() {
-  const { data:{ session } } = await supabase.auth.getSession();
-  if (!session) {
-    likedStories = [];
     return;
   }
+  sessionUserId = session.user.id;
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('username')
+    .eq('id', sessionUserId)
+    .single();
+  area.textContent = profile?.username || session.user.email;
+  area.style.cursor = 'pointer';
+  area.onclick = () => {
+    if (confirm('Deseja fazer logout?')) {
+      supabase.auth.signOut().then(() => location.href = 'Criacao.html');
+    }
+  };
+}
+
+// [1.1] Carrega os likes do utilizador de user_likes
+async function fetchUserLikes() {
+  if (!sessionUserId) { likedStories = []; return; }
   const { data, error } = await supabase
     .from('user_likes')
     .select('historia_id')
-    .eq('user_id', session.user.id);
+    .eq('user_id', sessionUserId);
   if (error) {
-    console.error('Erro ao carregar user_likes:', error);
+    console.error('Erro ao carregar likes do utilizador:', error);
     likedStories = [];
   } else {
     likedStories = data.map(r => r.historia_id);
@@ -69,7 +93,6 @@ async function fetchUserLikes() {
 }
 
 // [2] Carrega categorias
-let categoryMap = {};
 async function fetchCategories() {
   const { data, error } = await supabase
     .from('categorias')
@@ -86,7 +109,7 @@ async function fetchStoriesFromSupabase() {
   // 3.1) Histórias
   const { data: historias, error: errH } = await supabase
     .from('historias')
-    .select('id, titulo, descricao, user_id, data_criacao')
+    .select('id, titulo, descricao, data_criacao')
     .order('data_criacao', { ascending: false });
   if (errH) {
     console.error('Erro ao carregar histórias:', errH);
@@ -109,7 +132,7 @@ async function fetchStoriesFromSupabase() {
     .from('historia_categorias')
     .select('historia_id, categoria_id');
   if (errHC) {
-    console.error('Erro ao carregar história_categorias:', errHC);
+    console.error('Erro ao carregar categorias de história:', errHC);
     return;
   }
   const hcMap = {};
@@ -124,8 +147,8 @@ async function fetchStoriesFromSupabase() {
     return {
       id: h.id,
       cartao: {
-        tituloCartao:     c.titulo_cartao   || h.titulo    || 'Sem título',
-        sinopseCartao:    c.sinopse_cartao  || h.descricao  || 'Sem sinopse',
+        tituloCartao:     c.titulo_cartao   || h.titulo       || 'Sem título',
+        sinopseCartao:    c.sinopse_cartao  || h.descricao    || 'Sem sinopse',
         historiaCompleta: h.descricao       || 'Sem história',
         dataCartao:       (c.data_criacao || h.data_criacao).split('T')[0],
         autorCartao:      c.autor_cartao    || 'Anónimo',
@@ -136,13 +159,39 @@ async function fetchStoriesFromSupabase() {
   });
 }
 
-// [4] Funções de utilitários de texto (stub)
-function formatarPor4Linhas(text) { /* ... */ }
-function formatarTextoParaLeitura(text) { /* ... */ }
-function markReadingPosition(el) { /* ... */ }
-function destacarPalavra() { /* ... */ }
+// [4] Formatação de texto
+function formatarPor4Linhas(text) {
+  if (!text) return '<p>(sem sinopse)</p>';
+  const linhas = text.split('\n');
+  return linhas.slice(0, 4)
+    .map(l => `<p style="text-align:justify">${l}</p>`)
+    .join('');
+}
+function formatarTextoParaLeitura(text) {
+  if (!text) return '<p>(sem conteúdo)</p>';
+  let idx = 0;
+  return text.split('\n').map((lin, i) => {
+    const spans = lin.split(' ')
+      .map(w => `<span data-index="${idx++}" onclick="markReadingPosition(this)">${w}</span>`)
+      .join(' ');
+    return `<p style="text-align:justify">${spans}</p>`;
+  }).join('');
+}
+window.markReadingPosition = function(el) {
+  localStorage.setItem(`readingPosition_${currentStoryId}`, el.dataset.index);
+};
+function destacarPalavra() {
+  const pos = localStorage.getItem(`readingPosition_${currentStoryId}`);
+  if (pos !== null) {
+    const span = modalFullText.querySelector(`[data-index="${pos}"]`);
+    if (span) {
+      span.style.background = 'yellow';
+      span.scrollIntoView({ block:'center', behavior:'smooth' });
+    }
+  }
+}
 
-// [5] Geração de cartões e placeholders
+// [5] Criação de cards e placeholders
 function createStoryCard(story) {
   const div = document.createElement('div');
   div.className = 'sheet';
@@ -177,13 +226,15 @@ function createStoryCard(story) {
     likeCt.textContent  = ` ${story.cartao.likes} curtida(s)`;
   }
   updateUI();
-
-  likeBtn.onclick = () => toggleLike(story, updateUI);
-  // estilo do botão
   Object.assign(likeBtn.style, {
-    background:'transparent', border:'none', outline:'none',
-    padding:'0', cursor:'pointer', fontSize:'1.4rem'
+    background:'transparent',
+    border:'none',
+    outline:'none',
+    padding:'0',
+    cursor:'pointer',
+    fontSize:'1.4rem'
   });
+  likeBtn.onclick = () => toggleLike(story, updateUI);
 
   likeCont.append(likeBtn, likeCt);
   div.appendChild(likeCont);
@@ -210,7 +261,7 @@ function createPlaceholderCard() {
   return div;
 }
 
-// Abre o modal de leitura
+// Abre modal detalhado
 function abrirModal(story) {
   isModalOpen    = true;
   currentStoryId = story.id;
@@ -231,40 +282,33 @@ function abrirModal(story) {
   modalOverlay.style.display = 'flex';
 }
 
-// Alterna o like no Supabase e atualiza UI
+// Alterna like no Supabase e atualiza UI
 async function toggleLike(story, updateUI) {
   const { data:{ session } } = await supabase.auth.getSession();
-  if (!session) {
-    alert('Faça login para dar like.');
-    return;
-  }
+  if (!session) { alert('Faça login para dar like.'); return; }
   const uid = session.user.id;
   const already = likedStories.includes(story.id);
 
   if (already) {
-    // remove like
     await supabase
       .from('user_likes')
       .delete()
       .match({ user_id: uid, historia_id: story.id });
     likedStories = likedStories.filter(id => id !== story.id);
   } else {
-    // adiciona like
     await supabase
       .from('user_likes')
       .insert({ user_id: uid, historia_id: story.id });
     likedStories.push(story.id);
   }
 
-  // busca nova contagem de likes
+  // Ler nova contagem de likes (inclui primary key para evitar 406)
   const { data, error } = await supabase
     .from('cartoes')
-    .select('likes')
+    .select('historia_id, likes')
     .eq('historia_id', story.id)
     .single();
-  if (!error && data) {
-    story.cartao.likes = data.likes;
-  }
+  if (!error && data) story.cartao.likes = data.likes;
   updateUI();
 }
 
@@ -306,32 +350,3 @@ function initialLoad() {
   currentOffset = 0;
   showBatch(initialCount);
 }
-
-// [8] Modal & aviso de fechar
-modalClose.onclick = () => { modalOverlay.style.display = 'none'; isModalOpen = false; };
-modalOverlay.onclick = e => {
-  if (e.target === modalOverlay && isModalOpen) warningOverlay.style.display = 'flex';
-};
-warningYes.onclick = () => { modalOverlay.style.display = 'none'; warningOverlay.style.display = 'none'; isModalOpen = false; };
-warningNo.onclick  = () => { warningOverlay.style.display = 'none'; };
-continuarBtn.onclick = () => {
-  const st = allStories.find(s => s.id === currentStoryId);
-  if (st) {
-    modalFullText.innerHTML = formatarTextoParaLeitura(st.cartao.historiaCompleta);
-    setTimeout(destacarPalavra, 100);
-  }
-};
-
-// [9] Inicialização
-document.addEventListener('DOMContentLoaded', async () => {
-  await exibirUsuarioLogado();
-  await fetchUserLikes();
-  await fetchCategories();
-  await fetchStoriesFromSupabase();
-  initialLoad();
-
-  searchBar.addEventListener('input', initialLoad);
-  categoryFilter.addEventListener('change', initialLoad);
-  sortFilter.addEventListener('change', initialLoad);
-  loadMoreBtn.addEventListener('click', () => { loadMoreBtn.disabled = true; showBatch(increment); });
-});
