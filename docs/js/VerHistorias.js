@@ -1,64 +1,80 @@
 // js/VerHistorias.js
 import { supabase } from './supabase.js';
 
-let sessionUserId = null;
-let allStories    = [];
-let likedStories  = [];   // IDs das histórias curtidas pelo utilizador
-let currentOffset = 0;
-const initialCount = 20;
-const increment    = 5;
+let sessionUserId   = null;
+let allStories      = [];
+let likedStories    = [];   // IDs de histórias curtidas pelo utilizador atual
+let currentOffset   = 0;
+const initialCount  = 20;
+const increment     = 5;
 
 // Elementos do DOM
-const container      = document.getElementById('storiesContainer');
-const categoryFilter = document.getElementById('category-filter');
-const sortFilter     = document.getElementById('sort-filter');
-const searchBar      = document.getElementById('searchBar');
-const loadMoreBtn    = document.getElementById('loadMoreBtn');
+const container       = document.getElementById('storiesContainer');
+const categoryFilter  = document.getElementById('category-filter');
+const sortFilter      = document.getElementById('sort-filter');
+const searchBar       = document.getElementById('searchBar');
+const loadMoreBtn     = document.getElementById('loadMoreBtn');
 
-const modalOverlay   = document.getElementById('modalOverlay');
-const modalClose     = document.getElementById('modalClose');
-const modalTitle     = document.getElementById('modalTitle');
-const modalFullText  = document.getElementById('modalFullText');
-const modalInfo      = document.getElementById('modalInfo');
-const warningOverlay = document.getElementById('warningOverlay');
-const warningYes     = document.getElementById('warningYes');
-const warningNo      = document.getElementById('warningNo');
-const continuarBtn   = document.getElementById('continuarBtn');
+const modalOverlay    = document.getElementById('modalOverlay');
+const modalClose      = document.getElementById('modalClose');
+const modalTitle      = document.getElementById('modalTitle');
+const modalFullText   = document.getElementById('modalFullText');
+const modalInfo       = document.getElementById('modalInfo');
+const warningOverlay  = document.getElementById('warningOverlay');
+const warningYes      = document.getElementById('warningYes');
+const warningNo       = document.getElementById('warningNo');
+const continuarBtn    = document.getElementById('continuarBtn');
 
-let isModalOpen    = false;
-let currentStoryId = null;
-let categoryMap    = {};  // id → nome
+let isModalOpen     = false;
+let currentStoryId  = null;
+let categoryMap     = {};   // id → nome
 
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', async () => {
+  // 1) Detectar sessão e user_id
+  const { data:{ session } } = await supabase.auth.getSession();
+  if (session) sessionUserId = session.user.id;
+  
+  // 2) Carregar likes locais para este user
+  initializeLikes();
 
-async function init() {
+  // 3) Carregar resto dos dados
   await exibirUsuarioLogado();
-  await fetchUserLikes();
   await fetchCategories();
   await fetchStoriesFromSupabase();
   initialLoad();
 
-  // Filtros e paginação
+  // 4) Eventos de filtro e paginação
   searchBar.addEventListener('input', initialLoad);
   categoryFilter.addEventListener('change', initialLoad);
   sortFilter.addEventListener('change', initialLoad);
   loadMoreBtn.addEventListener('click', () => { loadMoreBtn.disabled = true; showBatch(increment); });
 
-  // Modal & aviso
-  modalClose.onclick = () => { modalOverlay.style.display = 'none'; isModalOpen = false; };
-  modalOverlay.onclick = e => { if (e.target === modalOverlay && isModalOpen) warningOverlay.style.display = 'flex'; };
-  warningYes.onclick = () => { modalOverlay.style.display = 'none'; warningOverlay.style.display = 'none'; isModalOpen = false; };
-  warningNo.onclick  = () => { warningOverlay.style.display = 'none'; };
-  continuarBtn.onclick = () => {
+  // 5) Eventos do modal
+  modalClose.onclick    = () => { modalOverlay.style.display = 'none'; isModalOpen = false; };
+  modalOverlay.onclick  = e => { if (e.target === modalOverlay && isModalOpen) warningOverlay.style.display = 'flex'; };
+  warningYes.onclick    = () => { modalOverlay.style.display = 'none'; warningOverlay.style.display = 'none'; isModalOpen = false; };
+  warningNo.onclick     = () => { warningOverlay.style.display = 'none'; };
+  continuarBtn.onclick  = () => {
     const st = allStories.find(s => s.id === currentStoryId);
     if (st) {
       modalFullText.innerHTML = formatarTextoParaLeitura(st.cartao.historiaCompleta);
       setTimeout(destacarPalavra, 100);
     }
   };
+});
+
+// Armazena/recupera likedStories no localStorage por user
+function initializeLikes() {
+  if (!sessionUserId) {
+    likedStories = [];
+    return;
+  }
+  const key = `likedStories_${sessionUserId}`;
+  const stored = localStorage.getItem(key);
+  likedStories = stored ? JSON.parse(stored) : [];
 }
 
-// [1] Autenticação
+// [1] Exibe usuário logado / login
 async function exibirUsuarioLogado() {
   const area = document.getElementById('userMenuArea');
   const { data:{ session } } = await supabase.auth.getSession();
@@ -66,13 +82,14 @@ async function exibirUsuarioLogado() {
     area.innerHTML = `<a href="Criacao.html"><i class="fas fa-user"></i> Login</a>`;
     return;
   }
-  sessionUserId = session.user.id;
+  const userId = session.user.id;
   const { data: profile } = await supabase
     .from('profiles')
     .select('username')
-    .eq('id', sessionUserId)
+    .eq('id', userId)
     .single();
-  area.textContent = profile?.username || session.user.email;
+  const nome = profile?.username || session.user.email;
+  area.textContent = nome;
   area.style.cursor = 'pointer';
   area.onclick = () => {
     if (confirm('Deseja fazer logout?')) {
@@ -81,36 +98,21 @@ async function exibirUsuarioLogado() {
   };
 }
 
-// [2] Likes individuais
-async function fetchUserLikes() {
-  if (!sessionUserId) { likedStories = []; return; }
-  const { data, error } = await supabase
-    .from('user_likes')
-    .select('historia_id')
-    .eq('user_id', sessionUserId);
-  if (error) {
-    console.error('Erro ao carregar likes do utilizador:', error);
-    likedStories = [];
-  } else {
-    likedStories = data.map(r => r.historia_id);
-  }
-}
-
-// [3] Categorias
+// [2] Carrega categorias (id → nome)
 async function fetchCategories() {
   const { data, error } = await supabase
     .from('categorias')
     .select('id, nome');
   if (error) {
     console.error('Erro ao carregar categorias:', error);
-  } else {
-    categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
+    return;
   }
+  categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
 }
 
-// [4] Histórico + Cartões + Categorias
+// [3] Busca histórias + cartões + categorias
 async function fetchStoriesFromSupabase() {
-  // Histórias
+  // 3.1) Histórias
   const { data: historias, error: errH } = await supabase
     .from('historias')
     .select('id, titulo, descricao, data_criacao')
@@ -120,7 +122,8 @@ async function fetchStoriesFromSupabase() {
     container.innerHTML = '<p>Erro ao carregar histórias.</p>';
     return;
   }
-  // Cartões (inclui likes)
+
+  // 3.2) Cartões (inclui likes)
   const { data: cartoes, error: errC } = await supabase
     .from('cartoes')
     .select('historia_id, titulo_cartao, sinopse_cartao, autor_cartao, data_criacao, likes');
@@ -130,7 +133,7 @@ async function fetchStoriesFromSupabase() {
   }
   const cartaoMap = Object.fromEntries(cartoes.map(c => [c.historia_id, c]));
 
-  // História–Categorias
+  // 3.3) Relações história–categoria
   const { data: hcData, error: errHC } = await supabase
     .from('historia_categorias')
     .select('historia_id, categoria_id');
@@ -144,14 +147,14 @@ async function fetchStoriesFromSupabase() {
     hcMap[historia_id].push(categoryMap[categoria_id]);
   });
 
-  // Montagem
+  // 3.4) Montagem de allStories
   allStories = historias.map(h => {
     const c = cartaoMap[h.id] || {};
     return {
       id: h.id,
       cartao: {
-        tituloCartao:     c.titulo_cartao   || h.titulo       || 'Sem título',
-        sinopseCartao:    c.sinopse_cartao  || h.descricao    || 'Sem sinopse',
+        tituloCartao:     c.titulo_cartao   || h.titulo    || 'Sem título',
+        sinopseCartao:    c.sinopse_cartao  || h.descricao || 'Sem sinopse',
         historiaCompleta: h.descricao       || 'Sem história',
         dataCartao:       (c.data_criacao || h.data_criacao).split('T')[0],
         autorCartao:      c.autor_cartao    || 'Anónimo',
@@ -162,7 +165,7 @@ async function fetchStoriesFromSupabase() {
   });
 }
 
-// [5] Formatação de texto
+// [4] Formatação de texto
 function formatarPor4Linhas(text) {
   if (!text) return '<p>(sem sinopse)</p>';
   return text.split('\n').slice(0,4)
@@ -192,7 +195,7 @@ function destacarPalavra() {
   }
 }
 
-// [6] Criação de Cards
+// [5] Criação de cards e placeholders
 function createStoryCard(story) {
   const div = document.createElement('div');
   div.className = 'sheet';
@@ -263,7 +266,7 @@ function createPlaceholderCard() {
   return div;
 }
 
-// Modal detalhado
+// Abre modal detalhado
 function abrirModal(story) {
   isModalOpen    = true;
   currentStoryId = story.id;
@@ -284,37 +287,35 @@ function abrirModal(story) {
   modalOverlay.style.display = 'flex';
 }
 
-// [7] Toggle Like
+// [6] Alterna like e atualiza contador
 async function toggleLike(story, updateUI) {
-  if (!sessionUserId) { alert('Faça login para dar like.'); return; }
-  const already = likedStories.includes(story.id);
+  if (!sessionUserId) {
+    alert('Faça login para dar like.');
+    return;
+  }
 
+  const already = likedStories.includes(story.id);
+  story.cartao.likes += already ? -1 : 1;
+
+  // Atualiza lista local de likes
   if (already) {
-    await supabase
-      .from('user_likes')
-      .delete()
-      .match({ user_id: sessionUserId, historia_id: story.id });
     likedStories = likedStories.filter(id => id !== story.id);
   } else {
-    await supabase
-      .from('user_likes')
-      .insert({ user_id: sessionUserId, historia_id: story.id });
     likedStories.push(story.id);
   }
+  localStorage.setItem(`likedStories_${sessionUserId}`, JSON.stringify(likedStories));
 
-  // Recarrega contagem de likes (incluímos a PK no select para evitar 406)
-  const { data, error } = await supabase
+  // Atualiza no Supabase
+  const { error } = await supabase
     .from('cartoes')
-    .select('historia_id, likes')
-    .eq('historia_id', story.id)
-    .single();
-  if (!error && data) {
-    story.cartao.likes = data.likes;
-  }
+    .update({ likes: story.cartao.likes })
+    .eq('historia_id', story.id);
+  if (error) console.error('Erro ao salvar like em cartoes:', error);
+
   updateUI();
 }
 
-// [8] Filtrar / ordenar / pesquisar
+// [7] Filtrar / ordenar / pesquisar
 function matchesSearch(story, txt) {
   if (!txt) return true;
   txt = txt.toLowerCase();
@@ -323,9 +324,7 @@ function matchesSearch(story, txt) {
 }
 function getFilteredStories() {
   let arr = allStories.filter(st => matchesSearch(st, searchBar.value));
-  if (categoryFilter.value) {
-    arr = arr.filter(st => st.cartao.categorias.includes(categoryFilter.value));
-  }
+  if (categoryFilter.value) arr = arr.filter(st => st.cartao.categorias.includes(categoryFilter.value));
   if (sortFilter.value === 'date') {
     arr.sort((a,b) => b.cartao.dataCartao.localeCompare(a.cartao.dataCartao));
   } else if (sortFilter.value === 'popularity') {
@@ -334,11 +333,10 @@ function getFilteredStories() {
   return arr;
 }
 
-// [9] Paginação
+// [8] Paginação
 function showBatch(count) {
-  const filtered = getFilteredStories();
-  const slice    = filtered.slice(currentOffset, currentOffset + count);
-  const frag     = document.createDocumentFragment();
+  const slice = getFilteredStories().slice(currentOffset, currentOffset + count);
+  const frag  = document.createDocumentFragment();
   slice.forEach(s => frag.appendChild(createStoryCard(s)));
   for (let i = slice.length; i < count; i++) frag.appendChild(createPlaceholderCard());
   container.appendChild(frag);
