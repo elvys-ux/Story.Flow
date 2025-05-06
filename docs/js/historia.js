@@ -1,3 +1,4 @@
+
 // js/historia.js
 import { supabase } from './supabase.js';
 
@@ -6,13 +7,11 @@ let openMenu = null,
     isTitleListVisible = false,
     currentCardId = null;
 
-// Armazena o ID do utilizador autenticado
-let sessionUserId = null;
-
 document.addEventListener('DOMContentLoaded', async () => {
   await exibirUsuarioLogado();
   await mostrarHistorias();
 
+  // Submissão do formulário de criação/edição de história
   document.getElementById('storyForm')
     .addEventListener('submit', async e => {
       e.preventDefault();
@@ -25,6 +24,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       await salvarHistoria(titulo, descricao);
     });
 
+  // Botão “Nova História”
   document.getElementById('novaHistoriaBtn')
     .addEventListener('click', () => {
       if (!confirm('Começar nova história?')) return;
@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       removerExibicaoHistoria();
     });
 
+  // Fechar modal “Ler Mais”
   document.getElementById('closeModal')
     .addEventListener('click', () => {
       document.getElementById('modalOverlay').style.display = 'none';
@@ -42,11 +43,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('modalOverlay').style.display = 'none';
     });
 
+  // Hover na borda esquerda abre a lista
   document.body.addEventListener('mousemove', e => {
     if (e.clientX < 50) toggleTitleList(true);
   });
   document.body.addEventListener('mouseleave', () => toggleTitleList(false));
 
+  // Cliques gerais: fecha menu de contexto e lista lateral
   document.addEventListener('click', e => {
     if (openMenu &&
         !openMenu.menu.contains(e.target) &&
@@ -59,9 +62,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  // Estado inicial: oculta cartão e modal
   document.getElementById('cartaoContainer').style.display = 'none';
   document.getElementById('modalOverlay').style.display   = 'none';
 
+  // Botões do cartão
   document.getElementById('btnPublicarCartao')
     .addEventListener('click', () => {
       if (currentCardId !== null) publicarCartao(currentCardId);
@@ -82,18 +87,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function exibirUsuarioLogado() {
   const area = document.getElementById('userMenuArea');
   area.innerHTML = '';
-  const { data:{ session } } = await supabase.auth.getSession();
-  if (!session) {
+  const { data:{ user } } = await supabase.auth.getUser();
+  if (!user) {
     area.innerHTML = `
       <a href="Criacao.html" style="color:white">
         <i class="fas fa-user"></i> Login
       </a>`;
     return;
   }
-  sessionUserId = session.user.id;
   const { data: profile } = await supabase
-    .from('profiles').select('username').eq('id', sessionUserId).single();
-  const nome = profile?.username || session.user.email;
+    .from('profiles').select('username').eq('id', user.id).single();
+  const nome = profile?.username || user.email;
   area.innerHTML = `
     <span id="user-name" style="cursor:pointer">${nome}</span>
     <div id="logout-menu" style="display:none; margin-top:5px">
@@ -117,13 +121,11 @@ function toggleTitleList(show) {
   isTitleListVisible = show;
 }
 
-// [3] Carrega apenas as histórias do utilizador autenticado
+// [3] Carrega lista de histórias e anexa menu de contexto
 async function mostrarHistorias() {
-  if (!sessionUserId) return;
   const { data: stories, error } = await supabase
     .from('historias')
     .select('id, titulo')
-    .eq('user_id', sessionUserId)
     .order('data_criacao', { ascending: false });
   if (error) {
     console.error(error);
@@ -144,8 +146,66 @@ async function mostrarHistorias() {
   });
 }
 
-// restante código ([4] a [6]) permanece inalterado...
+function showMenu(li, id) {
+  hideMenu();
+  const menu = document.createElement('div');
+  menu.classList.add('menu-opcoes');
+  Object.assign(menu.style, {
+    display:     'block',
+    position:    'fixed',
+    background:  '#222',
+    borderRadius:'5px',
+    padding:     '5px 0',
+    minWidth:    '140px',
+    boxShadow:   '0 2px 6px rgba(0,0,0,0.6)',
+    zIndex:      '2000'
+  });
+  const r = li.getBoundingClientRect();
+  menu.style.top       = `${r.top + r.height/2}px`;
+  menu.style.left      = `${r.right + 8}px`;
+  menu.style.transform = 'translateY(-50%)';
 
+  const actions = [
+    { txt:'Cartão', ico:'fas fa-credit-card', fn:()=> mostrarCartaoForm(id) },
+    { txt:'Editar', ico:'fas fa-edit',        fn:()=> editarHistoria(id) },
+    { txt:'Excluir',ico:'fas fa-trash',       fn:()=> excluirHistoria(id) }
+  ];
+  actions.forEach((a,i) => {
+    const btn = document.createElement('button');
+    btn.innerHTML = `<i class="${a.ico}" style="margin-right:8px;color:#ffcc00"></i>${a.txt}`;
+    Object.assign(btn.style, {
+      display:      'flex',
+      alignItems:   'center',
+      width:        '100%',
+      padding:      '8px 12px',
+      background:   'none',
+      border:       'none',
+      borderBottom: i < actions.length-1 ? '1px solid #444' : 'none',
+      color:        '#fff',
+      cursor:       'pointer',
+      fontSize:     '14px',
+      textAlign:    'left'
+    });
+    btn.onmouseover = ()=> btn.style.background = '#444';
+    btn.onmouseout  = ()=> btn.style.background = 'transparent';
+    btn.onclick     = e => { e.stopPropagation(); hideMenu(); a.fn(); };
+    menu.appendChild(btn);
+  });
+
+  document.body.appendChild(menu);
+  openMenu = { menu, li };
+  menuTimeout = setTimeout(hideMenu, 3000);
+}
+
+function hideMenu() {
+  if (menuTimeout) {
+    clearTimeout(menuTimeout);
+    menuTimeout = null;
+  }
+  if (!openMenu) return;
+  openMenu.menu.remove();
+  openMenu = null;
+}
 
 // [4] Criar / atualizar / listar histórias
 async function salvarHistoria(titulo, descricao) {
