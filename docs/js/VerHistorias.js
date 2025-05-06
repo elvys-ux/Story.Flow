@@ -148,7 +148,9 @@ async function toggleLike(story) {
       console.error('Erro ao remover like:', error);
       return;
     }
+    // Remove do array e decrementa contador
     userLikedStories = userLikedStories.filter(id => id !== story.id);
+    story.cartao.likes = Math.max(story.cartao.likes - 1, 0);
   } else {
     const { error } = await supabase
       .from('user_likes')
@@ -157,17 +159,12 @@ async function toggleLike(story) {
       console.error('Erro ao adicionar like:', error);
       return;
     }
+    // Adiciona ao array e incrementa contador
     userLikedStories.push(story.id);
-  }
-  const { data, error: errCt } = await supabase
-    .from('cartoes')
-    .select('likes')
-    .eq('historia_id', story.id)
-    .single();
-  if (!errCt && data) {
-    story.cartao.likes = data.likes;
+    story.cartao.likes++;
   }
   return !liked;
+}
 }
 
 // [6] Criação de cards e placeholders
@@ -351,3 +348,4 @@ document.addEventListener('DOMContentLoaded', async () => {
   sortFilter.addEventListener('change', initialLoad);
   loadMoreBtn.addEventListener('click', loadMore);
 });
+
