@@ -25,16 +25,16 @@ const continuarBtn   = document.getElementById('continuarBtn');
 let isModalOpen    = false;
 let currentStoryId = null;
 
-// Guarda os IDs curtidos por usuário
+// Likes por usuário
 let likedStories = [];
 let likedKey     = null;
 
 let categoryMap  = {}; // id → nome
 
-// [1] mostra usuário e carrega likes locais
+// [1] Exibe usuário logado e inicializa likedStories
 async function exibirUsuarioLogado() {
   const area = document.getElementById('userMenuArea');
-  const { data:{ session } } = await supabase.auth.getSession();
+  const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
     area.innerHTML = `<a href="Criacao.html"><i class="fas fa-user"></i> Login</a>`;
     return;
@@ -42,11 +42,13 @@ async function exibirUsuarioLogado() {
   const userId = session.user.id;
   likedKey = `likedStories_${userId}`;
   likedStories = JSON.parse(localStorage.getItem(likedKey) || '[]');
+
   const { data: profile } = await supabase
     .from('profiles')
     .select('username')
     .eq('id', userId)
     .single();
+
   const nome = profile?.username || session.user.email;
   area.textContent = nome;
   area.style.cursor = 'pointer';
@@ -58,19 +60,15 @@ async function exibirUsuarioLogado() {
   };
 }
 
-// [2] carrega categorias
+// [2] Carrega categorias
 async function fetchCategories() {
   const { data, error } = await supabase
     .from('categorias')
     .select('id, nome');
-  if (error) {
-    console.error(error);
-    return;
-  }
-  categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
+  if (!error) categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
 }
 
-// [3] carrega histórias completas
+// [3] Busca todas as histórias, cartões e categorias
 async function fetchStoriesFromSupabase() {
   const { data: historias, error: errH } = await supabase
     .from('historias')
@@ -84,28 +82,14 @@ async function fetchStoriesFromSupabase() {
 
   const { data: cartoes, error: errC } = await supabase
     .from('cartoes')
-    .select(`
-      historia_id,
-      titulo_cartao,
-      sinopse_cartao,
-      autor_cartao,
-      data_criacao,
-      likes,
-      historia_completa
-    `);
-  if (errC) {
-    console.error(errC);
-    return;
-  }
+    .select('historia_id, titulo_cartao, sinopse_cartao, autor_cartao, data_criacao, likes, historia_completa');
+  if (errC) { console.error(errC); return; }
   const cartaoMap = Object.fromEntries(cartoes.map(c => [c.historia_id, c]));
 
   const { data: hcData, error: errHC } = await supabase
     .from('historia_categorias')
     .select('historia_id, categoria_id');
-  if (errHC) {
-    console.error(errHC);
-    return;
-  }
+  if (errHC) { console.error(errHC); return; }
   const hcMap = {};
   hcData.forEach(({ historia_id, categoria_id }) => {
     hcMap[historia_id] = hcMap[historia_id] || [];
@@ -120,39 +104,27 @@ async function fetchStoriesFromSupabase() {
     return {
       id: h.id,
       cartao: {
-        tituloCartao:     c.titulo_cartao     || h.titulo    || 'Sem título',
+        tituloCartao:     c.titulo_cartao   || h.titulo    || 'Sem título',
         sinopseCartao:    sinopse,
         historiaCompleta: c.historia_completa || h.descricao || '',
         dataCartao:       (c.data_criacao || h.data_criacao).split('T')[0],
-        autorCartao:      c.autor_cartao      || 'Anónimo',
-        categorias:       hcMap[h.id]         || [],
+        autorCartao:      c.autor_cartao    || 'Anónimo',
+        categorias:       hcMap[h.id]       || [],
         likes:            c.likes ?? 0
       }
     };
   });
 }
 
-// [4] formatadores
+// [4] Formatadores
 function formatarPor4Linhas(text) {
-  return text
-    .split('\n')
-    .reduce((acc, line, i) => {
-      const grp = Math.floor(i/4);
-      acc[grp] = acc[grp] || [];
-      acc[grp].push(line);
-      return acc;
-    }, [])
-    .map(grp => `<p style="text-align:justify;">${grp.join('<br>')}</p>`)
-    .join('');
+  return text.split('\n').slice(0,4).join('<br>');
 }
 function formatarTextoParaLeitura(text) {
-  return text
-    .split('\n')
-    .map(line => `<p style="text-align:justify;">${line}</p>`)
-    .join('');
+  return text.split('\n').map(l => `<p>${l}</p>`).join('');
 }
 
-// [5] cria um cartão
+// [5] Cria cartão com like persistente por conta
 function createStoryCard(story) {
   const div = document.createElement('div');
   div.className = 'sheet';
@@ -189,14 +161,14 @@ function createStoryCard(story) {
   updateLikeUI();
 
   likeBtn.onclick = async () => {
-    // otimista
+    // atualiza imediatamente
     story.cartao.likes += userLiked ? -1 : 1;
     userLiked = !userLiked;
     updateLikeUI();
 
-    // atualiza localStorage
+    // salva estado local
     if (userLiked) likedStories.push(story.id);
-    else likedStories = likedStories.filter(id => id !== story.id);
+    else likedStories = likedStories.filter(id => id!==story.id);
     localStorage.setItem(likedKey, JSON.stringify(likedStories));
 
     // persiste no Supabase
@@ -206,20 +178,19 @@ function createStoryCard(story) {
       .eq('historia_id', story.id)
       .select('likes')
       .single();
-    if (error) {
-      console.error('Falha ao salvar like:', error);
-      return;
+    if (!error) {
+      story.cartao.likes = data.likes;
+      updateLikeUI();
+    } else {
+      console.error('Erro ao salvar like:', error);
     }
-    // sincroniza
-    story.cartao.likes = data.likes;
-    updateLikeUI();
   };
 
   div.querySelector('.ver-mais').onclick = () => openModal(story);
   return div;
 }
 
-// [6] modal
+// [6] Modal “mais...” + “Ler”
 function openModal(story) {
   isModalOpen    = true;
   currentStoryId = story.id;
@@ -238,7 +209,7 @@ function openModal(story) {
   modalOverlay.style.display = 'flex';
 }
 
-// [7] fecha modal
+// [7] Fecha modal
 modalClose.onclick = () => { modalOverlay.style.display='none'; isModalOpen=false; };
 modalOverlay.onclick = e => {
   if (e.target===modalOverlay && isModalOpen) warningOverlay.style.display='flex';
@@ -250,11 +221,11 @@ warningYes.onclick = () => {
 };
 warningNo.onclick = () => warningOverlay.style.display='none';
 
-// [8] filtros + paginação
-function matchesSearch(s, txt) {
+// [8] Filtros, ordenação e paginação
+function matchesSearch(story, txt) {
   txt = txt.toLowerCase();
-  return s.cartao.tituloCartao.toLowerCase().includes(txt)
-      || (s.cartao.autorCartao||'').toLowerCase().includes(txt);
+  return story.cartao.tituloCartao.toLowerCase().includes(txt)
+      || (story.cartao.autorCartao||'').toLowerCase().includes(txt);
 }
 
 function showBatch(count) {
@@ -266,7 +237,6 @@ function showBatch(count) {
       return b.cartao.dataCartao.localeCompare(a.cartao.dataCartao);
     });
 
-  // limpa só na primeira página
   if (currentOffset===0) container.innerHTML='';
 
   const slice = filtered.slice(currentOffset, currentOffset + count);
@@ -278,7 +248,7 @@ function showBatch(count) {
     container.appendChild(ph);
   }
   currentOffset += count;
-  loadMoreBtn.disabled=false;
+  loadMoreBtn.disabled = false;
 }
 
 function initialLoad() {
@@ -286,8 +256,8 @@ function initialLoad() {
   showBatch(initialCount);
 }
 
-// [9] init
-document.addEventListener('DOMContentLoaded', async ()=>{
+// [9] Inicialização
+document.addEventListener('DOMContentLoaded', async () => {
   await exibirUsuarioLogado();
   await fetchCategories();
   await fetchStoriesFromSupabase();
@@ -296,5 +266,5 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   searchBar.oninput       = initialLoad;
   categoryFilter.onchange = initialLoad;
   sortFilter.onchange     = initialLoad;
-  loadMoreBtn.onclick     = ()=>{ loadMoreBtn.disabled=true; showBatch(increment); };
+  loadMoreBtn.onclick     = () => { loadMoreBtn.disabled=true; showBatch(increment); };
 });
