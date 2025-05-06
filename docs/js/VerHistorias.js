@@ -20,39 +20,58 @@ const modalInfo      = document.getElementById('modalInfo');
 const warningOverlay = document.getElementById('warningOverlay');
 const warningYes     = document.getElementById('warningYes');
 const warningNo      = document.getElementById('warningNo');
-const continuarBtn   = document.getElementById('continuarBtn');
 
-let isModalOpen     = false;
-let currentStoryId  = null;
+let isModalOpen    = false;
+let currentStoryId = null;
 
+// Likes isolados por usuário
 let likedStories = JSON.parse(localStorage.getItem('likedStories') || '[]');
-let categoryMap  = {};  // id → nome
+let likedKey     = 'likedStories';  // sem userId, mas você pode incluir se quiser isolar por conta
 
-// [1] Exibe usuário logado / login
+let categoryMap = {};  // id → nome
+
+/************************************************************
+ * [1] Exibe usuário logado / login
+ ************************************************************/
 async function exibirUsuarioLogado() {
   const area = document.getElementById('userMenuArea');
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session }, error: sessErr } = await supabase.auth.getSession();
+  if (sessErr) {
+    console.error('Erro ao obter sessão:', sessErr);
+    area.innerHTML = `<a href="Criacao.html"><i class="fas fa-user"></i> Login</a>`;
+    return;
+  }
   if (!session) {
     area.innerHTML = `<a href="Criacao.html"><i class="fas fa-user"></i> Login</a>`;
     return;
   }
   const userId = session.user.id;
-  const { data: profile } = await supabase
+  likedKey = `likedStories_${userId}`;
+  likedStories = JSON.parse(localStorage.getItem(likedKey) || '[]');
+
+  const { data: profile, error: profErr } = await supabase
     .from('profiles')
     .select('username')
     .eq('id', userId)
     .single();
-  const nome = profile?.username || session.user.email;
+
+  const nome = profErr || !profile?.username
+    ? session.user.email
+    : profile.username;
+
   area.textContent = nome;
   area.style.cursor = 'pointer';
   area.onclick = () => {
     if (confirm('Deseja fazer logout?')) {
+      localStorage.removeItem(likedKey);
       supabase.auth.signOut().then(() => location.href = 'Criacao.html');
     }
   };
 }
 
-// [2] Carrega categorias (id → nome)
+/************************************************************
+ * [2] Carrega categorias (id → nome)
+ ************************************************************/
 async function fetchCategories() {
   const { data, error } = await supabase
     .from('categorias')
@@ -64,9 +83,11 @@ async function fetchCategories() {
   categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
 }
 
-// [3] Busca histórias + cartões + categorias
+/************************************************************
+ * [3] Busca histórias + cartões + categorias
+ ************************************************************/
 async function fetchStoriesFromSupabase() {
-  // Carrega histórias
+  // Histórias básicas
   const { data: historias, error: errH } = await supabase
     .from('historias')
     .select('id, titulo, descricao, data_criacao')
@@ -77,7 +98,7 @@ async function fetchStoriesFromSupabase() {
     return;
   }
 
-  // Carrega cartões
+  // Cartões completos
   const { data: cartoes, error: errC } = await supabase
     .from('cartoes')
     .select(`
@@ -95,7 +116,7 @@ async function fetchStoriesFromSupabase() {
   }
   const cartaoMap = Object.fromEntries(cartoes.map(c => [c.historia_id, c]));
 
-  // Carrega relações história–categoria
+  // Relação história–categorias
   const { data: hcData, error: errHC } = await supabase
     .from('historia_categorias')
     .select('historia_id, categoria_id');
@@ -130,7 +151,9 @@ async function fetchStoriesFromSupabase() {
   });
 }
 
-// [4] Formatação de texto
+/************************************************************
+ * [4] Formatação de texto
+ ************************************************************/
 function formatarPor4Linhas(text) {
   return text.split('\n').slice(0,4).join('<br>');
 }
@@ -138,7 +161,9 @@ function formatarTextoParaLeitura(text) {
   return text.split('\n').map(l => `<p>${l}</p>`).join('');
 }
 
-// [5] Criação de cartão
+/************************************************************
+ * [5] Criação de cartão
+ ************************************************************/
 function createStoryCard(story) {
   const div = document.createElement('div');
   div.className = 'sheet';
@@ -176,32 +201,36 @@ function createStoryCard(story) {
   updateLikeUI();
 
   likeBtn.onclick = async () => {
+    // Ajusta contagem local
     story.cartao.likes += userLiked ? -1 : 1;
     userLiked = !userLiked;
-    // atualiza localStorage
+
+    // Atualiza localStorage
     if (userLiked) likedStories.push(story.id);
     else likedStories = likedStories.filter(id => id !== story.id);
-    localStorage.setItem('likedStories', JSON.stringify(likedStories));
+    localStorage.setItem(likedKey, JSON.stringify(likedStories));
 
-    // persiste no Supabase e aguarda confirmação
+    // Persiste no Supabase e loga resultado
     const { data, error } = await supabase
       .from('cartoes')
       .update({ likes: story.cartao.likes })
       .eq('historia_id', story.id)
       .select('likes')
       .single();
+    console.log('Supabase update:', { data, error });
 
     if (error) {
-      console.error('Erro ao salvar like no Supabase:', error);
-      // reverte em caso de falha
+      console.error('Falha ao salvar like:', error);
+      // Reverte local em caso de erro
       story.cartao.likes += userLiked ? -1 : 1;
       userLiked = !userLiked;
-      likedStories = JSON.parse(localStorage.getItem('likedStories') || '[]');
-      localStorage.setItem('likedStories', JSON.stringify(likedStories));
+      likedStories = JSON.parse(localStorage.getItem(likedKey) || '[]');
+      localStorage.setItem(likedKey, JSON.stringify(likedStories));
     } else {
-      // sincroniza valor retornado pelo banco
+      // Sincroniza com valor do banco
       story.cartao.likes = data.likes;
     }
+
     updateLikeUI();
   };
 
@@ -210,10 +239,12 @@ function createStoryCard(story) {
   return div;
 }
 
-// [6] Modal: sinopse + botão “Ler”
+/************************************************************
+ * [6] Modal para “mais...” e “Ler”
+ ************************************************************/
 function openModal(story) {
-  isModalOpen     = true;
-  currentStoryId  = story.id;
+  isModalOpen    = true;
+  currentStoryId = story.id;
   modalTitle.textContent = story.cartao.tituloCartao;
   modalFullText.innerHTML = `
     <div>${formatarPor4Linhas(story.cartao.sinopseCartao)}</div>
@@ -229,19 +260,23 @@ function openModal(story) {
   modalOverlay.style.display = 'flex';
 }
 
-// [7] Fecha modal / aviso
+/************************************************************
+ * [7] Fecha modal / aviso de clique fora
+ ************************************************************/
 modalClose.onclick = () => { modalOverlay.style.display = 'none'; isModalOpen = false; };
 modalOverlay.onclick = e => {
   if (e.target === modalOverlay && isModalOpen) warningOverlay.style.display = 'flex';
 };
 warningYes.onclick = () => {
-  modalOverlay.style.display = 'none';
+  modalOverlay.style.display   = 'none';
   warningOverlay.style.display = 'none';
-  isModalOpen = false;
+  isModalOpen                  = false;
 };
 warningNo.onclick = () => warningOverlay.style.display = 'none';
 
-// [8] Filtrar / ordenar / paginação
+/************************************************************
+ * [8] Filtros, ordenação e paginação
+ ************************************************************/
 function matchesSearch(story, txt) {
   txt = txt.toLowerCase();
   return story.cartao.tituloCartao.toLowerCase().includes(txt)
@@ -276,7 +311,9 @@ function initialLoad() {
   showBatch(initialCount);
 }
 
-// [9] Inicialização
+/************************************************************
+ * [9] Inicialização
+ ************************************************************/
 document.addEventListener('DOMContentLoaded', async () => {
   await exibirUsuarioLogado();
   await fetchCategories();
