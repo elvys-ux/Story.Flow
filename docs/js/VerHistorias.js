@@ -176,12 +176,13 @@ function createStoryCard(story) {
   const likeCt  = document.createElement('span');
   let userLiked = likedStories.includes(story.id);
 
-  // Remove bordas e outline
+  // Remove bordas e outline, e aumenta o tamanho do ícone
   likeBtn.style.background = 'transparent';
   likeBtn.style.border     = 'none';
   likeBtn.style.outline    = 'none';
   likeBtn.style.padding    = '0';
   likeBtn.style.cursor     = 'pointer';
+  likeBtn.style.fontSize   = '1.4rem';
   likeBtn.onfocus          = () => likeBtn.blur();
 
   function updateUI() {
@@ -191,7 +192,6 @@ function createStoryCard(story) {
   updateUI();
 
   likeBtn.addEventListener('click', async () => {
-    // Atualiza contador e estado local
     if (userLiked) {
       story.cartao.likes = Math.max(story.cartao.likes - 1, 0);
       likedStories = likedStories.filter(i => i !== story.id);
@@ -203,7 +203,6 @@ function createStoryCard(story) {
     localStorage.setItem('likedStories', JSON.stringify(likedStories));
     updateUI();
 
-    // Persiste no Supabase, na tabela 'cartoes'
     const { data, error } = await supabase
       .from('cartoes')
       .update({ likes: story.cartao.likes })
@@ -214,7 +213,6 @@ function createStoryCard(story) {
     if (error) {
       console.error('Erro ao salvar like em cartoes:', error);
     } else {
-      // Sincroniza com o valor retornado pelo banco
       story.cartao.likes = data.likes;
       updateUI();
     }
