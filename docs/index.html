@@ -2,88 +2,73 @@
 <html lang="pt">
 <head>
   <meta charset="UTF-8">
-  <title>StoryFlow - Memories</title>
+  <title>StoryFlow – Memories</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  <!-- Ícones do Font Awesome -->
+
+  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <!-- CSS principal -->
   <link rel="stylesheet" href="css/Memories.css">
-<script type="module" src="js/supabase.js"></script>
-  <script type="module" src="js/userDisplay.js"></script>
 </head>
 <body>
 
-  <!-- Barra de Navegação -->
+  <!-- Navbar -->
   <div class="navbar">
-     <a href="index.html"><i class="fas fa-home"></i>Início</a>
+    <a href="index.html"><i class="fas fa-home"></i> Início</a>
     <div class="dropdown">
-      <a href="#"><i class="fas fa-pencil-alt"></i>Criar História</a>
+      <a href="#"><i class="fas fa-pencil-alt"></i> Criar História</a>
       <div class="dropdown-content">
         <a href="diario.html">Escrever Diário</a>
         <a href="historia.html">Escrever História</a>
       </div>
     </div>
     <div class="dropdown">
-      <a href="#"><i class="fas fa-book"></i>Histórias</a>
+      <a href="#"><i class="fas fa-book"></i> Histórias</a>
       <div class="dropdown-content">
-        <a href="hisotirasqueescrevi.html">Histórias que eu escrevi</a>
+        <a href="historiasqueescrevi.html">Histórias que eu escrevi</a>
         <a href="VerHistorias.html">Ler Histórias</a>
       </div>
     </div>
-    <!-- Área para mostrar usuário logado -->
-    <div id="userMenuArea"></div>
-    <!-- Barra de pesquisa -->
+    <div id="userMenuArea" class="user-area"></div>
     <div class="search-box">
       <input type="text" id="searchBar" placeholder="Pesquisar...">
       <button id="searchBtn"><i class="fas fa-search"></i></button>
-      <!-- Sugestões (dropdown) -->
-      <div id="searchResults"></div>
+      <div id="searchResults" class="search-results"></div>
     </div>
   </div>
 
   <main>
     <h1>StoryFlow</h1>
-          <h2>Crie e personalize as suas histórias no StoryFlow.</h2>
-    <h3> Com recursos para guardar, editar e publicar histórias ao teu gosto.</h3>
-    <!-- Container para exibir 4 cartões de destaque -->
-    <div id="featuredStories" style="margin-top: 30px;"></div>
+    <h2>Crie e personalize as suas histórias no StoryFlow.</h2>
+    <h3>Com recursos para guardar, editar e publicar histórias ao teu gosto.</h3>
+    <div id="featuredStories" class="featured-container"></div>
   </main>
 
-  <!-- Modal para leitura de história -->
-  <div class="modal-overlay" id="modalOverlay">
+  <!-- Modal de leitura -->
+  <div id="modalOverlay" class="modal-overlay" style="display:none;">
     <div class="modal-content">
-      <button class="modal-close" id="modalClose">Fechar</button>
+      <button id="modalClose" class="modal-close">Fechar</button>
       <h2 id="modalTitle">Título da História</h2>
-      <!-- Texto completo (sinopse ou história completa) -->
-      <p id="modalFullText"></p>
-      <!-- Botão Continuar (inicialmente oculto) -->
-      <button id="continuarBtn" style="display: none;">Continuar</button>
-      <div class="modal-info" id="modalInfo"></div>
+      <div id="modalFullText" class="modal-text"></div>
+      <div id="modalInfo" class="modal-info"></div>
     </div>
   </div>
 
-  <!-- Overlay de aviso para clique fora -->
-  <div class="warning-overlay" id="warningOverlay">
+  <!-- Aviso ao clicar fora -->
+  <div id="warningOverlay" class="warning-overlay" style="display:none;">
     <div class="warning-box">
       <p>Deseja fechar a leitura?</p>
-      <div>
-        <button id="warningYes">Sim</button>
-        <button id="warningNo">Não</button>
-      </div>
+      <button id="warningYes">Sim</button>
+      <button id="warningNo">Não</button>
     </div>
-  </div>
-
-  <!-- Overlay para avisos (ex: linha salva) -->
-  <div id="avisoOverlay" style="display: none;">
-    <div id="avisoMessage"></div>
   </div>
 
   <footer>
-©Ano-2025 / Elvys / StoryFlow / 𝐓𝐮𝐫𝐦𝐚-Tis7 <a href="Sobre.html">Termos de uso</a>
+    © 2025 StoryFlow – Elvys – Turma Tis7 | <a href="Sobre.html">Termos de uso</a>
   </footer>
 
-  <!-- JavaScript principal -->
+  <!-- Scripts -->
+  <script type="module" src="js/supabase.js"></script>
   <script type="module" src="js/Memories.js"></script>
 </body>
 </html>
