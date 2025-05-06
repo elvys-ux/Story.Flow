@@ -98,6 +98,23 @@ async function fetchStoriesFromSupabase() {
   // Monta allStories
   allStories = historias.map(h => {
     const c = cartaoMap[h.id] || {};
+    // Define sinopse: prioriza sinopse do cartão, senão descrição da história, senão texto padrão
+    const sinopse = c.sinopse_cartao || h.descricao || 'Sem sinopse';
+    // Define texto completo: descrição da história ou texto padrão
+    const completa = h.descricao || 'Sem história';
+    return {
+      id: h.id,
+      cartao: {
+        tituloCartao:     c.titulo_cartao    || h.titulo         || 'Sem título',
+        sinopseCartao:    sinopse,
+        historiaCompleta: completa,
+        dataCartao:       (c.data_criacao    || h.data_criacao).split('T')[0],
+        autorCartao:      c.autor_cartao     || 'Anónimo',
+        categorias:       hcMap[h.id]        || ['Sem Categoria'],
+        likes:            c.likes ?? 0
+      }
+    };
+  });
     return {
       id: h.id,
       cartao: {
