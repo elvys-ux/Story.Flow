@@ -64,12 +64,12 @@ async function fetchCategories() {
   categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
 }
 
-// [3] Busca histórias + cartões + categorias (com likes em cartoes)
+// [3] Busca histórias + cartões + categorias (com likes e conteúdo em cartoes)
 async function fetchStoriesFromSupabase() {
   // Carrega histórias (sem likes)
   const { data: historias, error: errH } = await supabase
     .from('historias')
-    .select('id, titulo, descricao, user_id, data_criacao')
+    .select('id, titulo, user_id, data_criacao')
     .order('data_criacao', { ascending: false });
   if (errH) {
     console.error('Erro ao carregar histórias:', errH);
@@ -77,17 +77,23 @@ async function fetchStoriesFromSupabase() {
     return;
   }
 
-  // Carrega cartões incluindo o campo likes
+  // Carrega cartões incluindo likes e história completa
   const { data: cartoes, error: errC } = await supabase
     .from('cartoes')
-    .select('historia_id, titulo_cartao, sinopse_cartao, autor_cartao, data_criacao, likes');
+    .select(`
+      historia_id,
+      titulo_cartao,
+      sinopse_cartao,
+      autor_cartao,
+      data_criacao,
+      likes,
+      historia_completa
+    `);
   if (errC) {
     console.error('Erro ao carregar cartões:', errC);
     return;
   }
-  const cartaoMap = Object.fromEntries(
-    cartoes.map(c => [c.historia_id, c])
-  );
+  const cartaoMap = Object.fromEntries(cartoes.map(c => [c.historia_id, c]));
 
   // Carrega relações história–categoria
   const { data: hcData, error: errHC } = await supabase
@@ -103,7 +109,7 @@ async function fetchStoriesFromSupabase() {
     hcMap[historia_id].push(categoryMap[categoria_id]);
   });
 
-  // Monta allStories usando c.likes como fonte de verdade
+  // Monta allStories usando c.likes e c.historia_completa
   allStories = historias.map(h => {
     const c = cartaoMap[h.id] || {};
     return {
@@ -111,7 +117,7 @@ async function fetchStoriesFromSupabase() {
       cartao: {
         tituloCartao:     c.titulo_cartao   || h.titulo    || 'Sem título',
         sinopseCartao:    c.sinopse_cartao  || '',
-        historiaCompleta: h.descricao       || '',
+        historiaCompleta: c.historia_completa || '',
         dataCartao:       (c.data_criacao || h.data_criacao).split('T')[0],
         autorCartao:      c.autor_cartao    || 'Anónimo',
         categorias:       hcMap[h.id]       || [],
@@ -176,7 +182,6 @@ function createStoryCard(story) {
   const likeCt  = document.createElement('span');
   let userLiked = likedStories.includes(story.id);
 
-  // Remove bordas e outline, e aumenta o tamanho do ícone
   likeBtn.style.background = 'transparent';
   likeBtn.style.border     = 'none';
   likeBtn.style.outline    = 'none';
