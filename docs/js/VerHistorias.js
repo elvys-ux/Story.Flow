@@ -64,12 +64,12 @@ async function fetchCategories() {
   categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
 }
 
-// [3] Busca histórias + cartões + categorias (com likes e conteúdo em cartoes)
+// [3] Busca histórias + cartões + categorias (com conteúdo em cartoes)
 async function fetchStoriesFromSupabase() {
-  // Carrega histórias (sem likes)
+  // Carrega histórias (sem sinopse nem conteudo)
   const { data: historias, error: errH } = await supabase
     .from('historias')
-    .select('id, titulo, user_id, data_criacao')
+    .select('id, titulo, descricao, user_id, data_criacao')
     .order('data_criacao', { ascending: false });
   if (errH) {
     console.error('Erro ao carregar histórias:', errH);
@@ -77,7 +77,7 @@ async function fetchStoriesFromSupabase() {
     return;
   }
 
-  // Carrega cartões incluindo likes e história completa
+  // Carrega cartões incluindo likes, sinopse e história completa
   const { data: cartoes, error: errC } = await supabase
     .from('cartoes')
     .select(`
@@ -109,18 +109,18 @@ async function fetchStoriesFromSupabase() {
     hcMap[historia_id].push(categoryMap[categoria_id]);
   });
 
-  // Monta allStories usando c.likes e c.historia_completa
+  // Monta allStories usando c.* como fonte de verdade
   allStories = historias.map(h => {
     const c = cartaoMap[h.id] || {};
     return {
       id: h.id,
       cartao: {
-        tituloCartao:     c.titulo_cartao   || h.titulo    || 'Sem título',
-        sinopseCartao:    c.sinopse_cartao  || '',
-        historiaCompleta: c.historia_completa || '',
+        tituloCartao:     c.titulo_cartao      || h.titulo    || 'Sem título',
+        sinopseCartao:    c.sinopse_cartao     || '', 
+        historiaCompleta: c.historia_completa  ?? h.descricao ?? '',
         dataCartao:       (c.data_criacao || h.data_criacao).split('T')[0],
-        autorCartao:      c.autor_cartao    || 'Anónimo',
-        categorias:       hcMap[h.id]       || [],
+        autorCartao:      c.autor_cartao       || 'Anónimo',
+        categorias:       hcMap[h.id]          || [],
         likes:            c.likes ?? 0
       }
     };
