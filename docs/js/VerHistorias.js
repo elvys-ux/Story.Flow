@@ -64,9 +64,9 @@ async function fetchCategories() {
   categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
 }
 
-// [3] Busca histórias + cartões + categorias (com conteúdo em cartoes)
+// [3] Busca histórias + cartões + categorias (com likes em cartoes)
 async function fetchStoriesFromSupabase() {
-  // 1) Carrega histórias, incluindo 'descricao' para fallback
+  // Carrega histórias (sem likes)
   const { data: historias, error: errH } = await supabase
     .from('historias')
     .select('id, titulo, descricao, user_id, data_criacao')
@@ -77,25 +77,19 @@ async function fetchStoriesFromSupabase() {
     return;
   }
 
-  // 2) Carrega cartões incluindo sinopse, likes e história completa
+  // Carrega cartões incluindo o campo likes
   const { data: cartoes, error: errC } = await supabase
     .from('cartoes')
-    .select(`
-      historia_id,
-      titulo_cartao,
-      sinopse_cartao,
-      autor_cartao,
-      data_criacao,
-      likes,
-      historia_completa
-    `);
+    .select('historia_id, titulo_cartao, sinopse_cartao, autor_cartao, data_criacao, likes');
   if (errC) {
     console.error('Erro ao carregar cartões:', errC);
     return;
   }
-  const cartaoMap = Object.fromEntries(cartoes.map(c => [c.historia_id, c]));
+  const cartaoMap = Object.fromEntries(
+    cartoes.map(c => [c.historia_id, c])
+  );
 
-  // 3) Carrega relações história–categoria
+  // Carrega relações história–categoria
   const { data: hcData, error: errHC } = await supabase
     .from('historia_categorias')
     .select('historia_id, categoria_id');
@@ -109,18 +103,18 @@ async function fetchStoriesFromSupabase() {
     hcMap[historia_id].push(categoryMap[categoria_id]);
   });
 
-  // 4) Monta allStories usando cartoes.historia_completa ou fallback em historias.descricao
+  // Monta allStories usando c.likes como fonte de verdade
   allStories = historias.map(h => {
     const c = cartaoMap[h.id] || {};
     return {
       id: h.id,
       cartao: {
-        tituloCartao:     c.titulo_cartao      || h.titulo    || 'Sem título',
-        sinopseCartao:    c.sinopse_cartao     || '',
-        historiaCompleta: c.historia_completa  || h.descricao  || '',
+        tituloCartao:     c.titulo_cartao   || h.titulo    || 'Sem título',
+        sinopseCartao:    c.sinopse_cartao  || '',
+        historiaCompleta: h.descricao       || '',
         dataCartao:       (c.data_criacao || h.data_criacao).split('T')[0],
-        autorCartao:      c.autor_cartao       || 'Anónimo',
-        categorias:       hcMap[h.id]          || [],
+        autorCartao:      c.autor_cartao    || 'Anónimo',
+        categorias:       hcMap[h.id]       || [],
         likes:            c.likes ?? 0
       }
     };
@@ -149,16 +143,16 @@ function createStoryCard(story) {
   sin.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao);
   div.appendChild(sin);
 
-  // “mais...” (abre modal)
+  // “mais...”
   const mais = document.createElement('span');
   mais.className = 'ver-mais';
   mais.textContent = 'mais...';
   mais.addEventListener('click', () => {
     isModalOpen = true;
     currentStoryId = story.id;
-    modalTitle.textContent = story.cartao.tituloCartao;
-    modalFullText.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao);
-    modalInfo.innerHTML = `
+    modalTitle.textContent   = story.cartao.tituloCartao;
+    modalFullText.innerHTML  = formatarPor4Linhas(story.cartao.sinopseCartao);
+    modalInfo.innerHTML      = `
       <p><strong>Data:</strong> ${story.cartao.dataCartao}</p>
       <p><strong>Autor:</strong> ${story.cartao.autorCartao}</p>
       <p><strong>Categorias:</strong> ${story.cartao.categorias.join(', ')}</p>`;
@@ -182,6 +176,7 @@ function createStoryCard(story) {
   const likeCt  = document.createElement('span');
   let userLiked = likedStories.includes(story.id);
 
+  // Remove bordas e outline, e aumenta o tamanho do ícone
   likeBtn.style.background = 'transparent';
   likeBtn.style.border     = 'none';
   likeBtn.style.outline    = 'none';
@@ -192,7 +187,7 @@ function createStoryCard(story) {
 
   function updateUI() {
     likeBtn.textContent = userLiked ? '❤️' : '🤍';
-    likeCt.textContent  = ` ${story.cartao.likes} curtida(s)`;
+    likeCt.textContent   = ` ${story.cartao.likes} curtida(s)`;
   }
   updateUI();
 
@@ -258,7 +253,7 @@ function matchesSearch(story, txt) {
   if (!txt) return true;
   txt = txt.toLowerCase();
   return story.cartao.tituloCartao.toLowerCase().includes(txt)
-    || story.cartao.autorCartao.toLowerCase().includes(txt);
+      || story.cartao.autorCartao.toLowerCase().includes(txt);
 }
 
 function getFilteredStories() {
