@@ -24,15 +24,12 @@ const warningNo      = document.getElementById('warningNo');
 let isModalOpen    = false;
 let currentStoryId = null;
 
-// Likes isolados por usuário
-let likedStories = JSON.parse(localStorage.getItem('likedStories') || '[]');
-let likedKey     = 'likedStories';  // sem userId, mas você pode incluir se quiser isolar por conta
+// Armazena likes por usuário
+let likedStories = [];
+let likedKey     = null;
+let categoryMap  = {};  // id → nome
 
-let categoryMap = {};  // id → nome
-
-/************************************************************
- * [1] Exibe usuário logado / login
- ************************************************************/
+// [1] Exibe usuário logado e carrega likes desse usuário
 async function exibirUsuarioLogado() {
   const area = document.getElementById('userMenuArea');
   const { data: { session }, error: sessErr } = await supabase.auth.getSession();
@@ -45,6 +42,7 @@ async function exibirUsuarioLogado() {
     area.innerHTML = `<a href="Criacao.html"><i class="fas fa-user"></i> Login</a>`;
     return;
   }
+
   const userId = session.user.id;
   likedKey = `likedStories_${userId}`;
   likedStories = JSON.parse(localStorage.getItem(likedKey) || '[]');
@@ -69,9 +67,7 @@ async function exibirUsuarioLogado() {
   };
 }
 
-/************************************************************
- * [2] Carrega categorias (id → nome)
- ************************************************************/
+// [2] Carrega categorias
 async function fetchCategories() {
   const { data, error } = await supabase
     .from('categorias')
@@ -83,11 +79,8 @@ async function fetchCategories() {
   categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
 }
 
-/************************************************************
- * [3] Busca histórias + cartões + categorias
- ************************************************************/
+// [3] Busca histórias, cartões e categorias
 async function fetchStoriesFromSupabase() {
-  // Histórias básicas
   const { data: historias, error: errH } = await supabase
     .from('historias')
     .select('id, titulo, descricao, data_criacao')
@@ -98,7 +91,6 @@ async function fetchStoriesFromSupabase() {
     return;
   }
 
-  // Cartões completos
   const { data: cartoes, error: errC } = await supabase
     .from('cartoes')
     .select(`
@@ -116,7 +108,6 @@ async function fetchStoriesFromSupabase() {
   }
   const cartaoMap = Object.fromEntries(cartoes.map(c => [c.historia_id, c]));
 
-  // Relação história–categorias
   const { data: hcData, error: errHC } = await supabase
     .from('historia_categorias')
     .select('historia_id, categoria_id');
@@ -130,7 +121,6 @@ async function fetchStoriesFromSupabase() {
     hcMap[historia_id].push(categoryMap[categoria_id]);
   });
 
-  // Monta allStories
   allStories = historias.map(h => {
     const c = cartaoMap[h.id] || {};
     const sinopse = c.sinopse_cartao
@@ -151,9 +141,7 @@ async function fetchStoriesFromSupabase() {
   });
 }
 
-/************************************************************
- * [4] Formatação de texto
- ************************************************************/
+// [4] Formatadores
 function formatarPor4Linhas(text) {
   return text.split('\n').slice(0,4).join('<br>');
 }
@@ -161,9 +149,7 @@ function formatarTextoParaLeitura(text) {
   return text.split('\n').map(l => `<p>${l}</p>`).join('');
 }
 
-/************************************************************
- * [5] Criação de cartão
- ************************************************************/
+// [5] Cria cartão
 function createStoryCard(story) {
   const div = document.createElement('div');
   div.className = 'sheet';
@@ -180,7 +166,6 @@ function createStoryCard(story) {
     </div>
   `;
 
-  // Likes
   const likeBtn = div.querySelector('.like-btn');
   const likeCt  = div.querySelector('.like-count');
   let userLiked  = likedStories.includes(story.id);
@@ -201,47 +186,33 @@ function createStoryCard(story) {
   updateLikeUI();
 
   likeBtn.onclick = async () => {
-    // Ajusta contagem local
+    // **Optimistic UI**: atualiza imediatamente
     story.cartao.likes += userLiked ? -1 : 1;
     userLiked = !userLiked;
+    updateLikeUI();
 
-    // Atualiza localStorage
+    // atualiza localStorage
     if (userLiked) likedStories.push(story.id);
     else likedStories = likedStories.filter(id => id !== story.id);
     localStorage.setItem(likedKey, JSON.stringify(likedStories));
 
-    // Persiste no Supabase e loga resultado
-    const { data, error } = await supabase
+    // persiste no Supabase
+    const { error } = await supabase
       .from('cartoes')
       .update({ likes: story.cartao.likes })
-      .eq('historia_id', story.id)
-      .select('likes')
-      .single();
-    console.log('Supabase update:', { data, error });
+      .eq('historia_id', story.id);
 
     if (error) {
-      console.error('Falha ao salvar like:', error);
-      // Reverte local em caso de erro
-      story.cartao.likes += userLiked ? -1 : 1;
-      userLiked = !userLiked;
-      likedStories = JSON.parse(localStorage.getItem(likedKey) || '[]');
-      localStorage.setItem(likedKey, JSON.stringify(likedStories));
-    } else {
-      // Sincroniza com valor do banco
-      story.cartao.likes = data.likes;
+      console.error('Falha ao salvar curtida:', error);
+      // opcional: informar o usuário, mas não reverte o UI
     }
-
-    updateLikeUI();
   };
 
-  // “mais...” abre modal
   div.querySelector('.ver-mais').onclick = () => openModal(story);
   return div;
 }
 
-/************************************************************
- * [6] Modal para “mais...” e “Ler”
- ************************************************************/
+// [6] Modal para “mais…” e “Ler”
 function openModal(story) {
   isModalOpen    = true;
   currentStoryId = story.id;
@@ -260,9 +231,7 @@ function openModal(story) {
   modalOverlay.style.display = 'flex';
 }
 
-/************************************************************
- * [7] Fecha modal / aviso de clique fora
- ************************************************************/
+// [7] Fecha modal / aviso
 modalClose.onclick = () => { modalOverlay.style.display = 'none'; isModalOpen = false; };
 modalOverlay.onclick = e => {
   if (e.target === modalOverlay && isModalOpen) warningOverlay.style.display = 'flex';
@@ -274,9 +243,7 @@ warningYes.onclick = () => {
 };
 warningNo.onclick = () => warningOverlay.style.display = 'none';
 
-/************************************************************
- * [8] Filtros, ordenação e paginação
- ************************************************************/
+// [8] Filtrar/ordenar/pagination
 function matchesSearch(story, txt) {
   txt = txt.toLowerCase();
   return story.cartao.tituloCartao.toLowerCase().includes(txt)
@@ -311,9 +278,7 @@ function initialLoad() {
   showBatch(initialCount);
 }
 
-/************************************************************
- * [9] Inicialização
- ************************************************************/
+// [9] Inicialização
 document.addEventListener('DOMContentLoaded', async () => {
   await exibirUsuarioLogado();
   await fetchCategories();
