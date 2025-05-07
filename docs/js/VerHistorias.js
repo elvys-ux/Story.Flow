@@ -1,16 +1,14 @@
 // js/VerHistorias.js
 import { supabase } from './supabase.js';
 
-let sessionUserId    = null;
-let allStories       = [];
-let likedStories     = new Set();
-let readingPositions = {};    // { historia_id: position }
-let currentStoryId   = null;
-let currentOffset    = 0;
-const initialCount   = 20;
-const increment      = 5;
+let sessionUserId = null;
+let allStories    = [];
+let likedStories  = new Set();  // IDs das histórias que este utilizador já curtiu
+let currentOffset = 0;
+const initialCount = 20;
+const increment    = 5;
 
-// DOM elements
+// DOM
 const container      = document.getElementById('storiesContainer');
 const categoryFilter = document.getElementById('category-filter');
 const sortFilter     = document.getElementById('sort-filter');
@@ -26,98 +24,73 @@ const modalInfo      = document.getElementById('modalInfo');
 const warningOverlay = document.getElementById('warningOverlay');
 const warningYes     = document.getElementById('warningYes');
 const warningNo      = document.getElementById('warningNo');
+const continuarBtn   = document.getElementById('continuarBtn');
 
-let categoryMap = {}; // id → nome
+let isModalOpen    = false;
+let currentStoryId = null;
+let categoryMap    = {}; // id → nome
 
 document.addEventListener('DOMContentLoaded', init);
 
-/**
- * Formata a sinopse: transforma cada frase em parágrafo.
+/** 
+ * Formata o texto inserindo duas quebras de linha após cada ponto final.
  */
-function formatSynopsis(text) {
-  if (!text) return '<p>(sem sinopse)</p>';
-  return text
+function formataComQuebra(texto) {
+  return texto
     .split('.')
     .map(s => s.trim())
-    .filter(s => s.length)
-    .map(s => `<p style="margin:0; text-align:justify">${s}.</p>`)
-    .join('');
+    .filter(s => s.length > 0)
+    .map(s => `${s}.`)
+    .join('<br><br>');
 }
-
-/**
- * Formata o texto completo: cada palavra vira um span clicável,
- * e savedIndex, se fornecido, recebe destaque.
- */
-function formatFullText(text, savedIndex = null) {
-  if (!text) return '<p>(sem conteúdo)</p>';
-  let idx = 0;
-  return text.split('\n').map(line => {
-    const spans = line.split(' ').map(word => {
-      const hl = idx === savedIndex ? ' style="background:yellow"' : '';
-      const html = `<span data-index="${idx}" onclick="markReadingPosition(this)"${hl}>${word}</span>`;
-      idx++;
-      return html;
-    }).join(' ');
-    return `<p style="text-align:justify; margin:0">${spans}</p>`;
-  }).join('');
-}
-
-// torna global para spans onclick
-window.markReadingPosition = async function(el) {
-  const pos = +el.dataset.index;
-  if (!sessionUserId || currentStoryId === null) return;
-  readingPositions[currentStoryId] = pos;
-  const { error } = await supabase
-    .from('reading_positions')
-    .upsert(
-      { user_id: sessionUserId, historia_id: currentStoryId, position: pos },
-      { onConflict: ['user_id','historia_id'] }
-    );
-  if (error) console.error('Erro ao salvar posição:', error);
-  // limpa destaque anterior e destaca este
-  modalFullText.querySelectorAll('span').forEach(s => s.style.background = '');
-  el.style.background = 'yellow';
-};
 
 async function init() {
-  // evita reload ao submeter busca
+  // Evita reload do form de pesquisa
   if (searchForm) {
     searchForm.addEventListener('submit', e => {
       e.preventDefault();
-      loadInitial();
+      initialLoad();
     });
   }
 
-  // obtém sessão
+  // Detecta sessão
   const { data:{ session } } = await supabase.auth.getSession();
   sessionUserId = session?.user?.id ?? null;
   if (sessionUserId) {
-    await loadUserLikes();
-    await loadReadingPositions();
+    await fetchUserLikes();
   }
 
-  await showLoggedUser();
-  await loadCategories();
-  await loadStories();
-  loadInitial();
+  // Carrega usuário, categorias e histórias
+  await exibirUsuarioLogado();
+  await fetchCategories();
+  await fetchStoriesFromSupabase();
 
-  // filtros e paginação
-  searchBar.addEventListener('input', loadInitial);
-  categoryFilter.addEventListener('change', loadInitial);
-  sortFilter.addEventListener('change', loadInitial);
+  // Render inicial
+  initialLoad();
+
+  // Filtros e paginação
+  searchBar.addEventListener('input', initialLoad);
+  categoryFilter.addEventListener('change', initialLoad);
+  sortFilter.addEventListener('change', initialLoad);
   loadMoreBtn.addEventListener('click', () => {
     loadMoreBtn.disabled = true;
     showBatch(increment);
   });
 
-  // eventos do modal
-  modalClose.onclick   = () => modalOverlay.style.display = 'none';
-  modalOverlay.onclick = e => { if (e.target === modalOverlay) warningOverlay.style.display = 'flex'; };
-  warningYes.onclick   = () => { modalOverlay.style.display = 'none'; warningOverlay.style.display = 'none'; };
-  warningNo.onclick    = () => warningOverlay.style.display = 'none';
+  // Modal e aviso
+  modalClose.onclick   = () => { modalOverlay.style.display = 'none'; isModalOpen = false; };
+  modalOverlay.onclick = e => { if (e.target === modalOverlay && isModalOpen) warningOverlay.style.display = 'flex'; };
+  warningYes.onclick   = () => { modalOverlay.style.display = 'none'; warningOverlay.style.display = 'none'; isModalOpen = false; };
+  warningNo.onclick    = () => { warningOverlay.style.display = 'none'; };
+  continuarBtn.onclick = () => {
+    const st = allStories.find(s => s.id === currentStoryId);
+    if (st) {
+      modalFullText.innerHTML = formataComQuebra(st.cartao.historiaCompleta);
+    }
+  };
 }
 
-async function showLoggedUser() {
+async function exibirUsuarioLogado() {
   const area = document.getElementById('userMenuArea');
   const { data:{ session } } = await supabase.auth.getSession();
   if (!session) {
@@ -125,41 +98,45 @@ async function showLoggedUser() {
     return;
   }
   const { data: profile } = await supabase
-    .from('profiles').select('username').eq('id', session.user.id).single();
+    .from('profiles')
+    .select('username')
+    .eq('id', session.user.id)
+    .single();
   area.textContent = profile?.username || session.user.email;
   area.style.cursor = 'pointer';
   area.onclick = () => {
     if (confirm('Deseja fazer logout?')) {
-      supabase.auth.signOut().then(() => window.location.href = 'Criacao.html');
+      supabase.auth.signOut().then(() => location.href = 'Criacao.html');
     }
   };
 }
 
-async function loadUserLikes() {
+async function fetchUserLikes() {
   const { data, error } = await supabase
-    .from('user_likes').select('historia_id').eq('user_id', sessionUserId);
-  likedStories = error ? new Set() : new Set(data.map(r => r.historia_id));
-}
-
-async function loadReadingPositions() {
-  const { data, error } = await supabase
-    .from('reading_positions')
-    .select('historia_id, position')
+    .from('user_likes')
+    .select('historia_id')
     .eq('user_id', sessionUserId);
-  readingPositions = error ? {} : Object.fromEntries(data.map(r => [r.historia_id, r.position]));
+  likedStories = error
+    ? new Set()
+    : new Set(data.map(r => r.historia_id));
 }
 
-async function loadCategories() {
-  const { data, error } = await supabase.from('categorias').select('id, nome');
-  if (!error) categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
+async function fetchCategories() {
+  const { data, error } = await supabase
+    .from('categorias')
+    .select('id, nome');
+  if (!error) {
+    categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
+  }
 }
 
-async function loadStories() {
+async function fetchStoriesFromSupabase() {
   const { data: historias, error: errH } = await supabase
     .from('historias')
     .select('id, titulo, descricao, data_criacao')
     .order('data_criacao', { ascending: false });
   if (errH) {
+    console.error(errH);
     container.innerHTML = '<p>Erro ao carregar histórias.</p>';
     return;
   }
@@ -174,14 +151,14 @@ async function loadStories() {
     .select('historia_id, categoria_id');
   const hcMap = {};
   hcData.forEach(({ historia_id, categoria_id }) => {
-    if (!hcMap[historia_id]) hcMap[historia_id] = [];
+    hcMap[historia_id] = hcMap[historia_id] || [];
     hcMap[historia_id].push(categoryMap[categoria_id]);
   });
 
   allStories = historias.map(h => {
     const c = cartaoMap[h.id] || {};
     return {
-      id:        h.id,
+      id: h.id,
       hasCartao: Boolean(c.titulo_cartao),
       cartao: {
         tituloCartao:     c.titulo_cartao   || h.titulo    || 'Sem título',
@@ -197,112 +174,127 @@ async function loadStories() {
 }
 
 function createStoryCard(story) {
-  const card = document.createElement('div');
-  card.className = 'sheet';
+  const div = document.createElement('div');
+  div.className = 'sheet';
 
-  const title = document.createElement('h3');
-  title.textContent = story.cartao.tituloCartao;
-  card.appendChild(title);
+  // Título
+  const h3 = document.createElement('h3');
+  h3.textContent = story.cartao.tituloCartao;
+  div.appendChild(h3);
 
-  // Limita sinopse a 4 linhas via CSS line-clamp:
-  const synopsis = document.createElement('div');
-  synopsis.className = 'sheet-sinopse';
-  synopsis.innerHTML = formatSynopsis(story.cartao.sinopseCartao);
-  Object.assign(synopsis.style, {
-    display: '-webkit-box',
-    WebkitBoxOrient: 'vertical',
-    WebkitLineClamp: '4',
-    overflow: 'hidden'
-  });
-  card.appendChild(synopsis);
+  // Sinopse com quebras após ponto final
+  const sin = document.createElement('div');
+  sin.className = 'sheet-sinopse';
+  sin.innerHTML = formataComQuebra(story.cartao.sinopseCartao);
+  div.appendChild(sin);
 
-  const more = document.createElement('span');
-  more.className = 'ver-mais';
-  more.textContent = 'mais...';
-  more.onclick = () => openModal(story);
-  card.appendChild(more);
+  // “mais...”
+  const mais = document.createElement('span');
+  mais.className = 'ver-mais';
+  mais.textContent = 'mais...';
+  mais.onclick = () => abrirModal(story);
+  div.appendChild(mais);
 
+  // Likes (só se existir cartão)
   if (story.hasCartao) {
     const likeCont = document.createElement('div');
     likeCont.style.marginTop = '10px';
-    const btn = document.createElement('button');
-    const count = document.createElement('span');
-    btn.style.cssText = 'background:transparent;border:none;outline:none;padding:0;cursor:pointer;font-size:1.4rem';
-
+    const likeBtn = document.createElement('button');
+    const likeCt  = document.createElement('span');
     let userLiked = likedStories.has(story.id);
-    function updateLikeUI() {
-      btn.textContent = userLiked ? '❤️' : '🤍';
-      count.textContent = ` ${story.cartao.likes} curtida(s)`;
-    }
-    updateLikeUI();
 
-    btn.onclick = async () => {
+    const updateUI = () => {
+      likeBtn.textContent = userLiked ? '❤️' : '🤍';
+      likeCt.textContent  = ` ${story.cartao.likes} curtida(s)`;
+    };
+    updateUI();
+
+    Object.assign(likeBtn.style, {
+      background:'transparent', border:'none', outline:'none',
+      padding:'0', cursor:'pointer', fontSize:'1.4rem'
+    });
+
+    likeBtn.onclick = async () => {
       if (!sessionUserId) { alert('Faça login para dar like.'); return; }
+
+      // Optimistic UI + persistência
       if (userLiked) {
-        story.cartao.likes--;
-        await supabase.from('user_likes').delete().match({ user_id: sessionUserId, historia_id: story.id });
+        story.cartao.likes = Math.max(story.cartao.likes - 1, 0);
+        await supabase.from('user_likes').delete().match({
+          user_id: sessionUserId,
+          historia_id: story.id
+        });
       } else {
         story.cartao.likes++;
-        await supabase.from('user_likes').insert({ user_id: sessionUserId, historia_id: story.id });
+        await supabase.from('user_likes').insert({
+          user_id: sessionUserId,
+          historia_id: story.id
+        });
       }
+
       userLiked = !userLiked;
-      if (userLiked) likedStories.add(story.id);
-      else likedStories.delete(story.id);
-      updateLikeUI();
-      await supabase.from('cartoes').update({ likes: story.cartao.likes }).eq('historia_id', story.id);
+      likedStories[userLiked ? 'add' : 'delete'](story.id);
+      updateUI();
+
+      await supabase
+        .from('cartoes')
+        .update({ likes: story.cartao.likes })
+        .eq('historia_id', story.id);
     };
 
-    likeCont.appendChild(btn);
-    likeCont.appendChild(count);
-    card.appendChild(likeCont);
+    likeCont.append(likeBtn, likeCt);
+    div.appendChild(likeCont);
   }
 
+  // Categorias
   const catCont = document.createElement('div');
   catCont.className = 'sheet-categories';
-  (story.cartao.categorias.length ? story.cartao.categorias : ['Sem Categoria']).forEach(c => {
-    const badge = document.createElement('span');
-    badge.className = 'badge';
-    badge.textContent = c;
-    catCont.appendChild(badge);
-  });
-  card.appendChild(catCont);
+  (story.cartao.categorias.length ? story.cartao.categorias : ['Sem Categoria'])
+    .forEach(c => {
+      const badge = document.createElement('span');
+      badge.className = 'badge';
+      badge.textContent = c;
+      catCont.appendChild(badge);
+    });
+  div.appendChild(catCont);
 
-  return card;
+  return div;
 }
 
-function openModal(story) {
+function createPlaceholderCard() {
+  const div = document.createElement('div');
+  div.className = 'sheet sheet-placeholder';
+  div.innerHTML = '<h3>Placeholder</h3><p>(sem história)</p>';
+  return div;
+}
+
+function abrirModal(story) {
+  isModalOpen    = true;
   currentStoryId = story.id;
-  modalTitle.textContent = story.cartao.tituloCartao;
-
-  // exibe apenas sinopse + botão "Ler"
-  modalFullText.innerHTML = formatSynopsis(story.cartao.sinopseCartao);
-  const lerBtn = document.createElement('button');
-  lerBtn.textContent = 'Ler';
-  lerBtn.onclick = () => {
-    const saved = readingPositions[story.id] ?? null;
-    modalFullText.innerHTML = formatFullText(story.cartao.historiaCompleta, saved);
-  };
-  modalFullText.appendChild(lerBtn);
-
-  modalInfo.innerHTML = `
+  modalTitle.textContent  = story.cartao.tituloCartao;
+  modalFullText.innerHTML = formataComQuebra(story.cartao.sinopseCartao);
+  modalInfo.innerHTML     = `
     <p><strong>Data:</strong> ${story.cartao.dataCartao}</p>
     <p><strong>Autor:</strong> ${story.cartao.autorCartao}</p>
     <p><strong>Categorias:</strong> ${story.cartao.categorias.join(', ')}</p>
   `;
-
-  warningOverlay.style.display = 'none';
-  modalOverlay.style.display   = 'flex';
+  const btnLer = document.createElement('button');
+  btnLer.textContent = 'Ler';
+  btnLer.onclick = () => {
+    modalFullText.innerHTML = formataComQuebra(story.cartao.historiaCompleta);
+  };
+  modalFullText.appendChild(btnLer);
+  continuarBtn.style.display = localStorage.getItem(`readingPosition_${story.id}`) ? 'inline-block' : 'none';
+  modalOverlay.style.display = 'flex';
 }
 
-function matchesSearch(story, text) {
-  if (!text) return true;
-  text = text.toLowerCase();
-  return story.cartao.tituloCartao.toLowerCase().includes(text)
-      || story.cartao.autorCartao.toLowerCase().includes(text);
-}
-
-function getFilteredStories() {
-  let arr = allStories.filter(st => matchesSearch(st, searchBar.value));
+function getFilteredStories() {  
+  let arr = allStories.filter(st => {
+    const txt = searchBar.value.toLowerCase();
+    return !txt
+      || st.cartao.tituloCartao.toLowerCase().includes(txt)
+      || st.cartao.autorCartao.toLowerCase().includes(txt);
+  });
   if (categoryFilter.value) {
     arr = arr.filter(st => st.cartao.categorias.includes(categoryFilter.value));
   }
@@ -316,23 +308,16 @@ function getFilteredStories() {
 
 function showBatch(count) {
   const slice = getFilteredStories().slice(currentOffset, currentOffset + count);
-  slice.forEach(s => container.appendChild(createStoryCard(s)));
-  for (let i = slice.length; i < count; i++) {
-    container.appendChild(createPlaceholderCard());
-  }
+  const frag  = document.createDocumentFragment();
+  slice.forEach(s => frag.appendChild(createStoryCard(s)));
+  for (let i = slice.length; i < count; i++) frag.appendChild(createPlaceholderCard());
+  container.appendChild(frag);
   currentOffset += count;
   loadMoreBtn.disabled = false;
 }
 
-function loadInitial() {
+function initialLoad() {
   container.innerHTML = '';
   currentOffset = 0;
   showBatch(initialCount);
-}
-
-function createPlaceholderCard() {
-  const div = document.createElement('div');
-  div.className = 'sheet sheet-placeholder';
-  div.innerHTML = '<h3>Placeholder</h3><p>(sem história)</p>';
-  return div;
 }
