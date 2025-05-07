@@ -26,7 +26,6 @@ const modalInfo      = document.getElementById('modalInfo');
 const warningOverlay = document.getElementById('warningOverlay');
 const warningYes     = document.getElementById('warningYes');
 const warningNo      = document.getElementById('warningNo');
-const continuarBtn   = document.getElementById('continuarBtn');
 
 let isModalOpen = false;
 let categoryMap = {}; // id → nome
@@ -34,34 +33,24 @@ let categoryMap = {}; // id → nome
 document.addEventListener('DOMContentLoaded', init);
 
 /**
- * Insere duas quebras de linha após cada ponto final.
- */
-function formataComQuebra(texto) {
-  if (!texto) return '';
-  return texto
-    .split('.')
-    .map(s => s.trim())
-    .filter(s => s.length > 0)
-    .map(s => `${s}.`)
-    .join('<br><br>');
-}
-
-/**
  * Converte o texto completo em spans clicáveis, cada palavra com data-index.
+ * Se houver posição salva, destaca aquela palavra.
  */
-function formatarTextoParaLeitura(texto) {
+function formatarTextoParaLeitura(texto, savedIndex) {
   if (!texto) return '';
   let idx = 0;
   return texto.split('\n').map(line => {
     const spans = line.split(' ').map(word => {
-      return `<span data-index="${idx}" onclick="markReadingPosition(this)">${word}</span>`;
+      const highlight = (idx === savedIndex) ? ' style="background:yellow"' : '';
+      const html = `<span data-index="${idx}"${highlight} onclick="markReadingPosition(this)">${word}</span>`;
+      idx++;
+      return html;
     }).join(' ');
-    idx++;
     return `<p style="text-align:justify">${spans}</p>`;
   }).join('');
 }
 
-// Expõe a função global para que os spans chamem onclick="markReadingPosition(this)"
+// Função global para clique em palavra
 window.markReadingPosition = async el => {
   const pos = parseInt(el.dataset.index, 10);
   if (!sessionUserId || currentStoryId === null) return;
@@ -73,15 +62,13 @@ window.markReadingPosition = async el => {
       { onConflict: ['user_id','historia_id'] }
     );
   if (error) console.error('Erro ao salvar posição:', error);
-  // destaca o span clicado e rola até ele
+  // remove destaque anterior
+  modalFullText.querySelectorAll('span').forEach(s => s.style.background = '');
+  // destaca a clicada
   el.style.background = 'yellow';
-  el.scrollIntoView({ block: 'center', behavior: 'smooth' });
-  // mostra o botão Continuar
-  continuarBtn.style.display = 'block';
 };
 
 async function init() {
-  // evita reload ao submeter pesquisa
   if (searchForm) {
     searchForm.addEventListener('submit', e => {
       e.preventDefault();
@@ -89,7 +76,6 @@ async function init() {
     });
   }
 
-  // detecta sessão
   const { data:{ session } } = await supabase.auth.getSession();
   sessionUserId = session?.user?.id ?? null;
   if (sessionUserId) {
@@ -97,15 +83,11 @@ async function init() {
     await fetchReadingPositions();
   }
 
-  // carrega usuário, categorias e histórias
   await exibirUsuarioLogado();
   await fetchCategories();
   await fetchStoriesFromSupabase();
-
-  // renderização inicial
   initialLoad();
 
-  // filtros e paginação
   searchBar.addEventListener('input', initialLoad);
   categoryFilter.addEventListener('change', initialLoad);
   sortFilter.addEventListener('change', initialLoad);
@@ -114,12 +96,10 @@ async function init() {
     showBatch(increment);
   });
 
-  // handlers de modal
   modalClose.onclick   = () => { modalOverlay.style.display = 'none'; isModalOpen = false; };
   modalOverlay.onclick = e => { if (e.target === modalOverlay && isModalOpen) warningOverlay.style.display = 'flex'; };
   warningYes.onclick   = () => { modalOverlay.style.display = 'none'; warningOverlay.style.display = 'none'; isModalOpen = false; };
   warningNo.onclick    = () => { warningOverlay.style.display = 'none'; };
-  continuarBtn.onclick = continuarLeitura;
 }
 
 async function exibirUsuarioLogado() {
@@ -289,42 +269,23 @@ function createStoryCard(story) {
 function abrirModal(story) {
   isModalOpen    = true;
   currentStoryId = story.id;
+
   modalTitle.textContent  = story.cartao.tituloCartao;
-  modalFullText.innerHTML = formataComQuebra(story.cartao.sinopseCartao);
-  modalInfo.innerHTML     = `
+  // recupera índice salvo, se houver
+  const saved = readingPositions[story.id];
+  modalFullText.innerHTML = saved != null
+    ? formatarTextoParaLeitura(story.cartao.historiaCompleta, saved)
+    : formatarTextoParaLeitura(story.cartao.historiaCompleta, null);
+
+  modalInfo.innerHTML = `
     <p><strong>Data:</strong> ${story.cartao.dataCartao}</p>
-    <p><strong>Autor:</strong> ${story.cartao.autor_cartao}</p>
+    <p><strong>Autor:</strong> ${story.cartao.autorCartao}</p>
     <p><strong>Categorias:</strong> ${story.cartao.categorias.join(', ')}</p>
   `;
 
-  const btnLer = document.createElement('button');
-  btnLer.textContent = 'Ler';
-  btnLer.onclick = () => {
-    modalFullText.innerHTML = formatarTextoParaLeitura(story.cartao.historiaCompleta);
-    continuarBtn.style.display = 'block';
-  };
-  modalFullText.appendChild(btnLer);
-
-  continuarBtn.style.display = readingPositions[story.id] != null
-    ? 'block'
-    : 'none';
-
+  warningOverlay.style.display = 'none';
   modalOverlay.style.display = 'flex';
-}
-
-function continuarLeitura() {
-  if (currentStoryId === null) return;
-  modalFullText.innerHTML = formatarTextoParaLeitura(
-    allStories.find(s => s.id === currentStoryId).cartao.historiaCompleta
-  );
-  const pos = readingPositions[currentStoryId];
-  if (pos != null) {
-    const span = modalFullText.querySelector(`[data-index="${pos}"]`);
-    if (span) {
-      span.style.background = 'yellow';
-      span.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    }
-  }
+  isModalOpen = true;
 }
 
 function matchesSearch(story, txt) {
