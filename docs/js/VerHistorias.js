@@ -32,7 +32,7 @@ let categoryMap = {}; // id → nome
 document.addEventListener('DOMContentLoaded', init);
 
 /**
- * Formata uma sinopse: transforma cada frase em parágrafo.
+ * Formata a sinopse: transforma cada frase em parágrafo.
  */
 function formatSynopsis(text) {
   if (!text) return '<p>(sem sinopse)</p>';
@@ -40,13 +40,13 @@ function formatSynopsis(text) {
     .split('.')
     .map(s => s.trim())
     .filter(s => s.length)
-    .map(s => `<p style="text-align:justify">${s}.</p>`)
+    .map(s => `<p style="margin:0; text-align:justify">${s}.</p>`)
     .join('');
 }
 
 /**
- * Formata o texto completo: cada palavra vira um span clicável.
- * savedIndex, se fornecido, recebe destaque.
+ * Formata o texto completo: cada palavra vira um span clicável,
+ * e savedIndex, se fornecido, recebe destaque.
  */
 function formatFullText(text, savedIndex = null) {
   if (!text) return '<p>(sem conteúdo)</p>';
@@ -58,7 +58,7 @@ function formatFullText(text, savedIndex = null) {
       idx++;
       return html;
     }).join(' ');
-    return `<p style="text-align:justify">${spans}</p>`;
+    return `<p style="text-align:justify; margin:0">${spans}</p>`;
   }).join('');
 }
 
@@ -80,6 +80,7 @@ window.markReadingPosition = async function(el) {
 };
 
 async function init() {
+  // evita reload ao submeter busca
   if (searchForm) {
     searchForm.addEventListener('submit', e => {
       e.preventDefault();
@@ -87,6 +88,7 @@ async function init() {
     });
   }
 
+  // obtém sessão
   const { data:{ session } } = await supabase.auth.getSession();
   sessionUserId = session?.user?.id ?? null;
   if (sessionUserId) {
@@ -99,6 +101,7 @@ async function init() {
   await loadStories();
   loadInitial();
 
+  // filtros e paginação
   searchBar.addEventListener('input', loadInitial);
   categoryFilter.addEventListener('change', loadInitial);
   sortFilter.addEventListener('change', loadInitial);
@@ -107,6 +110,7 @@ async function init() {
     showBatch(increment);
   });
 
+  // eventos do modal
   modalClose.onclick   = () => modalOverlay.style.display = 'none';
   modalOverlay.onclick = e => { if (e.target === modalOverlay) warningOverlay.style.display = 'flex'; };
   warningYes.onclick   = () => { modalOverlay.style.display = 'none'; warningOverlay.style.display = 'none'; };
@@ -170,7 +174,7 @@ async function loadStories() {
     .select('historia_id, categoria_id');
   const hcMap = {};
   hcData.forEach(({ historia_id, categoria_id }) => {
-    hcMap[historia_id] = hcMap[historia_id] || [];
+    if (!hcMap[historia_id]) hcMap[historia_id] = [];
     hcMap[historia_id].push(categoryMap[categoria_id]);
   });
 
@@ -200,9 +204,16 @@ function createStoryCard(story) {
   title.textContent = story.cartao.tituloCartao;
   card.appendChild(title);
 
+  // Limita sinopse a 4 linhas via CSS line-clamp:
   const synopsis = document.createElement('div');
   synopsis.className = 'sheet-sinopse';
   synopsis.innerHTML = formatSynopsis(story.cartao.sinopseCartao);
+  Object.assign(synopsis.style, {
+    display: '-webkit-box',
+    WebkitBoxOrient: 'vertical',
+    WebkitLineClamp: '4',
+    overflow: 'hidden'
+  });
   card.appendChild(synopsis);
 
   const more = document.createElement('span');
@@ -235,7 +246,8 @@ function createStoryCard(story) {
         await supabase.from('user_likes').insert({ user_id: sessionUserId, historia_id: story.id });
       }
       userLiked = !userLiked;
-      likedStories[userLiked ? 'add' : 'delete'](story.id);
+      if (userLiked) likedStories.add(story.id);
+      else likedStories.delete(story.id);
       updateLikeUI();
       await supabase.from('cartoes').update({ likes: story.cartao.likes }).eq('historia_id', story.id);
     };
@@ -262,12 +274,11 @@ function openModal(story) {
   currentStoryId = story.id;
   modalTitle.textContent = story.cartao.tituloCartao;
 
-  // mostra apenas a sinopse + botão "Ler"
+  // exibe apenas sinopse + botão "Ler"
   modalFullText.innerHTML = formatSynopsis(story.cartao.sinopseCartao);
   const lerBtn = document.createElement('button');
   lerBtn.textContent = 'Ler';
   lerBtn.onclick = () => {
-    // ao clicar em "Ler", exibe texto completo com spans
     const saved = readingPositions[story.id] ?? null;
     modalFullText.innerHTML = formatFullText(story.cartao.historiaCompleta, saved);
   };
