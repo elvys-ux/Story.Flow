@@ -1,12 +1,13 @@
 // js/VerHistorias.js
 import { supabase } from './supabase.js';
 
-let sessionUserId = null;
-let allStories    = [];
-let likedStories  = new Set();  // IDs das histórias que este utilizador já curtiu
-let currentOffset = 0;
-const initialCount = 20;
-const increment    = 5;
+let sessionUserId    = null;
+let allStories       = [];
+let likedStories     = new Set();     // IDs das histórias que este utilizador já curtiu
+let readingPositions = {};            // { historia_id: position }
+let currentOffset    = 0;
+const initialCount   = 20;
+const increment      = 5;
 
 // DOM
 const container      = document.getElementById('storiesContainer');
@@ -32,8 +33,8 @@ let categoryMap    = {}; // id → nome
 
 document.addEventListener('DOMContentLoaded', init);
 
-/** 
- * Formata o texto inserindo duas quebras de linha após cada ponto final.
+/**
+ * Insere duas quebras de linha após cada ponto final.
  */
 function formataComQuebra(texto) {
   return texto
@@ -45,7 +46,7 @@ function formataComQuebra(texto) {
 }
 
 async function init() {
-  // Evita reload do form de pesquisa
+  // 1) Evita reload do form de pesquisa
   if (searchForm) {
     searchForm.addEventListener('submit', e => {
       e.preventDefault();
@@ -53,22 +54,23 @@ async function init() {
     });
   }
 
-  // Detecta sessão
+  // 2) Detecta sessão e carrega likes e posições
   const { data:{ session } } = await supabase.auth.getSession();
   sessionUserId = session?.user?.id ?? null;
   if (sessionUserId) {
     await fetchUserLikes();
+    await fetchReadingPositions();
   }
 
-  // Carrega usuário, categorias e histórias
+  // 3) Carrega usuário, categorias e histórias
   await exibirUsuarioLogado();
   await fetchCategories();
   await fetchStoriesFromSupabase();
 
-  // Render inicial
+  // 4) Render inicial
   initialLoad();
 
-  // Filtros e paginação
+  // 5) Filtros e paginação
   searchBar.addEventListener('input', initialLoad);
   categoryFilter.addEventListener('change', initialLoad);
   sortFilter.addEventListener('change', initialLoad);
@@ -77,15 +79,24 @@ async function init() {
     showBatch(increment);
   });
 
-  // Modal e aviso
+  // 6) Modal e aviso
   modalClose.onclick   = () => { modalOverlay.style.display = 'none'; isModalOpen = false; };
   modalOverlay.onclick = e => { if (e.target === modalOverlay && isModalOpen) warningOverlay.style.display = 'flex'; };
   warningYes.onclick   = () => { modalOverlay.style.display = 'none'; warningOverlay.style.display = 'none'; isModalOpen = false; };
   warningNo.onclick    = () => { warningOverlay.style.display = 'none'; };
   continuarBtn.onclick = () => {
     const st = allStories.find(s => s.id === currentStoryId);
-    if (st) {
-      modalFullText.innerHTML = formataComQuebra(st.cartao.historiaCompleta);
+    if (!st) return;
+    // renderiza todo o texto com quebras
+    modalFullText.innerHTML = formataComQuebra(st.cartao.historiaCompleta);
+    // destaca a palavra salva
+    const idx = readingPositions[currentStoryId];
+    if (idx != null) {
+      const span = modalFullText.querySelector(`[data-index="${idx}"]`);
+      if (span) {
+        span.style.background = 'yellow';
+        span.scrollIntoView({ block:'center', behavior:'smooth' });
+      }
     }
   };
 }
@@ -119,6 +130,20 @@ async function fetchUserLikes() {
   likedStories = error
     ? new Set()
     : new Set(data.map(r => r.historia_id));
+}
+
+async function fetchReadingPositions() {
+  const { data, error } = await supabase
+    .from('reading_positions')
+    .select('historia_id, position')
+    .eq('user_id', sessionUserId);
+  if (!error) {
+    readingPositions = Object.fromEntries(
+      data.map(r => [r.historia_id, r.position])
+    );
+  } else {
+    readingPositions = {};
+  }
 }
 
 async function fetchCategories() {
@@ -182,7 +207,7 @@ function createStoryCard(story) {
   h3.textContent = story.cartao.tituloCartao;
   div.appendChild(h3);
 
-  // Sinopse com quebras após ponto final
+  // Sinopse formatada
   const sin = document.createElement('div');
   sin.className = 'sheet-sinopse';
   sin.innerHTML = formataComQuebra(story.cartao.sinopseCartao);
@@ -203,39 +228,46 @@ function createStoryCard(story) {
     const likeCt  = document.createElement('span');
     let userLiked = likedStories.has(story.id);
 
-    const updateUI = () => {
+    function updateUI() {
       likeBtn.textContent = userLiked ? '❤️' : '🤍';
       likeCt.textContent  = ` ${story.cartao.likes} curtida(s)`;
-    };
+    }
     updateUI();
 
     Object.assign(likeBtn.style, {
-      background:'transparent', border:'none', outline:'none',
-      padding:'0', cursor:'pointer', fontSize:'1.4rem'
+      background:'transparent',
+      border:'none',
+      outline:'none',
+      padding:'0',
+      cursor:'pointer',
+      fontSize:'1.4rem'
     });
 
     likeBtn.onclick = async () => {
-      if (!sessionUserId) { alert('Faça login para dar like.'); return; }
+      if (!sessionUserId) {
+        alert('Faça login para dar like.');
+        return;
+      }
 
-      // Optimistic UI + persistência
+      // Visualização imediata + persistência
       if (userLiked) {
         story.cartao.likes = Math.max(story.cartao.likes - 1, 0);
-        await supabase.from('user_likes').delete().match({
-          user_id: sessionUserId,
-          historia_id: story.id
-        });
+        await supabase
+          .from('user_likes')
+          .delete()
+          .match({ user_id: sessionUserId, historia_id: story.id });
       } else {
         story.cartao.likes++;
-        await supabase.from('user_likes').insert({
-          user_id: sessionUserId,
-          historia_id: story.id
-        });
+        await supabase
+          .from('user_likes')
+          .insert({ user_id: sessionUserId, historia_id: story.id });
       }
 
       userLiked = !userLiked;
       likedStories[userLiked ? 'add' : 'delete'](story.id);
       updateUI();
 
+      // Atualiza contador no Supabase
       await supabase
         .from('cartoes')
         .update({ likes: story.cartao.likes })
@@ -278,17 +310,22 @@ function abrirModal(story) {
     <p><strong>Autor:</strong> ${story.cartao.autorCartao}</p>
     <p><strong>Categorias:</strong> ${story.cartao.categorias.join(', ')}</p>
   `;
+
   const btnLer = document.createElement('button');
   btnLer.textContent = 'Ler';
   btnLer.onclick = () => {
     modalFullText.innerHTML = formataComQuebra(story.cartao.historiaCompleta);
   };
   modalFullText.appendChild(btnLer);
-  continuarBtn.style.display = localStorage.getItem(`readingPosition_${story.id}`) ? 'inline-block' : 'none';
+
+  continuarBtn.style.display = (readingPositions[story.id] != null)
+    ? 'inline-block'
+    : 'none';
+
   modalOverlay.style.display = 'flex';
 }
 
-function getFilteredStories() {  
+function getFilteredStories() {
   let arr = allStories.filter(st => {
     const txt = searchBar.value.toLowerCase();
     return !txt
@@ -310,7 +347,9 @@ function showBatch(count) {
   const slice = getFilteredStories().slice(currentOffset, currentOffset + count);
   const frag  = document.createDocumentFragment();
   slice.forEach(s => frag.appendChild(createStoryCard(s)));
-  for (let i = slice.length; i < count; i++) frag.appendChild(createPlaceholderCard());
+  for (let i = slice.length; i < count; i++) {
+    frag.appendChild(createPlaceholderCard());
+  }
   container.appendChild(frag);
   currentOffset += count;
   loadMoreBtn.disabled = false;
