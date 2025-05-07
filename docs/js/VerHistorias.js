@@ -32,7 +32,7 @@ let categoryMap = {}; // id → nome
 document.addEventListener('DOMContentLoaded', init);
 
 /**
- * Formata a sinopse: envolve cada frase em parágrafo.
+ * Formata uma sinopse: transforma cada frase em parágrafo.
  */
 function formatSynopsis(text) {
   if (!text) return '<p>(sem sinopse)</p>';
@@ -45,9 +45,8 @@ function formatSynopsis(text) {
 }
 
 /**
- * Formata o texto completo para leitura:
- * cada palavra vira um <span data-index> clicável,
- * e a palavra em savedIndex é destacada.
+ * Formata o texto completo: cada palavra vira um span clicável.
+ * savedIndex, se fornecido, recebe destaque.
  */
 function formatFullText(text, savedIndex = null) {
   if (!text) return '<p>(sem conteúdo)</p>';
@@ -63,9 +62,9 @@ function formatFullText(text, savedIndex = null) {
   }).join('');
 }
 
-// torna global para onclick nos spans
+// torna global para spans onclick
 window.markReadingPosition = async function(el) {
-  const pos = parseInt(el.dataset.index, 10);
+  const pos = +el.dataset.index;
   if (!sessionUserId || currentStoryId === null) return;
   readingPositions[currentStoryId] = pos;
   const { error } = await supabase
@@ -75,14 +74,12 @@ window.markReadingPosition = async function(el) {
       { onConflict: ['user_id','historia_id'] }
     );
   if (error) console.error('Erro ao salvar posição:', error);
-  // limpa todos os destaques
+  // limpa destaque anterior e destaca este
   modalFullText.querySelectorAll('span').forEach(s => s.style.background = '');
-  // destaca este
   el.style.background = 'yellow';
 };
 
 async function init() {
-  // evita reload ao submeter busca
   if (searchForm) {
     searchForm.addEventListener('submit', e => {
       e.preventDefault();
@@ -90,7 +87,6 @@ async function init() {
     });
   }
 
-  // obtém sessão
   const { data:{ session } } = await supabase.auth.getSession();
   sessionUserId = session?.user?.id ?? null;
   if (sessionUserId) {
@@ -103,7 +99,6 @@ async function init() {
   await loadStories();
   loadInitial();
 
-  // filtros e paginação
   searchBar.addEventListener('input', loadInitial);
   categoryFilter.addEventListener('change', loadInitial);
   sortFilter.addEventListener('change', loadInitial);
@@ -112,7 +107,6 @@ async function init() {
     showBatch(increment);
   });
 
-  // eventos do modal
   modalClose.onclick   = () => modalOverlay.style.display = 'none';
   modalOverlay.onclick = e => { if (e.target === modalOverlay) warningOverlay.style.display = 'flex'; };
   warningYes.onclick   = () => { modalOverlay.style.display = 'none'; warningOverlay.style.display = 'none'; };
@@ -162,7 +156,6 @@ async function loadStories() {
     .select('id, titulo, descricao, data_criacao')
     .order('data_criacao', { ascending: false });
   if (errH) {
-    console.error(errH);
     container.innerHTML = '<p>Erro ao carregar histórias.</p>';
     return;
   }
@@ -177,7 +170,7 @@ async function loadStories() {
     .select('historia_id, categoria_id');
   const hcMap = {};
   hcData.forEach(({ historia_id, categoria_id }) => {
-    if (!hcMap[historia_id]) hcMap[historia_id] = [];
+    hcMap[historia_id] = hcMap[historia_id] || [];
     hcMap[historia_id].push(categoryMap[categoria_id]);
   });
 
@@ -242,8 +235,7 @@ function createStoryCard(story) {
         await supabase.from('user_likes').insert({ user_id: sessionUserId, historia_id: story.id });
       }
       userLiked = !userLiked;
-      if (userLiked) likedStories.add(story.id);
-      else likedStories.delete(story.id);
+      likedStories[userLiked ? 'add' : 'delete'](story.id);
       updateLikeUI();
       await supabase.from('cartoes').update({ likes: story.cartao.likes }).eq('historia_id', story.id);
     };
@@ -270,8 +262,16 @@ function openModal(story) {
   currentStoryId = story.id;
   modalTitle.textContent = story.cartao.tituloCartao;
 
-  const saved = readingPositions[story.id] ?? null;
-  modalFullText.innerHTML = formatFullText(story.cartao.historiaCompleta, saved);
+  // mostra apenas a sinopse + botão "Ler"
+  modalFullText.innerHTML = formatSynopsis(story.cartao.sinopseCartao);
+  const lerBtn = document.createElement('button');
+  lerBtn.textContent = 'Ler';
+  lerBtn.onclick = () => {
+    // ao clicar em "Ler", exibe texto completo com spans
+    const saved = readingPositions[story.id] ?? null;
+    modalFullText.innerHTML = formatFullText(story.cartao.historiaCompleta, saved);
+  };
+  modalFullText.appendChild(lerBtn);
 
   modalInfo.innerHTML = `
     <p><strong>Data:</strong> ${story.cartao.dataCartao}</p>
