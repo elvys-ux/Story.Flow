@@ -5,8 +5,8 @@ let sessionUserId    = null;
 let allStories       = [];
 let likedStories     = new Set();
 let readingPositions = {};    // { historia_id: position }
-let currentOffset    = 0;
 let currentStoryId   = null;
+let currentOffset    = 0;
 const initialCount   = 20;
 const increment      = 5;
 
@@ -31,22 +31,28 @@ let categoryMap = {}; // id → nome
 
 document.addEventListener('DOMContentLoaded', init);
 
-// 1) Formata sinopse: adiciona duas quebras de linha após cada ponto.
-function formataComQuebra(texto) {
-  if (!texto) return '<p>(sem sinopse)</p>';
-  return texto
+/**
+ * Formata a sinopse: envolve cada frase em parágrafo.
+ */
+function formatSynopsis(text) {
+  if (!text) return '<p>(sem sinopse)</p>';
+  return text
     .split('.')
     .map(s => s.trim())
-    .filter(s => s.length > 0)
+    .filter(s => s.length)
     .map(s => `<p style="text-align:justify">${s}.</p>`)
     .join('');
 }
 
-// 2) Formata texto completo para leitura: cada palavra em span clicável.
-function formatarTextoParaLeitura(texto, savedIndex = null) {
-  if (!texto) return '<p>(sem conteúdo)</p>';
+/**
+ * Formata o texto completo para leitura:
+ * cada palavra vira um <span data-index> clicável,
+ * e a palavra em savedIndex é destacada.
+ */
+function formatFullText(text, savedIndex = null) {
+  if (!text) return '<p>(sem conteúdo)</p>';
   let idx = 0;
-  return texto.split('\n').map(line => {
+  return text.split('\n').map(line => {
     const spans = line.split(' ').map(word => {
       const hl = idx === savedIndex ? ' style="background:yellow"' : '';
       const html = `<span data-index="${idx}" onclick="markReadingPosition(this)"${hl}>${word}</span>`;
@@ -57,28 +63,30 @@ function formatarTextoParaLeitura(texto, savedIndex = null) {
   }).join('');
 }
 
-// 3) Handler global para span clicado: salva posição e destaca.
-window.markReadingPosition = async el => {
-  const pos = +el.dataset.index;
+// torna global para onclick nos spans
+window.markReadingPosition = async function(el) {
+  const pos = parseInt(el.dataset.index, 10);
   if (!sessionUserId || currentStoryId === null) return;
   readingPositions[currentStoryId] = pos;
-  await supabase
+  const { error } = await supabase
     .from('reading_positions')
     .upsert(
       { user_id: sessionUserId, historia_id: currentStoryId, position: pos },
       { onConflict: ['user_id','historia_id'] }
     );
-  // limpa destaques e destaca apenas o clicado
+  if (error) console.error('Erro ao salvar posição:', error);
+  // limpa todos os destaques
   modalFullText.querySelectorAll('span').forEach(s => s.style.background = '');
+  // destaca este
   el.style.background = 'yellow';
 };
 
 async function init() {
-  // impede reload ao submeter busca
+  // evita reload ao submeter busca
   if (searchForm) {
     searchForm.addEventListener('submit', e => {
       e.preventDefault();
-      initialLoad();
+      loadInitial();
     });
   }
 
@@ -86,35 +94,32 @@ async function init() {
   const { data:{ session } } = await supabase.auth.getSession();
   sessionUserId = session?.user?.id ?? null;
   if (sessionUserId) {
-    await fetchUserLikes();
-    await fetchReadingPositions();
+    await loadUserLikes();
+    await loadReadingPositions();
   }
 
-  // carrega dados
-  await exibirUsuarioLogado();
-  await fetchCategories();
-  await fetchStoriesFromSupabase();
-
-  // exibe primeira leva
-  initialLoad();
+  await showLoggedUser();
+  await loadCategories();
+  await loadStories();
+  loadInitial();
 
   // filtros e paginação
-  searchBar.addEventListener('input', initialLoad);
-  categoryFilter.addEventListener('change', initialLoad);
-  sortFilter.addEventListener('change', initialLoad);
+  searchBar.addEventListener('input', loadInitial);
+  categoryFilter.addEventListener('change', loadInitial);
+  sortFilter.addEventListener('change', loadInitial);
   loadMoreBtn.addEventListener('click', () => {
     loadMoreBtn.disabled = true;
     showBatch(increment);
   });
 
-  // modal events
+  // eventos do modal
   modalClose.onclick   = () => modalOverlay.style.display = 'none';
   modalOverlay.onclick = e => { if (e.target === modalOverlay) warningOverlay.style.display = 'flex'; };
   warningYes.onclick   = () => { modalOverlay.style.display = 'none'; warningOverlay.style.display = 'none'; };
   warningNo.onclick    = () => warningOverlay.style.display = 'none';
 }
 
-async function exibirUsuarioLogado() {
+async function showLoggedUser() {
   const area = document.getElementById('userMenuArea');
   const { data:{ session } } = await supabase.auth.getSession();
   if (!session) {
@@ -127,18 +132,18 @@ async function exibirUsuarioLogado() {
   area.style.cursor = 'pointer';
   area.onclick = () => {
     if (confirm('Deseja fazer logout?')) {
-      supabase.auth.signOut().then(() => location.href = 'Criacao.html');
+      supabase.auth.signOut().then(() => window.location.href = 'Criacao.html');
     }
   };
 }
 
-async function fetchUserLikes() {
+async function loadUserLikes() {
   const { data, error } = await supabase
     .from('user_likes').select('historia_id').eq('user_id', sessionUserId);
   likedStories = error ? new Set() : new Set(data.map(r => r.historia_id));
 }
 
-async function fetchReadingPositions() {
+async function loadReadingPositions() {
   const { data, error } = await supabase
     .from('reading_positions')
     .select('historia_id, position')
@@ -146,17 +151,18 @@ async function fetchReadingPositions() {
   readingPositions = error ? {} : Object.fromEntries(data.map(r => [r.historia_id, r.position]));
 }
 
-async function fetchCategories() {
+async function loadCategories() {
   const { data, error } = await supabase.from('categorias').select('id, nome');
   if (!error) categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
 }
 
-async function fetchStoriesFromSupabase() {
+async function loadStories() {
   const { data: historias, error: errH } = await supabase
     .from('historias')
     .select('id, titulo, descricao, data_criacao')
     .order('data_criacao', { ascending: false });
   if (errH) {
+    console.error(errH);
     container.innerHTML = '<p>Erro ao carregar histórias.</p>';
     return;
   }
@@ -171,7 +177,7 @@ async function fetchStoriesFromSupabase() {
     .select('historia_id, categoria_id');
   const hcMap = {};
   hcData.forEach(({ historia_id, categoria_id }) => {
-    hcMap[historia_id] = hcMap[historia_id] || [];
+    if (!hcMap[historia_id]) hcMap[historia_id] = [];
     hcMap[historia_id].push(categoryMap[categoria_id]);
   });
 
@@ -194,40 +200,39 @@ async function fetchStoriesFromSupabase() {
 }
 
 function createStoryCard(story) {
-  const div = document.createElement('div');
-  div.className = 'sheet';
+  const card = document.createElement('div');
+  card.className = 'sheet';
 
-  const h3 = document.createElement('h3');
-  h3.textContent = story.cartao.tituloCartao;
-  div.appendChild(h3);
+  const title = document.createElement('h3');
+  title.textContent = story.cartao.tituloCartao;
+  card.appendChild(title);
 
-  const sin = document.createElement('div');
-  sin.className = 'sheet-sinopse';
-  sin.innerHTML = formataComQuebra(story.cartao.sinopseCartao);
-  div.appendChild(sin);
+  const synopsis = document.createElement('div');
+  synopsis.className = 'sheet-sinopse';
+  synopsis.innerHTML = formatSynopsis(story.cartao.sinopseCartao);
+  card.appendChild(synopsis);
 
-  const mais = document.createElement('span');
-  mais.className = 'ver-mais';
-  mais.textContent = 'mais...';
-  mais.onclick = () => abrirModal(story);
-  div.appendChild(mais);
+  const more = document.createElement('span');
+  more.className = 'ver-mais';
+  more.textContent = 'mais...';
+  more.onclick = () => openModal(story);
+  card.appendChild(more);
 
   if (story.hasCartao) {
     const likeCont = document.createElement('div');
     likeCont.style.marginTop = '10px';
-    const likeBtn = document.createElement('button');
-    const likeCt  = document.createElement('span');
+    const btn = document.createElement('button');
+    const count = document.createElement('span');
+    btn.style.cssText = 'background:transparent;border:none;outline:none;padding:0;cursor:pointer;font-size:1.4rem';
+
     let userLiked = likedStories.has(story.id);
+    function updateLikeUI() {
+      btn.textContent = userLiked ? '❤️' : '🤍';
+      count.textContent = ` ${story.cartao.likes} curtida(s)`;
+    }
+    updateLikeUI();
 
-    const updateUI = () => {
-      likeBtn.textContent = userLiked ? '❤️' : '🤍';
-      likeCt.textContent  = ` ${story.cartao.likes} curtida(s)`;
-    };
-    updateUI();
-
-    likeBtn.style.cssText = 'background:transparent;border:none;outline:none;padding:0;cursor:pointer;font-size:1.4rem;';
-
-    likeBtn.onclick = async () => {
+    btn.onclick = async () => {
       if (!sessionUserId) { alert('Faça login para dar like.'); return; }
       if (userLiked) {
         story.cartao.likes--;
@@ -237,36 +242,36 @@ function createStoryCard(story) {
         await supabase.from('user_likes').insert({ user_id: sessionUserId, historia_id: story.id });
       }
       userLiked = !userLiked;
-      likedStories[userLiked ? 'add' : 'delete'](story.id);
-      updateUI();
+      if (userLiked) likedStories.add(story.id);
+      else likedStories.delete(story.id);
+      updateLikeUI();
       await supabase.from('cartoes').update({ likes: story.cartao.likes }).eq('historia_id', story.id);
     };
 
-    likeCont.appendChild(likeBtn);
-    likeCont.appendChild(likeCt);
-    div.appendChild(likeCont);
+    likeCont.appendChild(btn);
+    likeCont.appendChild(count);
+    card.appendChild(likeCont);
   }
 
   const catCont = document.createElement('div');
   catCont.className = 'sheet-categories';
-  (story.cartao.categorias.length ? story.cartao.categorias : ['Sem Categoria'])
-    .forEach(c => {
-      const badge = document.createElement('span');
-      badge.className = 'badge';
-      badge.textContent = c;
-      catCont.appendChild(badge);
-    });
-  div.appendChild(catCont);
+  (story.cartao.categorias.length ? story.cartao.categorias : ['Sem Categoria']).forEach(c => {
+    const badge = document.createElement('span');
+    badge.className = 'badge';
+    badge.textContent = c;
+    catCont.appendChild(badge);
+  });
+  card.appendChild(catCont);
 
-  return div;
+  return card;
 }
 
-function abrirModal(story) {
+function openModal(story) {
   currentStoryId = story.id;
-  modalTitle.textContent  = story.cartao.tituloCartao;
+  modalTitle.textContent = story.cartao.tituloCartao;
 
-  const saved = readingPositions[story.id];
-  modalFullText.innerHTML = formatarTextoParaLeitura(story.cartao.historiaCompleta, saved);
+  const saved = readingPositions[story.id] ?? null;
+  modalFullText.innerHTML = formatFullText(story.cartao.historiaCompleta, saved);
 
   modalInfo.innerHTML = `
     <p><strong>Data:</strong> ${story.cartao.dataCartao}</p>
@@ -275,15 +280,14 @@ function abrirModal(story) {
   `;
 
   warningOverlay.style.display = 'none';
-  modalOverlay.style.display = 'flex';
-  isModalOpen = true;
+  modalOverlay.style.display   = 'flex';
 }
 
-function matchesSearch(story, txt) {
-  if (!txt) return true;
-  txt = txt.toLowerCase();
-  return story.cartao.tituloCartao.toLowerCase().includes(txt)
-      || story.cartao.autorCartao.toLowerCase().includes(txt);
+function matchesSearch(story, text) {
+  if (!text) return true;
+  text = text.toLowerCase();
+  return story.cartao.tituloCartao.toLowerCase().includes(text)
+      || story.cartao.autorCartao.toLowerCase().includes(text);
 }
 
 function getFilteredStories() {
@@ -301,17 +305,15 @@ function getFilteredStories() {
 
 function showBatch(count) {
   const slice = getFilteredStories().slice(currentOffset, currentOffset + count);
-  const frag  = document.createDocumentFragment();
-  slice.forEach(s => frag.appendChild(createStoryCard(s)));
+  slice.forEach(s => container.appendChild(createStoryCard(s)));
   for (let i = slice.length; i < count; i++) {
-    frag.appendChild(createPlaceholderCard());
+    container.appendChild(createPlaceholderCard());
   }
-  container.appendChild(frag);
   currentOffset += count;
   loadMoreBtn.disabled = false;
 }
 
-function initialLoad() {
+function loadInitial() {
   container.innerHTML = '';
   currentOffset = 0;
   showBatch(initialCount);
