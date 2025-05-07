@@ -46,7 +46,7 @@ function formataComQuebra(texto) {
 }
 
 async function init() {
-  // 1) Evita reload do form de pesquisa
+  // Evita reload do form de pesquisa
   if (searchForm) {
     searchForm.addEventListener('submit', e => {
       e.preventDefault();
@@ -54,7 +54,7 @@ async function init() {
     });
   }
 
-  // 2) Detecta sessão e carrega likes e posições
+  // Detecta sessão e carrega likes e posições
   const { data:{ session } } = await supabase.auth.getSession();
   sessionUserId = session?.user?.id ?? null;
   if (sessionUserId) {
@@ -62,15 +62,15 @@ async function init() {
     await fetchReadingPositions();
   }
 
-  // 3) Carrega usuário, categorias e histórias
+  // Carrega usuário, categorias e histórias
   await exibirUsuarioLogado();
   await fetchCategories();
   await fetchStoriesFromSupabase();
 
-  // 4) Render inicial
+  // Render inicial
   initialLoad();
 
-  // 5) Filtros e paginação
+  // Filtros e paginação
   searchBar.addEventListener('input', initialLoad);
   categoryFilter.addEventListener('change', initialLoad);
   sortFilter.addEventListener('change', initialLoad);
@@ -79,7 +79,7 @@ async function init() {
     showBatch(increment);
   });
 
-  // 6) Modal e aviso
+  // Modal e aviso
   modalClose.onclick   = () => { modalOverlay.style.display = 'none'; isModalOpen = false; };
   modalOverlay.onclick = e => { if (e.target === modalOverlay && isModalOpen) warningOverlay.style.display = 'flex'; };
   warningYes.onclick   = () => { modalOverlay.style.display = 'none'; warningOverlay.style.display = 'none'; isModalOpen = false; };
@@ -87,9 +87,7 @@ async function init() {
   continuarBtn.onclick = () => {
     const st = allStories.find(s => s.id === currentStoryId);
     if (!st) return;
-    // renderiza todo o texto com quebras
     modalFullText.innerHTML = formataComQuebra(st.cartao.historiaCompleta);
-    // destaca a palavra salva
     const idx = readingPositions[currentStoryId];
     if (idx != null) {
       const span = modalFullText.querySelector(`[data-index="${idx}"]`);
@@ -137,13 +135,9 @@ async function fetchReadingPositions() {
     .from('reading_positions')
     .select('historia_id, position')
     .eq('user_id', sessionUserId);
-  if (!error) {
-    readingPositions = Object.fromEntries(
-      data.map(r => [r.historia_id, r.position])
-    );
-  } else {
-    readingPositions = {};
-  }
+  readingPositions = !error
+    ? Object.fromEntries(data.map(r => [r.historia_id, r.position]))
+    : {};
 }
 
 async function fetchCategories() {
@@ -249,7 +243,7 @@ function createStoryCard(story) {
         return;
       }
 
-      // Visualização imediata + persistência
+      // Optimistic UI + persistência
       if (userLiked) {
         story.cartao.likes = Math.max(story.cartao.likes - 1, 0);
         await supabase
@@ -307,14 +301,26 @@ function abrirModal(story) {
   modalFullText.innerHTML = formataComQuebra(story.cartao.sinopseCartao);
   modalInfo.innerHTML     = `
     <p><strong>Data:</strong> ${story.cartao.dataCartao}</p>
-    <p><strong>Autor:</strong> ${story.cartao.autorCartao}</p>
+    <p><strong>Autor:</strong> ${story.cartao.autor_cartao}</p>
     <p><strong>Categorias:</strong> ${story.cartao.categorias.join(', ')}</p>
   `;
 
   const btnLer = document.createElement('button');
   btnLer.textContent = 'Ler';
-  btnLer.onclick = () => {
+  btnLer.onclick = async () => {
     modalFullText.innerHTML = formataComQuebra(story.cartao.historiaCompleta);
+    if (sessionUserId) {
+      // garante botão Continuar
+      await supabase
+        .from('reading_positions')
+        .upsert({
+          user_id:     sessionUserId,
+          historia_id: story.id,
+          position:    0
+        });
+      readingPositions[story.id] = 0;
+      continuarBtn.style.display = 'inline-block';
+    }
   };
   modalFullText.appendChild(btnLer);
 
