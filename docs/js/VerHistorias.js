@@ -10,7 +10,7 @@ let currentStoryId   = null;
 const initialCount   = 20;
 const increment      = 5;
 
-// DOM
+// DOM elements
 const container      = document.getElementById('storiesContainer');
 const categoryFilter = document.getElementById('category-filter');
 const sortFilter     = document.getElementById('sort-filter');
@@ -27,22 +27,29 @@ const warningOverlay = document.getElementById('warningOverlay');
 const warningYes     = document.getElementById('warningYes');
 const warningNo      = document.getElementById('warningNo');
 
-let isModalOpen = false;
 let categoryMap = {}; // id → nome
 
 document.addEventListener('DOMContentLoaded', init);
 
-/**
- * Converte o texto completo em spans clicáveis, cada palavra com data-index.
- * Se houver posição salva, destaca aquela palavra.
- */
-function formatarTextoParaLeitura(texto, savedIndex) {
-  if (!texto) return '';
+// 1) Formata sinopse: adiciona duas quebras de linha após cada ponto.
+function formataComQuebra(texto) {
+  if (!texto) return '<p>(sem sinopse)</p>';
+  return texto
+    .split('.')
+    .map(s => s.trim())
+    .filter(s => s.length > 0)
+    .map(s => `<p style="text-align:justify">${s}.</p>`)
+    .join('');
+}
+
+// 2) Formata texto completo para leitura: cada palavra em span clicável.
+function formatarTextoParaLeitura(texto, savedIndex = null) {
+  if (!texto) return '<p>(sem conteúdo)</p>';
   let idx = 0;
   return texto.split('\n').map(line => {
     const spans = line.split(' ').map(word => {
-      const highlight = (idx === savedIndex) ? ' style="background:yellow"' : '';
-      const html = `<span data-index="${idx}"${highlight} onclick="markReadingPosition(this)">${word}</span>`;
+      const hl = idx === savedIndex ? ' style="background:yellow"' : '';
+      const html = `<span data-index="${idx}" onclick="markReadingPosition(this)"${hl}>${word}</span>`;
       idx++;
       return html;
     }).join(' ');
@@ -50,25 +57,24 @@ function formatarTextoParaLeitura(texto, savedIndex) {
   }).join('');
 }
 
-// Função global para clique em palavra
+// 3) Handler global para span clicado: salva posição e destaca.
 window.markReadingPosition = async el => {
-  const pos = parseInt(el.dataset.index, 10);
+  const pos = +el.dataset.index;
   if (!sessionUserId || currentStoryId === null) return;
   readingPositions[currentStoryId] = pos;
-  const { error } = await supabase
+  await supabase
     .from('reading_positions')
     .upsert(
       { user_id: sessionUserId, historia_id: currentStoryId, position: pos },
       { onConflict: ['user_id','historia_id'] }
     );
-  if (error) console.error('Erro ao salvar posição:', error);
-  // remove destaque anterior
+  // limpa destaques e destaca apenas o clicado
   modalFullText.querySelectorAll('span').forEach(s => s.style.background = '');
-  // destaca a clicada
   el.style.background = 'yellow';
 };
 
 async function init() {
+  // impede reload ao submeter busca
   if (searchForm) {
     searchForm.addEventListener('submit', e => {
       e.preventDefault();
@@ -76,6 +82,7 @@ async function init() {
     });
   }
 
+  // obtém sessão
   const { data:{ session } } = await supabase.auth.getSession();
   sessionUserId = session?.user?.id ?? null;
   if (sessionUserId) {
@@ -83,11 +90,15 @@ async function init() {
     await fetchReadingPositions();
   }
 
+  // carrega dados
   await exibirUsuarioLogado();
   await fetchCategories();
   await fetchStoriesFromSupabase();
+
+  // exibe primeira leva
   initialLoad();
 
+  // filtros e paginação
   searchBar.addEventListener('input', initialLoad);
   categoryFilter.addEventListener('change', initialLoad);
   sortFilter.addEventListener('change', initialLoad);
@@ -96,10 +107,11 @@ async function init() {
     showBatch(increment);
   });
 
-  modalClose.onclick   = () => { modalOverlay.style.display = 'none'; isModalOpen = false; };
-  modalOverlay.onclick = e => { if (e.target === modalOverlay && isModalOpen) warningOverlay.style.display = 'flex'; };
-  warningYes.onclick   = () => { modalOverlay.style.display = 'none'; warningOverlay.style.display = 'none'; isModalOpen = false; };
-  warningNo.onclick    = () => { warningOverlay.style.display = 'none'; };
+  // modal events
+  modalClose.onclick   = () => modalOverlay.style.display = 'none';
+  modalOverlay.onclick = e => { if (e.target === modalOverlay) warningOverlay.style.display = 'flex'; };
+  warningYes.onclick   = () => { modalOverlay.style.display = 'none'; warningOverlay.style.display = 'none'; };
+  warningNo.onclick    = () => warningOverlay.style.display = 'none';
 }
 
 async function exibirUsuarioLogado() {
@@ -110,10 +122,7 @@ async function exibirUsuarioLogado() {
     return;
   }
   const { data: profile } = await supabase
-    .from('profiles')
-    .select('username')
-    .eq('id', session.user.id)
-    .single();
+    .from('profiles').select('username').eq('id', session.user.id).single();
   area.textContent = profile?.username || session.user.email;
   area.style.cursor = 'pointer';
   area.onclick = () => {
@@ -125,12 +134,8 @@ async function exibirUsuarioLogado() {
 
 async function fetchUserLikes() {
   const { data, error } = await supabase
-    .from('user_likes')
-    .select('historia_id')
-    .eq('user_id', sessionUserId);
-  likedStories = error
-    ? new Set()
-    : new Set(data.map(r => r.historia_id));
+    .from('user_likes').select('historia_id').eq('user_id', sessionUserId);
+  likedStories = error ? new Set() : new Set(data.map(r => r.historia_id));
 }
 
 async function fetchReadingPositions() {
@@ -138,18 +143,12 @@ async function fetchReadingPositions() {
     .from('reading_positions')
     .select('historia_id, position')
     .eq('user_id', sessionUserId);
-  readingPositions = error
-    ? {}
-    : Object.fromEntries(data.map(r => [r.historia_id, r.position]));
+  readingPositions = error ? {} : Object.fromEntries(data.map(r => [r.historia_id, r.position]));
 }
 
 async function fetchCategories() {
-  const { data, error } = await supabase
-    .from('categorias')
-    .select('id, nome');
-  if (!error) {
-    categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
-  }
+  const { data, error } = await supabase.from('categorias').select('id, nome');
+  if (!error) categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
 }
 
 async function fetchStoriesFromSupabase() {
@@ -158,7 +157,6 @@ async function fetchStoriesFromSupabase() {
     .select('id, titulo, descricao, data_criacao')
     .order('data_criacao', { ascending: false });
   if (errH) {
-    console.error(errH);
     container.innerHTML = '<p>Erro ao carregar histórias.</p>';
     return;
   }
@@ -227,10 +225,7 @@ function createStoryCard(story) {
     };
     updateUI();
 
-    likeBtn.style.cssText = `
-      background:transparent; border:none; outline:none;
-      padding:0; cursor:pointer; font-size:1.4rem;
-    `;
+    likeBtn.style.cssText = 'background:transparent;border:none;outline:none;padding:0;cursor:pointer;font-size:1.4rem;';
 
     likeBtn.onclick = async () => {
       if (!sessionUserId) { alert('Faça login para dar like.'); return; }
@@ -267,15 +262,11 @@ function createStoryCard(story) {
 }
 
 function abrirModal(story) {
-  isModalOpen    = true;
   currentStoryId = story.id;
-
   modalTitle.textContent  = story.cartao.tituloCartao;
-  // recupera índice salvo, se houver
+
   const saved = readingPositions[story.id];
-  modalFullText.innerHTML = saved != null
-    ? formatarTextoParaLeitura(story.cartao.historiaCompleta, saved)
-    : formatarTextoParaLeitura(story.cartao.historiaCompleta, null);
+  modalFullText.innerHTML = formatarTextoParaLeitura(story.cartao.historiaCompleta, saved);
 
   modalInfo.innerHTML = `
     <p><strong>Data:</strong> ${story.cartao.dataCartao}</p>
