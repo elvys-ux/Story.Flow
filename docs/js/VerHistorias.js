@@ -44,12 +44,10 @@ async function init() {
   // 2) detectar sessão atual
   const { data:{ session } } = await supabase.auth.getSession();
   sessionUserId = session?.user?.id ?? null;
-  console.log('sessionUserId:', sessionUserId);
 
   // 3) se estiver logado, buscar likes
   if (sessionUserId) {
     await fetchUserLikes();
-    console.log('likedStories:', Array.from(likedStories));
   }
 
   // 4) carregar utilizador, categorias e histórias
@@ -109,11 +107,11 @@ async function fetchUserLikes() {
     .from('user_likes')
     .select('historia_id')
     .eq('user_id', sessionUserId);
-  if (error) {
+  if (!error) {
+    likedStories = new Set(data.map(r => r.historia_id));
+  } else {
     console.error('fetchUserLikes erro:', error);
     likedStories.clear();
-  } else {
-    likedStories = new Set(data.map(r => r.historia_id));
   }
 }
 
@@ -121,10 +119,10 @@ async function fetchCategories() {
   const { data, error } = await supabase
     .from('categorias')
     .select('id, nome');
-  if (error) {
-    console.error('fetchCategories erro:', error);
-  } else {
+  if (!error) {
     categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
+  } else {
+    console.error('fetchCategories erro:', error);
   }
 }
 
@@ -260,7 +258,7 @@ function createStoryCard(story) {
       return;
     }
 
-    // otimista: muda já
+    // 1) Optimistic UI
     if (userLiked) {
       story.cartao.likes = Math.max(story.cartao.likes - 1, 0);
       likedStories.delete(story.id);
@@ -276,8 +274,17 @@ function createStoryCard(story) {
         .insert({ user_id: sessionUserId, historia_id: story.id });
     }
 
-    userLiked = likedStories.has(story.id);
+    userLiked = !userLiked;
     updateUI();
+
+    // 2) Persistir contador em cartoes
+    const { error:updateErr } = await supabase
+      .from('cartoes')
+      .update({ likes: story.cartao.likes })
+      .eq('historia_id', story.id);
+    if (updateErr) {
+      console.error('Erro ao persistir likes em cartoes:', updateErr);
+    }
   };
 
   likeCont.append(likeBtn, likeCt);
