@@ -3,7 +3,7 @@ import { supabase } from './supabase.js';
 
 let sessionUserId = null;
 let allStories    = [];
-let likedStories  = [];   // IDs das histórias curtidas pelo utilizador atual
+let likedStories  = new Set();  // IDs das histórias curtidas pelo utilizador atual
 let currentOffset = 0;
 const initialCount = 20;
 const increment    = 5;
@@ -29,16 +29,18 @@ let isModalOpen    = false;
 let currentStoryId = null;
 let categoryMap    = {};   // id → nome
 
-document.addEventListener('DOMContentLoaded', async () => {
-  // 1) Checa sessão e guarda user_id
+document.addEventListener('DOMContentLoaded', init);
+
+async function init() {
+  // 1) Detecta sessão e guarda user_id
   const { data:{ session } } = await supabase.auth.getSession();
   if (session) sessionUserId = session.user.id;
 
-  // 2) Inicializa likedStories a partir do localStorage
-  initializeLikedStories();
-
-  // 3) Carrega dados
+  // 2) Exibe usuário e depois carrega likes desse user
   await exibirUsuarioLogado();
+  if (sessionUserId) await fetchUserLikes();
+
+  // 3) Carrega categorias, histórias e exibe
   await fetchCategories();
   await fetchStoriesFromSupabase();
   initialLoad();
@@ -61,19 +63,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       setTimeout(destacarPalavra, 100);
     }
   };
-});
-
-// Lê do localStorage a lista de likes do user atual
-function initializeLikedStories() {
-  if (!sessionUserId) {
-    likedStories = [];
-  } else {
-    const key = `likedStories_${sessionUserId}`;
-    likedStories = JSON.parse(localStorage.getItem(key) || '[]');
-  }
 }
 
-// [1] Exibe usuário logado / login
 async function exibirUsuarioLogado() {
   const area = document.getElementById('userMenuArea');
   const { data:{ session } } = await supabase.auth.getSession();
@@ -86,7 +77,8 @@ async function exibirUsuarioLogado() {
     .select('username')
     .eq('id', session.user.id)
     .single();
-  area.textContent = profile?.username || session.user.email;
+  const nome = profile?.username || session.user.email;
+  area.textContent = nome;
   area.style.cursor = 'pointer';
   area.onclick = () => {
     if (confirm('Deseja fazer logout?')) {
@@ -95,21 +87,31 @@ async function exibirUsuarioLogado() {
   };
 }
 
-// [2] Carrega categorias (id → nome)
+async function fetchUserLikes() {
+  const { data, error } = await supabase
+    .from('user_likes')
+    .select('historia_id')
+    .eq('user_id', sessionUserId);
+  if (error) {
+    console.error('Erro ao carregar likes do utilizador:', error);
+    likedStories.clear();
+  } else {
+    likedStories = new Set(data.map(r => r.historia_id));
+  }
+}
+
 async function fetchCategories() {
   const { data, error } = await supabase
     .from('categorias')
     .select('id, nome');
   if (error) {
     console.error('Erro ao carregar categorias:', error);
-    return;
+  } else {
+    categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
   }
-  categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
 }
 
-// [3] Carrega histórias + cartões + categorias
 async function fetchStoriesFromSupabase() {
-  // Histórias
   const { data: historias, error: errH } = await supabase
     .from('historias')
     .select('id, titulo, descricao, data_criacao')
@@ -120,7 +122,6 @@ async function fetchStoriesFromSupabase() {
     return;
   }
 
-  // Cartões (com likes)
   const { data: cartoes, error: errC } = await supabase
     .from('cartoes')
     .select('historia_id, titulo_cartao, sinopse_cartao, autor_cartao, data_criacao, likes');
@@ -130,7 +131,6 @@ async function fetchStoriesFromSupabase() {
   }
   const cartaoMap = Object.fromEntries(cartoes.map(c => [c.historia_id, c]));
 
-  // História–Categorias
   const { data: hcData, error: errHC } = await supabase
     .from('historia_categorias')
     .select('historia_id, categoria_id');
@@ -144,7 +144,6 @@ async function fetchStoriesFromSupabase() {
     hcMap[historia_id].push(categoryMap[categoria_id]);
   });
 
-  // Monta allStories
   allStories = historias.map(h => {
     const c = cartaoMap[h.id] || {};
     return {
@@ -162,12 +161,12 @@ async function fetchStoriesFromSupabase() {
   });
 }
 
-// [4] Formatação de texto
 function formatarPor4Linhas(text) {
   if (!text) return '<p>(sem sinopse)</p>';
   return text.split('\n').slice(0,4)
     .map(l => `<p style="text-align:justify">${l}</p>`).join('');
 }
+
 function formatarTextoParaLeitura(text) {
   if (!text) return '<p>(sem conteúdo)</p>';
   let idx = 0;
@@ -178,9 +177,11 @@ function formatarTextoParaLeitura(text) {
     return `<p style="text-align:justify">${spans}</p>`;
   }).join('');
 }
+
 window.markReadingPosition = el => {
   localStorage.setItem(`readingPosition_${currentStoryId}`, el.dataset.index);
 };
+
 function destacarPalavra() {
   const pos = localStorage.getItem(`readingPosition_${currentStoryId}`);
   if (pos !== null) {
@@ -192,7 +193,6 @@ function destacarPalavra() {
   }
 }
 
-// [5] Geração de cartões
 function createStoryCard(story) {
   const div = document.createElement('div');
   div.className = 'sheet';
@@ -220,8 +220,8 @@ function createStoryCard(story) {
   likeCont.style.marginTop = '10px';
   const likeBtn = document.createElement('button');
   const likeCt  = document.createElement('span');
+  let userLiked  = likedStories.has(story.id);
 
-  let userLiked = likedStories.includes(story.id);
   function updateUI() {
     likeBtn.textContent = userLiked ? '❤️' : '🤍';
     likeCt.textContent  = ` ${story.cartao.likes} curtida(s)`;
@@ -236,7 +236,32 @@ function createStoryCard(story) {
     cursor:'pointer',
     fontSize:'1.4rem'
   });
-  likeBtn.onclick = () => toggleLike(story, updateUI);
+
+  likeBtn.onclick = async () => {
+    if (!sessionUserId) {
+      alert('Faça login para dar like.');
+      return;
+    }
+
+    // UI imediata
+    if (userLiked) {
+      story.cartao.likes = Math.max(story.cartao.likes - 1, 0);
+      likedStories.delete(story.id);
+      await supabase
+        .from('user_likes')
+        .delete()
+        .match({ user_id: sessionUserId, historia_id: story.id });
+    } else {
+      story.cartao.likes++;
+      likedStories.add(story.id);
+      await supabase
+        .from('user_likes')
+        .insert({ user_id: sessionUserId, historia_id: story.id });
+    }
+
+    // Atualiza heart/color imediatamente
+    updateUI();
+  };
 
   likeCont.append(likeBtn, likeCt);
   div.appendChild(likeCont);
@@ -263,7 +288,6 @@ function createPlaceholderCard() {
   return div;
 }
 
-// Abre modal de leitura
 function abrirModal(story) {
   isModalOpen    = true;
   currentStoryId = story.id;
@@ -284,49 +308,16 @@ function abrirModal(story) {
   modalOverlay.style.display = 'flex';
 }
 
-// [6] Alterna like e persiste no cartão
-async function toggleLike(story, updateUI) {
-  if (!sessionUserId) {
-    alert('Faça login para dar like.');
-    return;
-  }
-
-  const key = `likedStories_${sessionUserId}`;
-  let userLiked = likedStories.includes(story.id);
-
-  // Atualiza contagem local
-  story.cartao.likes += userLiked ? -1 : 1;
-
-  // Atualiza lista local
-  if (userLiked) {
-    likedStories = likedStories.filter(id => id !== story.id);
-  } else {
-    likedStories.push(story.id);
-  }
-  localStorage.setItem(key, JSON.stringify(likedStories));
-
-  // Atualiza no Supabase
-  const { error } = await supabase
-    .from('cartoes')
-    .update({ likes: story.cartao.likes })
-    .eq('historia_id', story.id);
-  if (error) console.error('Erro ao salvar like em cartoes:', error);
-
-  updateUI();
-}
-
-// [7] Filtrar / ordenar / pesquisar
 function matchesSearch(story, txt) {
   if (!txt) return true;
   txt = txt.toLowerCase();
   return story.cartao.tituloCartao.toLowerCase().includes(txt)
       || story.cartao.autorCartao.toLowerCase().includes(txt);
 }
+
 function getFilteredStories() {
   let arr = allStories.filter(st => matchesSearch(st, searchBar.value));
-  if (categoryFilter.value) {
-    arr = arr.filter(st => st.cartao.categorias.includes(categoryFilter.value));
-  }
+  if (categoryFilter.value) arr = arr.filter(st => st.cartao.categorias.includes(categoryFilter.value));
   if (sortFilter.value === 'date') {
     arr.sort((a,b) => b.cartao.dataCartao.localeCompare(a.cartao.dataCartao));
   } else if (sortFilter.value === 'popularity') {
@@ -335,7 +326,6 @@ function getFilteredStories() {
   return arr;
 }
 
-// [8] Paginação
 function showBatch(count) {
   const slice = getFilteredStories().slice(currentOffset, currentOffset + count);
   const frag  = document.createDocumentFragment();
@@ -345,6 +335,7 @@ function showBatch(count) {
   currentOffset += count;
   loadMoreBtn.disabled = false;
 }
+
 function initialLoad() {
   container.innerHTML = '';
   currentOffset = 0;
