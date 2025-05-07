@@ -3,15 +3,16 @@ import { supabase } from './supabase.js';
 
 let sessionUserId = null;
 let allStories    = [];
-let likedStories  = new Set();  // IDs das histórias curtidas pelo utilizador atual
+let likedStories  = new Set();  // IDs das histórias que este utilizador já curtiu
 let currentOffset = 0;
 const initialCount = 20;
 const increment    = 5;
 
-// Elementos do DOM
+// DOM
 const container      = document.getElementById('storiesContainer');
 const categoryFilter = document.getElementById('category-filter');
 const sortFilter     = document.getElementById('sort-filter');
+const searchForm     = document.getElementById('searchForm');
 const searchBar      = document.getElementById('searchBar');
 const loadMoreBtn    = document.getElementById('loadMoreBtn');
 
@@ -27,13 +28,12 @@ const continuarBtn   = document.getElementById('continuarBtn');
 
 let isModalOpen    = false;
 let currentStoryId = null;
-let categoryMap    = {};  // id → nome
+let categoryMap    = {}; // id → nome
 
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
-  // 1) Evitar reload do form de pesquisa
-  const searchForm = document.getElementById('searchForm');
+  // 1) evitar reload do form de pesquisa
   if (searchForm) {
     searchForm.addEventListener('submit', e => {
       e.preventDefault();
@@ -41,37 +41,26 @@ async function init() {
     });
   }
 
-  // 2) Ouvir mudanças de autenticação
-  supabase.auth.onAuthStateChange((_event, session) => {
-    sessionUserId = session?.user?.id || null;
-    likedStories.clear();
-    // redesenha cards para novo utilizador / sem sessão
-    container.innerHTML = '';
-    currentOffset = 0;
-    showBatch(initialCount);
-    if (sessionUserId) {
-      fetchUserLikes().then(() => {
-        container.innerHTML = '';
-        currentOffset = 0;
-        showBatch(initialCount);
-      });
-    }
-  });
+  // 2) detectar sessão atual
+  const { data:{ session } } = await supabase.auth.getSession();
+  sessionUserId = session?.user?.id ?? null;
+  console.log('sessionUserId:', sessionUserId);
 
-  // 3) Detetar sessão inicial
-  const { data: { session } } = await supabase.auth.getSession();
-  sessionUserId = session?.user?.id || null;
-
-  // 4) Carregar likes, utilizador, categorias e histórias
+  // 3) se estiver logado, buscar likes
   if (sessionUserId) {
     await fetchUserLikes();
+    console.log('likedStories:', Array.from(likedStories));
   }
+
+  // 4) carregar utilizador, categorias e histórias
   await exibirUsuarioLogado();
   await fetchCategories();
   await fetchStoriesFromSupabase();
+
+  // 5) render inicial
   initialLoad();
 
-  // 5) Configurar filtros e paginação
+  // 6) filtros e paginação
   searchBar.addEventListener('input', initialLoad);
   categoryFilter.addEventListener('change', initialLoad);
   sortFilter.addEventListener('change', initialLoad);
@@ -80,7 +69,7 @@ async function init() {
     showBatch(increment);
   });
 
-  // 6) Modal e aviso de fechar
+  // 7) modal & aviso
   modalClose.onclick    = () => { modalOverlay.style.display = 'none'; isModalOpen = false; };
   modalOverlay.onclick  = e => { if (e.target === modalOverlay && isModalOpen) warningOverlay.style.display = 'flex'; };
   warningYes.onclick    = () => { modalOverlay.style.display = 'none'; warningOverlay.style.display = 'none'; isModalOpen = false; };
@@ -101,11 +90,10 @@ async function exibirUsuarioLogado() {
     area.innerHTML = `<a href="Criacao.html"><i class="fas fa-user"></i> Login</a>`;
     return;
   }
-  const userId = session.user.id;
   const { data: profile } = await supabase
     .from('profiles')
     .select('username')
-    .eq('id', userId)
+    .eq('id', session.user.id)
     .single();
   area.textContent = profile?.username || session.user.email;
   area.style.cursor = 'pointer';
@@ -121,11 +109,11 @@ async function fetchUserLikes() {
     .from('user_likes')
     .select('historia_id')
     .eq('user_id', sessionUserId);
-  if (!error) {
-    likedStories = new Set(data.map(r => r.historia_id));
-  } else {
-    console.error('Erro ao carregar likes do utilizador:', error);
+  if (error) {
+    console.error('fetchUserLikes erro:', error);
     likedStories.clear();
+  } else {
+    likedStories = new Set(data.map(r => r.historia_id));
   }
 }
 
@@ -133,10 +121,10 @@ async function fetchCategories() {
   const { data, error } = await supabase
     .from('categorias')
     .select('id, nome');
-  if (!error) {
-    categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
+  if (error) {
+    console.error('fetchCategories erro:', error);
   } else {
-    console.error('Erro ao carregar categorias:', error);
+    categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
   }
 }
 
@@ -146,7 +134,7 @@ async function fetchStoriesFromSupabase() {
     .select('id, titulo, descricao, data_criacao')
     .order('data_criacao', { ascending: false });
   if (errH) {
-    console.error('Erro ao carregar histórias:', errH);
+    console.error('fetchStories errH:', errH);
     container.innerHTML = '<p>Erro ao carregar histórias.</p>';
     return;
   }
@@ -155,7 +143,7 @@ async function fetchStoriesFromSupabase() {
     .from('cartoes')
     .select('historia_id, titulo_cartao, sinopse_cartao, autor_cartao, data_criacao, likes');
   if (errC) {
-    console.error('Erro ao carregar cartões:', errC);
+    console.error('fetchStories errC:', errC);
     return;
   }
   const cartaoMap = Object.fromEntries(cartoes.map(c => [c.historia_id, c]));
@@ -164,12 +152,12 @@ async function fetchStoriesFromSupabase() {
     .from('historia_categorias')
     .select('historia_id, categoria_id');
   if (errHC) {
-    console.error('Erro ao carregar categorias de história:', errHC);
+    console.error('fetchStories errHC:', errHC);
     return;
   }
   const hcMap = {};
   hcData.forEach(({ historia_id, categoria_id }) => {
-    if (!hcMap[historia_id]) hcMap[historia_id] = [];
+    hcMap[historia_id] = hcMap[historia_id] || [];
     hcMap[historia_id].push(categoryMap[categoria_id]);
   });
 
@@ -193,7 +181,8 @@ async function fetchStoriesFromSupabase() {
 function formatarPor4Linhas(text) {
   if (!text) return '<p>(sem sinopse)</p>';
   return text.split('\n').slice(0,4)
-    .map(l => `<p style="text-align:justify">${l}</p>`).join('');
+    .map(l => `<p style="text-align:justify">${l}</p>`)
+    .join('');
 }
 
 function formatarTextoParaLeitura(text) {
@@ -225,21 +214,25 @@ function createStoryCard(story) {
   const div = document.createElement('div');
   div.className = 'sheet';
 
+  // Título
   const h3 = document.createElement('h3');
   h3.textContent = story.cartao.tituloCartao;
   div.appendChild(h3);
 
+  // Sinopse
   const sin = document.createElement('div');
   sin.className = 'sheet-sinopse';
   sin.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao);
   div.appendChild(sin);
 
+  // “mais...”
   const mais = document.createElement('span');
   mais.className = 'ver-mais';
   mais.textContent = 'mais...';
   mais.onclick = () => abrirModal(story);
   div.appendChild(mais);
 
+  // Likes
   const likeCont = document.createElement('div');
   likeCont.style.marginTop = '10px';
   const likeBtn = document.createElement('button');
@@ -260,12 +253,14 @@ function createStoryCard(story) {
     cursor:'pointer',
     fontSize:'1.4rem'
   });
+
   likeBtn.onclick = async () => {
     if (!sessionUserId) {
       alert('Faça login para dar like.');
       return;
     }
-    // Optimistic UI
+
+    // otimista: muda já
     if (userLiked) {
       story.cartao.likes = Math.max(story.cartao.likes - 1, 0);
       likedStories.delete(story.id);
@@ -280,12 +275,15 @@ function createStoryCard(story) {
         .from('user_likes')
         .insert({ user_id: sessionUserId, historia_id: story.id });
     }
+
+    userLiked = likedStories.has(story.id);
     updateUI();
   };
 
   likeCont.append(likeBtn, likeCt);
   div.appendChild(likeCont);
 
+  // Categorias
   const catCont = document.createElement('div');
   catCont.className = 'sheet-categories';
   (story.cartao.categorias.length ? story.cartao.categorias : ['Sem Categoria'])
