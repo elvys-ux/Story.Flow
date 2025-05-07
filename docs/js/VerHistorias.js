@@ -33,47 +33,55 @@ let categoryMap = {}; // id → nome
 
 document.addEventListener('DOMContentLoaded', init);
 
-/** Insere duas quebras de linha após cada ponto final (para sinopse) */
+/**
+ * Insere duas quebras de linha após cada ponto final.
+ */
 function formataComQuebra(texto) {
   if (!texto) return '';
   return texto
     .split('.')
     .map(s => s.trim())
-    .filter(s => s.length)
+    .filter(s => s.length > 0)
     .map(s => `${s}.`)
     .join('<br><br>');
 }
 
-/** Transforma cada palavra em <span data-index> para leitura interativa */
+/**
+ * Converte o texto completo em spans clicáveis, cada palavra com data-index.
+ */
 function formatarTextoParaLeitura(texto) {
   if (!texto) return '';
   let idx = 0;
   return texto.split('\n').map(line => {
-    const spans = line.split(' ').map(w => {
-      const html = `<span data-index="${idx}" onclick="markReadingPosition(this)">${w}</span>`;
-      idx++;
-      return html;
+    const spans = line.split(' ').map(word => {
+      return `<span data-index="${idx}" onclick="markReadingPosition(this)">${word}</span>`;
     }).join(' ');
+    idx++;
     return `<p style="text-align:justify">${spans}</p>`;
   }).join('');
 }
 
-// Global para onclick inline nos spans
+// Expõe a função global para que os spans chamem onclick="markReadingPosition(this)"
 window.markReadingPosition = async el => {
   const pos = parseInt(el.dataset.index, 10);
   if (!sessionUserId || currentStoryId === null) return;
   readingPositions[currentStoryId] = pos;
-  await supabase
+  const { error } = await supabase
     .from('reading_positions')
-    .upsert({
-      user_id:     sessionUserId,
-      historia_id: currentStoryId,
-      position:    pos
-    });
+    .upsert(
+      { user_id: sessionUserId, historia_id: currentStoryId, position: pos },
+      { onConflict: ['user_id','historia_id'] }
+    );
+  if (error) console.error('Erro ao salvar posição:', error);
+  // destaca o span clicado e rola até ele
+  el.style.background = 'yellow';
+  el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  // mostra o botão Continuar
   continuarBtn.style.display = 'block';
 };
 
 async function init() {
+  // evita reload ao submeter pesquisa
   if (searchForm) {
     searchForm.addEventListener('submit', e => {
       e.preventDefault();
@@ -81,6 +89,7 @@ async function init() {
     });
   }
 
+  // detecta sessão
   const { data:{ session } } = await supabase.auth.getSession();
   sessionUserId = session?.user?.id ?? null;
   if (sessionUserId) {
@@ -88,11 +97,15 @@ async function init() {
     await fetchReadingPositions();
   }
 
+  // carrega usuário, categorias e histórias
   await exibirUsuarioLogado();
   await fetchCategories();
   await fetchStoriesFromSupabase();
+
+  // renderização inicial
   initialLoad();
 
+  // filtros e paginação
   searchBar.addEventListener('input', initialLoad);
   categoryFilter.addEventListener('change', initialLoad);
   sortFilter.addEventListener('change', initialLoad);
@@ -101,6 +114,7 @@ async function init() {
     showBatch(increment);
   });
 
+  // handlers de modal
   modalClose.onclick   = () => { modalOverlay.style.display = 'none'; isModalOpen = false; };
   modalOverlay.onclick = e => { if (e.target === modalOverlay && isModalOpen) warningOverlay.style.display = 'flex'; };
   warningYes.onclick   = () => { modalOverlay.style.display = 'none'; warningOverlay.style.display = 'none'; isModalOpen = false; };
@@ -116,7 +130,10 @@ async function exibirUsuarioLogado() {
     return;
   }
   const { data: profile } = await supabase
-    .from('profiles').select('username').eq('id', session.user.id).single();
+    .from('profiles')
+    .select('username')
+    .eq('id', session.user.id)
+    .single();
   area.textContent = profile?.username || session.user.email;
   area.style.cursor = 'pointer';
   area.onclick = () => {
@@ -230,10 +247,10 @@ function createStoryCard(story) {
     };
     updateUI();
 
-    Object.assign(likeBtn.style, {
-      background:'transparent', border:'none', outline:'none',
-      padding:'0', cursor:'pointer', fontSize:'1.4rem'
-    });
+    likeBtn.style.cssText = `
+      background:transparent; border:none; outline:none;
+      padding:0; cursor:pointer; font-size:1.4rem;
+    `;
 
     likeBtn.onclick = async () => {
       if (!sessionUserId) { alert('Faça login para dar like.'); return; }
@@ -284,14 +301,6 @@ function abrirModal(story) {
   btnLer.textContent = 'Ler';
   btnLer.onclick = () => {
     modalFullText.innerHTML = formatarTextoParaLeitura(story.cartao.historiaCompleta);
-    if (sessionUserId) {
-      supabase.from('reading_positions').upsert({
-        user_id:     sessionUserId,
-        historia_id: story.id,
-        position:    0
-      });
-      readingPositions[story.id] = 0;
-    }
     continuarBtn.style.display = 'block';
   };
   modalFullText.appendChild(btnLer);
@@ -304,26 +313,29 @@ function abrirModal(story) {
 }
 
 function continuarLeitura() {
-  const st = allStories.find(s => s.id === currentStoryId);
-  if (!st) return;
-  modalFullText.innerHTML = formatarTextoParaLeitura(st.cartao.historiaCompleta);
-  const idx = readingPositions[currentStoryId];
-  if (idx != null) {
-    const span = modalFullText.querySelector(`[data-index="${idx}"]`);
+  if (currentStoryId === null) return;
+  modalFullText.innerHTML = formatarTextoParaLeitura(
+    allStories.find(s => s.id === currentStoryId).cartao.historiaCompleta
+  );
+  const pos = readingPositions[currentStoryId];
+  if (pos != null) {
+    const span = modalFullText.querySelector(`[data-index="${pos}"]`);
     if (span) {
       span.style.background = 'yellow';
-      span.scrollIntoView({ block:'center', behavior:'smooth' });
+      span.scrollIntoView({ block: 'center', behavior: 'smooth' });
     }
   }
 }
 
+function matchesSearch(story, txt) {
+  if (!txt) return true;
+  txt = txt.toLowerCase();
+  return story.cartao.tituloCartao.toLowerCase().includes(txt)
+      || story.cartao.autorCartao.toLowerCase().includes(txt);
+}
+
 function getFilteredStories() {
-  let arr = allStories.filter(st => {
-    const txt = searchBar.value.toLowerCase();
-    return !txt
-      || st.cartao.tituloCartao.toLowerCase().includes(txt)
-      || st.cartao.autorCartao.toLowerCase().includes(txt);
-  });
+  let arr = allStories.filter(st => matchesSearch(st, searchBar.value));
   if (categoryFilter.value) {
     arr = arr.filter(st => st.cartao.categorias.includes(categoryFilter.value));
   }
@@ -337,10 +349,12 @@ function getFilteredStories() {
 
 function showBatch(count) {
   const slice = getFilteredStories().slice(currentOffset, currentOffset + count);
-  slice.forEach(s => container.appendChild(createStoryCard(s)));
+  const frag  = document.createDocumentFragment();
+  slice.forEach(s => frag.appendChild(createStoryCard(s)));
   for (let i = slice.length; i < count; i++) {
-    container.appendChild(createPlaceholderCard());
+    frag.appendChild(createPlaceholderCard());
   }
+  container.appendChild(frag);
   currentOffset += count;
   loadMoreBtn.disabled = false;
 }
