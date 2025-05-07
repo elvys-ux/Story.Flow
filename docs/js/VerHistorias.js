@@ -3,7 +3,7 @@ import { supabase } from './supabase.js';
 
 let sessionUserId = null;
 let allStories    = [];
-let likedStories  = new Set();  // IDs das histórias que este utilizador já curtiu
+let likedStories  = new Set();
 let currentOffset = 0;
 const initialCount = 20;
 const increment    = 5;
@@ -32,9 +32,14 @@ let categoryMap    = {}; // id → nome
 
 document.addEventListener('DOMContentLoaded', init);
 
-// insere <br> após cada ponto final
+/** Insere <br> após cada ponto final */
 function quebraPorPonto(texto) {
-  return texto.replace(/\.(\s|$)/g, '.<br>');
+  return texto
+    .split('.')
+    .map(s => s.trim())
+    .filter(s => s.length > 0)
+    .map(s => `${s}.`)
+    .join('<br>');
 }
 
 async function init() {
@@ -47,9 +52,7 @@ async function init() {
 
   const { data:{ session } } = await supabase.auth.getSession();
   sessionUserId = session?.user?.id ?? null;
-  if (sessionUserId) {
-    await fetchUserLikes();
-  }
+  if (sessionUserId) await fetchUserLikes();
 
   await exibirUsuarioLogado();
   await fetchCategories();
@@ -71,8 +74,7 @@ async function init() {
   continuarBtn.onclick  = () => {
     const st = allStories.find(s => s.id === currentStoryId);
     if (st) {
-      modalFullText.innerHTML = formatarTextoParaLeitura(st.cartao.historiaCompleta);
-      setTimeout(destacarPalavra, 100);
+      modalFullText.innerHTML = quebraPorPonto(st.cartao.historiaCompleta);
     }
   };
 }
@@ -92,9 +94,7 @@ async function exibirUsuarioLogado() {
   area.textContent = profile?.username || session.user.email;
   area.style.cursor = 'pointer';
   area.onclick = () => {
-    if (confirm('Deseja fazer logout?')) {
-      supabase.auth.signOut().then(() => location.href = 'Criacao.html');
-    }
+    if (confirm('Deseja fazer logout?')) supabase.auth.signOut().then(() => location.href = 'Criacao.html');
   };
 }
 
@@ -119,27 +119,19 @@ async function fetchStoriesFromSupabase() {
     .select('id, titulo, descricao, data_criacao')
     .order('data_criacao', { ascending: false });
   if (errH) {
-    console.error('fetchStories errH:', errH);
+    console.error(errH);
     container.innerHTML = '<p>Erro ao carregar histórias.</p>';
     return;
   }
 
-  const { data: cartoes, error: errC } = await supabase
+  const { data: cartoes } = await supabase
     .from('cartoes')
     .select('historia_id, titulo_cartao, sinopse_cartao, autor_cartao, data_criacao, likes');
-  if (errC) {
-    console.error('fetchStories errC:', errC);
-    return;
-  }
   const cartaoMap = Object.fromEntries(cartoes.map(c => [c.historia_id, c]));
 
-  const { data: hcData, error: errHC } = await supabase
+  const { data: hcData } = await supabase
     .from('historia_categorias')
     .select('historia_id, categoria_id');
-  if (errHC) {
-    console.error('fetchStories errHC:', errHC);
-    return;
-  }
   const hcMap = {};
   hcData.forEach(({ historia_id, categoria_id }) => {
     hcMap[historia_id] = hcMap[historia_id] || [];
@@ -150,11 +142,11 @@ async function fetchStoriesFromSupabase() {
     const c = cartaoMap[h.id] || {};
     return {
       id: h.id,
-      hasCartao: Boolean(c),
+      hasCartao: Boolean(c.titulo_cartao),
       cartao: {
         tituloCartao:     c.titulo_cartao   || h.titulo    || 'Sem título',
-        sinopseCartao:    c.sinopse_cartao  || h.descricao || 'Sem sinopse',
-        historiaCompleta: h.descricao       || 'Sem história',
+        sinopseCartao:    c.sinopse_cartao  || h.descricao || '',
+        historiaCompleta: h.descricao       || '',
         dataCartao:       (c.data_criacao || h.data_criacao).split('T')[0],
         autorCartao:      c.autor_cartao    || 'Anónimo',
         categorias:       hcMap[h.id]       || [],
@@ -164,53 +156,17 @@ async function fetchStoriesFromSupabase() {
   });
 }
 
-function formatarPor4Linhas(text) {
-  // aplica quebra após pontos antes de dividir
-  text = quebraPorPonto(text || '');
-  return text.split('\n').slice(0,4)
-    .map(l => `<p style="text-align:justify">${l}</p>`)
-    .join('');
-}
-
-function formatarTextoParaLeitura(text) {
-  text = quebraPorPonto(text || '');
-  let idx = 0;
-  return text.split('\n').map(l => {
-    const spans = l.split(' ')
-      .map(w => `<span data-index="${idx++}" onclick="markReadingPosition(this)">${w}</span>`)
-      .join(' ');
-    return `<p style="text-align:justify">${spans}</p>`;
-  }).join('');
-}
-window.markReadingPosition = el => {
-  localStorage.setItem(`readingPosition_${currentStoryId}`, el.dataset.index);
-};
-
-function destacarPalavra() {
-  const pos = localStorage.getItem(`readingPosition_${currentStoryId}`);
-  if (pos !== null) {
-    const span = modalFullText.querySelector(`[data-index="${pos}"]`);
-    if (span) {
-      span.style.background = 'yellow';
-      span.scrollIntoView({ block:'center', behavior:'smooth' });
-    }
-  }
-}
-
 function createStoryCard(story) {
   const div = document.createElement('div');
   div.className = 'sheet';
 
-  // Título
-  const h3 = document.createElement('h3');
-  h3.textContent = story.cartao.tituloCartao;
-  div.appendChild(h3);
-
-  // Sinopse
+  // Título e sinopse com quebras após ponto final
+  const h3  = document.createElement('h3');
   const sin = document.createElement('div');
+  h3.textContent = story.cartao.tituloCartao;
   sin.className = 'sheet-sinopse';
-  sin.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao);
-  div.appendChild(sin);
+  sin.innerHTML = quebraPorPonto(story.cartao.sinopseCartao);
+  div.append(h3, sin);
 
   // “mais...”
   const mais = document.createElement('span');
@@ -219,18 +175,18 @@ function createStoryCard(story) {
   mais.onclick = () => abrirModal(story);
   div.appendChild(mais);
 
-  // Likes
+  // Likes apenas se existir cartão
   if (story.hasCartao) {
     const likeCont = document.createElement('div');
     likeCont.style.marginTop = '10px';
     const likeBtn = document.createElement('button');
     const likeCt  = document.createElement('span');
-
     let userLiked = likedStories.has(story.id);
-    function updateUI() {
+
+    const updateUI = () => {
       likeBtn.textContent = userLiked ? '❤️' : '🤍';
       likeCt.textContent  = ` ${story.cartao.likes} curtida(s)`;
-    }
+    };
     updateUI();
 
     Object.assign(likeBtn.style, {
@@ -240,7 +196,6 @@ function createStoryCard(story) {
 
     likeBtn.onclick = async () => {
       if (!sessionUserId) { alert('Faça login para dar like.'); return; }
-
       if (userLiked) {
         story.cartao.likes = Math.max(story.cartao.likes - 1, 0);
         await supabase.from('user_likes').delete().match({ user_id: sessionUserId, historia_id: story.id });
@@ -251,11 +206,7 @@ function createStoryCard(story) {
       userLiked = !userLiked;
       likedStories[userLiked ? 'add' : 'delete'](story.id);
       updateUI();
-
-      await supabase
-        .from('cartoes')
-        .update({ likes: story.cartao.likes })
-        .eq('historia_id', story.id);
+      await supabase.from('cartoes').update({ likes: story.cartao.likes }).eq('historia_id', story.id);
     };
 
     likeCont.append(likeBtn, likeCt);
@@ -288,7 +239,7 @@ function abrirModal(story) {
   isModalOpen    = true;
   currentStoryId = story.id;
   modalTitle.textContent  = story.cartao.tituloCartao;
-  modalFullText.innerHTML = formatarPor4Linhas(story.cartao.sinopseCartao);
+  modalFullText.innerHTML = quebraPorPonto(story.cartao.sinopseCartao);
   modalInfo.innerHTML     = `
     <p><strong>Data:</strong> ${story.cartao.dataCartao}</p>
     <p><strong>Autor:</strong> ${story.cartao.autorCartao}</p>
@@ -296,23 +247,20 @@ function abrirModal(story) {
   const btnLer = document.createElement('button');
   btnLer.textContent = 'Ler';
   btnLer.onclick = () => {
-    modalFullText.innerHTML = formatarTextoParaLeitura(story.cartao.historiaCompleta);
-    setTimeout(destacarPalavra, 100);
+    modalFullText.innerHTML = quebraPorPonto(story.cartao.historiaCompleta);
   };
   modalFullText.appendChild(btnLer);
   continuarBtn.style.display = localStorage.getItem(`readingPosition_${story.id}`) ? 'inline-block' : 'none';
   modalOverlay.style.display = 'flex';
 }
 
-function matchesSearch(story, txt) {
-  if (!txt) return true;
-  txt = txt.toLowerCase();
-  return story.cartao.tituloCartao.toLowerCase().includes(txt)
-      || story.cartao.autorCartao.toLowerCase().includes(txt);
-}
-
 function getFilteredStories() {
-  let arr = allStories.filter(st => matchesSearch(st, searchBar.value));
+  let arr = allStories.filter(st => {
+    const txt = searchBar.value.toLowerCase();
+    return !txt
+      || st.cartao.tituloCartao.toLowerCase().includes(txt)
+      || st.cartao.autorCartao.toLowerCase().includes(txt);
+  });
   if (categoryFilter.value) {
     arr = arr.filter(st => st.cartao.categorias.includes(categoryFilter.value));
   }
