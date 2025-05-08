@@ -1,14 +1,15 @@
 // js/VerHistorias.js
 import { supabase } from './supabase.js';
 
-let sessionUserId = null;
-let allStories    = [];
-let likedStories  = new Set();  // IDs das histórias que este utilizador já curtiu
-let currentOffset = 0;
-const initialCount = 20;
-const increment    = 5;
+let sessionUserId    = null;
+let allStories       = [];
+let likedStories     = new Set();
+let currentStoryId   = null;
+let currentOffset    = 0;
+const initialCount   = 20;
+const increment      = 5;
 
-// DOM
+// DOM elements
 const container      = document.getElementById('storiesContainer');
 const categoryFilter = document.getElementById('category-filter');
 const sortFilter     = document.getElementById('sort-filter');
@@ -24,51 +25,30 @@ const modalInfo      = document.getElementById('modalInfo');
 const warningOverlay = document.getElementById('warningOverlay');
 const warningYes     = document.getElementById('warningYes');
 const warningNo      = document.getElementById('warningNo');
-const continuarBtn   = document.getElementById('continuarBtn');
 
-let isModalOpen    = false;
-let currentStoryId = null;
-let categoryMap    = {}; // id → nome
+let categoryMap = {}; // id → nome
 
 document.addEventListener('DOMContentLoaded', init);
 
-/** 
- * Formata o texto inserindo duas quebras de linha após cada ponto final.
- */
-function formataComQuebra(texto) {
-  return texto
-    .split('.')
-    .map(s => s.trim())
-    .filter(s => s.length > 0)
-    .map(s => `${s}.`)
-    .join('<br><br>');
-}
-
 async function init() {
-  // Evita reload do form de pesquisa
+  // impedir reload no search form
   if (searchForm) {
-    searchForm.addEventListener('submit', e => {
-      e.preventDefault();
-      initialLoad();
-    });
+    searchForm.addEventListener('submit', e => { e.preventDefault(); initialLoad(); });
   }
 
-  // Detecta sessão
+  // obter sessão
   const { data:{ session } } = await supabase.auth.getSession();
   sessionUserId = session?.user?.id ?? null;
   if (sessionUserId) {
     await fetchUserLikes();
   }
 
-  // Carrega usuário, categorias e histórias
   await exibirUsuarioLogado();
   await fetchCategories();
   await fetchStoriesFromSupabase();
-
-  // Render inicial
   initialLoad();
 
-  // Filtros e paginação
+  // filtros e paginação
   searchBar.addEventListener('input', initialLoad);
   categoryFilter.addEventListener('change', initialLoad);
   sortFilter.addEventListener('change', initialLoad);
@@ -77,17 +57,11 @@ async function init() {
     showBatch(increment);
   });
 
-  // Modal e aviso
-  modalClose.onclick   = () => { modalOverlay.style.display = 'none'; isModalOpen = false; };
-  modalOverlay.onclick = e => { if (e.target === modalOverlay && isModalOpen) warningOverlay.style.display = 'flex'; };
-  warningYes.onclick   = () => { modalOverlay.style.display = 'none'; warningOverlay.style.display = 'none'; isModalOpen = false; };
-  warningNo.onclick    = () => { warningOverlay.style.display = 'none'; };
-  continuarBtn.onclick = () => {
-    const st = allStories.find(s => s.id === currentStoryId);
-    if (st) {
-      modalFullText.innerHTML = formataComQuebra(st.cartao.historiaCompleta);
-    }
-  };
+  // modal e warning
+  modalClose.onclick   = () => modalOverlay.style.display = 'none';
+  modalOverlay.onclick = e => { if (e.target === modalOverlay) warningOverlay.style.display = 'flex'; };
+  warningYes.onclick   = () => { modalOverlay.style.display = 'none'; warningOverlay.style.display = 'none'; };
+  warningNo.onclick    = () => warningOverlay.style.display = 'none';
 }
 
 async function exibirUsuarioLogado() {
@@ -98,10 +72,7 @@ async function exibirUsuarioLogado() {
     return;
   }
   const { data: profile } = await supabase
-    .from('profiles')
-    .select('username')
-    .eq('id', session.user.id)
-    .single();
+    .from('profiles').select('username').eq('id', session.user.id).single();
   area.textContent = profile?.username || session.user.email;
   area.style.cursor = 'pointer';
   area.onclick = () => {
@@ -113,21 +84,14 @@ async function exibirUsuarioLogado() {
 
 async function fetchUserLikes() {
   const { data, error } = await supabase
-    .from('user_likes')
-    .select('historia_id')
-    .eq('user_id', sessionUserId);
-  likedStories = error
-    ? new Set()
-    : new Set(data.map(r => r.historia_id));
+    .from('user_likes').select('historia_id').eq('user_id', sessionUserId);
+  if (!error) likedStories = new Set(data.map(r => r.historia_id));
 }
 
 async function fetchCategories() {
   const { data, error } = await supabase
-    .from('categorias')
-    .select('id, nome');
-  if (!error) {
-    categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
-  }
+    .from('categorias').select('id, nome');
+  if (!error) categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
 }
 
 async function fetchStoriesFromSupabase() {
@@ -136,7 +100,6 @@ async function fetchStoriesFromSupabase() {
     .select('id, titulo, descricao, data_criacao')
     .order('data_criacao', { ascending: false });
   if (errH) {
-    console.error(errH);
     container.innerHTML = '<p>Erro ao carregar histórias.</p>';
     return;
   }
@@ -151,14 +114,14 @@ async function fetchStoriesFromSupabase() {
     .select('historia_id, categoria_id');
   const hcMap = {};
   hcData.forEach(({ historia_id, categoria_id }) => {
-    hcMap[historia_id] = hcMap[historia_id] || [];
+    if (!hcMap[historia_id]) hcMap[historia_id] = [];
     hcMap[historia_id].push(categoryMap[categoria_id]);
   });
 
   allStories = historias.map(h => {
     const c = cartaoMap[h.id] || {};
     return {
-      id: h.id,
+      id:        h.id,
       hasCartao: Boolean(c.titulo_cartao),
       cartao: {
         tituloCartao:     c.titulo_cartao   || h.titulo    || 'Sem título',
@@ -173,6 +136,37 @@ async function fetchStoriesFromSupabase() {
   });
 }
 
+/** insere <br><br> após cada ponto final */
+function formataComQuebra(texto='') {
+  return texto
+    .split('.')
+    .map(s => s.trim())
+    .filter(s => s)
+    .map(s => `${s}.`)
+    .join('<br><br>');
+}
+
+/** transforma em spans clicáveis para marcar leitura */
+function formatarTextoParaLeitura(texto='') {
+  let idx = 0;
+  return texto.split('\n').map(line => {
+    const spans = line.split(' ').map(word => {
+      const html = `<span data-index="${idx}" onclick="markReadingPosition(this)">${word}</span>`;
+      idx++;
+      return html;
+    }).join(' ');
+    return `<p style="text-align:justify">${spans}</p>`;
+  }).join('');
+}
+
+// global para spans
+window.markReadingPosition = function(el) {
+  const pos = el.dataset.index;
+  localStorage.setItem(`readingPosition_${currentStoryId}`, pos);
+  modalFullText.querySelectorAll('span').forEach(s => s.style.background = '');
+  el.style.background = 'yellow';
+};
+
 function createStoryCard(story) {
   const div = document.createElement('div');
   div.className = 'sheet';
@@ -182,10 +176,16 @@ function createStoryCard(story) {
   h3.textContent = story.cartao.tituloCartao;
   div.appendChild(h3);
 
-  // Sinopse com quebras após ponto final
+  // Sinopse limitada a 4 linhas
   const sin = document.createElement('div');
   sin.className = 'sheet-sinopse';
   sin.innerHTML = formataComQuebra(story.cartao.sinopseCartao);
+  Object.assign(sin.style, {
+    display: '-webkit-box',
+    WebkitBoxOrient: 'vertical',
+    WebkitLineClamp: '4',
+    overflow: 'hidden'
+  });
   div.appendChild(sin);
 
   // “mais...”
@@ -195,54 +195,46 @@ function createStoryCard(story) {
   mais.onclick = () => abrirModal(story);
   div.appendChild(mais);
 
-  // Likes (só se existir cartão)
+  // Likes (se houver cartão)
   if (story.hasCartao) {
     const likeCont = document.createElement('div');
     likeCont.style.marginTop = '10px';
-    const likeBtn = document.createElement('button');
-    const likeCt  = document.createElement('span');
+    const btn = document.createElement('button');
+    const count = document.createElement('span');
+    btn.style.cssText = 'background:transparent;border:none;outline:none;padding:0;cursor:pointer;font-size:1.4rem';
+
     let userLiked = likedStories.has(story.id);
+    function updateLikeUI() {
+      btn.textContent = userLiked ? '❤️' : '🤍';
+      count.textContent = ` ${story.cartao.likes} curtida(s)`;
+    }
+    updateLikeUI();
 
-    const updateUI = () => {
-      likeBtn.textContent = userLiked ? '❤️' : '🤍';
-      likeCt.textContent  = ` ${story.cartao.likes} curtida(s)`;
-    };
-    updateUI();
-
-    Object.assign(likeBtn.style, {
-      background:'transparent', border:'none', outline:'none',
-      padding:'0', cursor:'pointer', fontSize:'1.4rem'
-    });
-
-    likeBtn.onclick = async () => {
+    btn.onclick = async () => {
       if (!sessionUserId) { alert('Faça login para dar like.'); return; }
-
-      // Optimistic UI + persistência
       if (userLiked) {
-        story.cartao.likes = Math.max(story.cartao.likes - 1, 0);
-        await supabase.from('user_likes').delete().match({
-          user_id: sessionUserId,
-          historia_id: story.id
-        });
+        story.cartao.likes--;
+        await supabase
+          .from('user_likes')
+          .delete()
+          .match({ user_id: sessionUserId, historia_id: story.id });
       } else {
         story.cartao.likes++;
-        await supabase.from('user_likes').insert({
-          user_id: sessionUserId,
-          historia_id: story.id
-        });
+        await supabase
+          .from('user_likes')
+          .insert({ user_id: sessionUserId, historia_id: story.id });
       }
-
       userLiked = !userLiked;
-      likedStories[userLiked ? 'add' : 'delete'](story.id);
-      updateUI();
-
+      userLiked ? likedStories.add(story.id) : likedStories.delete(story.id);
+      updateLikeUI();
       await supabase
         .from('cartoes')
         .update({ likes: story.cartao.likes })
         .eq('historia_id', story.id);
     };
 
-    likeCont.append(likeBtn, likeCt);
+    likeCont.appendChild(btn);
+    likeCont.appendChild(count);
     div.appendChild(likeCont);
   }
 
@@ -261,39 +253,40 @@ function createStoryCard(story) {
   return div;
 }
 
-function createPlaceholderCard() {
-  const div = document.createElement('div');
-  div.className = 'sheet sheet-placeholder';
-  div.innerHTML = '<h3>Placeholder</h3><p>(sem história)</p>';
-  return div;
-}
-
 function abrirModal(story) {
-  isModalOpen    = true;
   currentStoryId = story.id;
-  modalTitle.textContent  = story.cartao.tituloCartao;
+  modalTitle.textContent = story.cartao.tituloCartao;
+
+  // exibe sinopse + botão Ler
   modalFullText.innerHTML = formataComQuebra(story.cartao.sinopseCartao);
-  modalInfo.innerHTML     = `
+  const ler = document.createElement('button');
+  ler.textContent = 'Ler';
+  ler.onclick = () => {
+    modalFullText.innerHTML = formatarTextoParaLeitura(story.cartao.historiaCompleta);
+    const saved = localStorage.getItem(`readingPosition_${story.id}`);
+    if (saved !== null) {
+      const el = modalFullText.querySelector(`span[data-index="${saved}"]`);
+      if (el) el.style.background = 'yellow';
+    }
+  };
+  modalFullText.appendChild(ler);
+
+  modalInfo.innerHTML = `
     <p><strong>Data:</strong> ${story.cartao.dataCartao}</p>
     <p><strong>Autor:</strong> ${story.cartao.autorCartao}</p>
     <p><strong>Categorias:</strong> ${story.cartao.categorias.join(', ')}</p>
   `;
-  const btnLer = document.createElement('button');
-  btnLer.textContent = 'Ler';
-  btnLer.onclick = () => {
-    modalFullText.innerHTML = formataComQuebra(story.cartao.historiaCompleta);
-  };
-  modalFullText.appendChild(btnLer);
-  continuarBtn.style.display = localStorage.getItem(`readingPosition_${story.id}`) ? 'inline-block' : 'none';
+
+  warningOverlay.style.display = 'none';
   modalOverlay.style.display = 'flex';
 }
 
-function getFilteredStories() {  
+function getFilteredStories() {
   let arr = allStories.filter(st => {
-    const txt = searchBar.value.toLowerCase();
-    return !txt
-      || st.cartao.tituloCartao.toLowerCase().includes(txt)
-      || st.cartao.autorCartao.toLowerCase().includes(txt);
+    const t = searchBar.value.toLowerCase();
+    return !t
+      || st.cartao.tituloCartao.toLowerCase().includes(t)
+      || st.cartao.autorCartao.toLowerCase().includes(t);
   });
   if (categoryFilter.value) {
     arr = arr.filter(st => st.cartao.categorias.includes(categoryFilter.value));
@@ -308,10 +301,10 @@ function getFilteredStories() {
 
 function showBatch(count) {
   const slice = getFilteredStories().slice(currentOffset, currentOffset + count);
-  const frag  = document.createDocumentFragment();
-  slice.forEach(s => frag.appendChild(createStoryCard(s)));
-  for (let i = slice.length; i < count; i++) frag.appendChild(createPlaceholderCard());
-  container.appendChild(frag);
+  slice.forEach(s => container.appendChild(createStoryCard(s)));
+  for (let i = slice.length; i < count; i++) {
+    container.appendChild(createPlaceholderCard());
+  }
   currentOffset += count;
   loadMoreBtn.disabled = false;
 }
@@ -320,4 +313,11 @@ function initialLoad() {
   container.innerHTML = '';
   currentOffset = 0;
   showBatch(initialCount);
+}
+
+function createPlaceholderCard() {
+  const div = document.createElement('div');
+  div.className = 'sheet sheet-placeholder';
+  div.innerHTML = '<h3>Placeholder</h3><p>(sem história)</p>';
+  return div;
 }
