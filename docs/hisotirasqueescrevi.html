@@ -2,48 +2,132 @@
 <html lang="pt">
 <head>
   <meta charset="UTF-8">
-  <title>StoryFlow – Minhas Histórias</title>
+  <title>StoryFlow - Histórias que eu escrevi</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Ícones do Font Awesome (opcional) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
   <!-- CSS principal -->
-  <link rel="stylesheet" href="css/historiasqueescrevi.css">
+  <link rel="stylesheet" href="css/hisotirasqueescrevi.css">
+   <script type="module" src="js/supabase.js"></script>
+  <script type="module" src="js/userDisplay.js"></script>
+
+  <style>
+    /* Exemplo de estilo p/ dropdown de pesquisa */
+    #searchResults {
+      display: none;
+      position: absolute;
+      background: #fff;
+      border: 1px solid #ccc;
+      width: 200px; /* Ajuste conforme necessidade */
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top: 40px; /* se precisar afastar do input */
+      z-index: 9999; /* para ficar acima de outros elementos */
+    }
+    .suggestion-item:hover {
+      background-color: #f0f0f0;
+    }
+    /* Botão "Alternar Modo" fixado */
+    .toggle-mode-button {
+      position: absolute;
+      top: 70px; /* Espaço abaixo da navbar */
+      right: 20px;
+      padding: 10px 20px;
+      background-color: rgba(0, 0, 0, 0.9);
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .toggle-mode-button:hover {
+      background-color: #555;
+    }
+  </style>
 </head>
 <body>
 
-  <!-- Navbar simplificada -->
-  <nav class="navbar">
-    <a href="index.html">Início</a>
-    <input type="text" id="barra-pesquisa" placeholder="Pesquisar histórias publicadas…">
-  </nav>
-
-  <div class="main-content">
-    <!-- Lista lateral -->
-    <aside class="sidebar">
-      <h2>Minhas Histórias</h2>
-      <ul id="lista-historias-usuario">
-        <!-- preenchido por carregarHistoriasDoUsuario() -->
-      </ul>
-    </aside>
-
-    <!-- Área de resultados da pesquisa -->
-    <section class="search-results">
-      <h2>Resultados da Pesquisa</h2>
-      <div id="resultados-pesquisa">
-        <!-- preenchido por pesquisarHistoriasPublicadas() -->
+  <!-- Barra de Navegação -->
+  <div class="navbar">
+    <a href="index.html"><i class="fas fa-home"></i>Início</a>
+    <div class="dropdown">
+      <a href="#"><i class="fas fa-pencil-alt"></i>Criar História</a>
+      <div class="dropdown-content">
+        <a href="diario.html">Escrever Diário</a>
+        <a href="historia.html">Escrever História</a>
       </div>
-    </section>
-  </div>
+    </div>
+    <div class="dropdown">
+      <a href="#"><i class="fas fa-book"></i>Histórias</a>
+      <div class="dropdown-content">
+        <a href="hisotirasqueescrevi.html">Histórias que eu escrevi</a>
+        <a href="VerHistorias.html">Histórias escritas</a>
+      </div>
+    </div>
 
-  <!-- Modal de leitura -->
-  <div id="modal-historia" class="modal">
-    <div class="modal-content">
-      <button id="btn-fechar-modal" class="close-btn">×</button>
-      <h3 id="modal-titulo"></h3>
-      <div id="modal-conteudo"></div>
+
+    <!-- Área para mostrar usuário logado -->
+    <div id="userMenuArea"></div>
+
+    <!-- Caixa de pesquisa -->
+    <div class="search-box" style="position: relative;">
+      <input type="text" id="searchBar" placeholder="Pesquisar...">
+      <button id="searchBtn"><i class="fas fa-search"></i></button>
+      <!-- Div para sugestões (drop-down) -->
+      <div id="searchResults"></div>
     </div>
   </div>
 
-  <!-- Import Supabase e script principal -->
-  <script type="module" src="js/supabase.js"></script>
-  <script type="module" src="js/historiasFlow.js"></script>
+  <!-- Botão "Alternar Modo" -->
+  <button id="toggleMode" class="toggle-mode-button">📝 Alternar Modo</button>
+
+  <!-- Form (id="formPrincipal") p/ criar histórias -->
+  <form id="formPrincipal">
+    <div class="title-list">
+      <div class="categoria">
+        <label for="categoria">Categoria:</label>
+        <select id="categoria" name="categoria">
+          <option value="Fantasia">Fantasia</option>
+          <option value="Terror">Terror</option>
+          <option value="Diário">Diário</option>
+          <option value="Aventura">Aventura</option>
+        </select>
+      </div>
+
+      <label for="titulo">Título:</label>
+      <input type="text" id="titulo" name="titulo" required>
+
+      <label for="autor">Autor:</label>
+      <input type="text" id="autor" name="autor" placeholder="Seu nome (ou anônimo)">
+
+      <label for="descricao">Descrição:</label>
+      <textarea id="descricao" name="descricao" required></textarea>
+
+      <button type="submit" class="btn">Salvar</button>
+    </div>
+  </form>
+
+  <!-- Lista de Títulos (visível ao passar mouse) -->
+  <div id="titleListLeft" class="title-list">
+    <ul id="titleListUl"></ul>
+  </div>
+
+  <!-- Container principal (exibição da história) -->
+  <div class="historia-container">
+    <h1 id="historia-titulo">Título da História</h1>
+    <p id="historia-conteudo">Aqui é onde a sua história será exibida.</p>
+    <div class="buttons">
+      <button id="btn-voltar" onclick="voltarPagina()">←</button>
+      <button id="btn-continuar" onclick="continuarHistoria()">→</button>
+    </div>
+  </div>
+  
+
+
+  <!-- Script principal -->
+   <script type="module" src="js/hisotirasqueescrevi.js"></script>
+ 
 </body>
 </html>
