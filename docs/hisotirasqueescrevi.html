@@ -6,156 +6,156 @@
   <title>StoryFlow – Histórias que eu escrevi</title>
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <!-- Seu CSS -->
+  <!-- Seu CSS principal -->
   <link rel="stylesheet" href="css/hisotirasqueescrevi.css">
+  <!-- Navbar custom inline -->
   <style>
-    /* Drop-down de sugestões */
-    #searchResults {
-      display: none;
-      position: absolute;
-      background: #fff;
-      border: 1px solid #ccc;
-      width: 200px;
-      max-height: 200px;
-      overflow-y: auto;
-      margin-top: 4px;
+    body { margin:0; padding:0; }
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #222;
+      padding: 0 20px;
+      height: 60px;
+      position: fixed;
+      top: 0; left: 0; right: 0;
       z-index: 1000;
     }
-    .suggestion-item:hover {
+    .navbar a {
+      color: #fff;
+      margin-right: 15px;
+      text-decoration: none;
+      font-size: 16px;
+    }
+    .navbar .nav-left, .navbar .nav-right {
+      display: flex;
+      align-items: center;
+    }
+    .navbar .dropdown {
+      position: relative;
+    }
+    .navbar .dropdown-content {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      background: #fff;
+      min-width: 160px;
+      border: 1px solid #ccc;
+      z-index: 1001;
+    }
+    .navbar .dropdown:hover .dropdown-content {
+      display: block;
+    }
+    .navbar .dropdown-content a {
+      display: block;
+      padding: 8px 12px;
+      color: #333;
+      text-decoration: none;
+    }
+    .navbar .dropdown-content a:hover {
       background: #f0f0f0;
     }
-    /* Lista lateral */
+    /* resto dos estilos existentes… */
     #titleListLeft {
-      position: fixed;
-      top: 70px;
-      left: 0;
-      width: 220px;
-      max-height: calc(100% - 70px);
-      overflow-y: auto;
-      background: #fafafa;
+      position: fixed; top: 70px; left: 0;
+      width: 220px; max-height: calc(100% - 70px);
+      overflow-y: auto; background: #fafafa;
       border-right: 1px solid #ddd;
       transform: translateX(-100%);
       transition: transform .3s;
       z-index: 500;
     }
-    #titleListLeft.visible {
-      transform: translateX(0);
-    }
-    #titleListLeft ul {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-    }
+    #titleListLeft.visible { transform: translateX(0); }
+    #titleListLeft ul { list-style:none; margin:0; padding:0; }
     #titleListLeft li {
-      padding: 8px 12px;
-      border-bottom: 1px solid #eee;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      padding:8px 12px; border-bottom:1px solid #eee;
+      display:flex; justify-content:space-between;
+      align-items:center;
     }
-    #titleListLeft .buttons button {
-      margin-left: 4px;
-    }
-    /* Container de leitura */
     .historia-container {
       margin: 90px 20px 20px 260px;
     }
-    .historia-container h1 {
-      margin-bottom: 12px;
-    }
-    .historia-container p {
-      white-space: pre-wrap;
-      line-height: 1.5;
-    }
-    .historia-container .buttons {
-      margin-top: 16px;
-    }
-    .historia-container button {
-      padding: 6px 12px;
-      font-size: 16px;
-      margin-right: 8px;
-    }
-    /* Botão alternar modo */
+    .historia-container h1 { margin-bottom:12px; }
+    .historia-container p { white-space: pre-wrap; line-height:1.5; }
+    .historia-container .buttons { margin-top:16px; }
     #toggleMode {
-      position: fixed;
-      top: 70px;
-      right: 20px;
-      padding: 8px 16px;
-      background: rgba(0,0,0,0.8);
-      color: #fff;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 14px;
-      z-index: 600;
+      position: fixed; top:70px; right:20px;
+      padding:8px 16px; background:rgba(0,0,0,0.8);
+      color:#fff; border:none; border-radius:4px;
+      cursor:pointer; font-size:14px; z-index:600;
     }
-    #toggleMode:hover {
-      background: #555;
+    #toggleMode:hover { background:#555; }
+    .search-box { position: relative; }
+    #searchResults {
+      display:none; position:absolute; top:100%;
+      left:0; background:#fff; border:1px solid #ccc;
+      width:200px; max-height:200px; overflow-y:auto;
+      z-index:1002;
     }
+    .suggestion-item:hover { background:#f0f0f0; }
   </style>
 </head>
 <body>
 
   <!-- NAVBAR -->
-  <nav class="navbar" style="position:fixed;top:0;left:0;right:0;height:60px;background:#222;color:#fff;display:flex;align-items:center;padding:0 20px;z-index:700;">
-    <a href="index.html" style="color:#fff;margin-right:20px;"><i class="fas fa-home"></i> Início</a>
-    <div class="dropdown" style="margin-right:20px;">
-      <a href="#" style="color:#fff;"><i class="fas fa-pencil-alt"></i> Criar História</a>
-      <div class="dropdown-content">
-        <a href="diario.html">Escrever Diário</a>
-        <a href="historia.html">Escrever História</a>
+  <nav class="navbar">
+    <div class="nav-left">
+      <a href="index.html"><i class="fas fa-home"></i> Início</a>
+      <div class="dropdown">
+        <a href="#"><i class="fas fa-pencil-alt"></i> Criar História</a>
+        <div class="dropdown-content">
+          <a href="diario.html">Escrever Diário</a>
+          <a href="historia.html">Escrever História</a>
+        </div>
+      </div>
+      <div class="dropdown">
+        <a href="#"><i class="fas fa-book"></i> Histórias</a>
+        <div class="dropdown-content">
+          <a href="hisotirasqueescrevi.html">Minhas Histórias</a>
+          <a href="VerHistorias.html">Ler Histórias</a>
+        </div>
       </div>
     </div>
-    <div class="dropdown" style="margin-right:20px;">
-      <a href="#" style="color:#fff;"><i class="fas fa-book"></i> Histórias</a>
-      <div class="dropdown-content">
-        <a href="hisotirasqueescrevi.html">Minhas Histórias</a>
-        <a href="VerHistorias.html">Ler Histórias</a>
+    <div class="nav-right">
+      <div id="userMenuArea" style="margin-right:15px; color:#fff; cursor:pointer;"></div>
+      <div class="search-box">
+        <input type="text" id="searchBar" placeholder="Pesquisar...">
+        <button id="searchBtn"><i class="fas fa-search"></i></button>
+        <div id="searchResults"></div>
       </div>
-    </div>
-    <div id="userMenuArea" style="margin-left:auto;cursor:pointer;"></div>
-    <div class="search-box" style="position:relative; margin-left:20px;">
-      <input type="text" id="searchBar" placeholder="Pesquisar..." autocomplete="off">
-      <button id="searchBtn"><i class="fas fa-search"></i></button>
-      <div id="searchResults"></div>
     </div>
   </nav>
 
-  <!-- Botão alternar modo -->
+  <!-- Alternar modo de leitura -->
   <button id="toggleMode">📝 Alternar Modo</button>
 
-  <!-- Formulário de criação/edição -->
-  <form id="formPrincipal" style="margin:90px 20px 20px 260px;max-width:400px;">
-    <div class="title-list">
-      <label for="titulo">Título:</label><br>
-      <input type="text" id="titulo" name="titulo" required style="width:100%;"><br><br>
-
-      <label for="autor">Autor:</label><br>
-      <input type="text" id="autor" name="autor" placeholder="Seu nome (ou anônimo)" style="width:100%;"><br><br>
-
-      <label for="descricao">Descrição:</label><br>
-      <textarea id="descricao" name="descricao" rows="6" required style="width:100%;"></textarea><br><br>
-
-      <button type="submit" class="btn">Salvar</button>
-    </div>
+  <!-- Form para criar/editar -->
+  <form id="formPrincipal" style="margin:90px 20px 20px 260px; max-width:400px;">
+    <label for="titulo">Título:</label><br>
+    <input type="text" id="titulo" required style="width:100%;"><br><br>
+    <label for="autor">Autor:</label><br>
+    <input type="text" id="autor" placeholder="Seu nome (ou anônimo)" style="width:100%;"><br><br>
+    <label for="descricao">Descrição:</label><br>
+    <textarea id="descricao" rows="6" required style="width:100%;"></textarea><br><br>
+    <button type="submit">Salvar</button>
   </form>
 
-  <!-- Lista lateral de títulos -->
-  <div id="titleListLeft">
-    <ul id="titleListUl"></ul>
-  </div>
+  <!-- Lista lateral somente das suas histórias -->
+  <div id="titleListLeft"><ul id="titleListUl"></ul></div>
 
-  <!-- Container de exibição da história -->
+  <!-- Exibição da história -->
   <div class="historia-container">
     <h1 id="historia-titulo">Selecione uma história</h1>
-    <p id="historia-conteudo">Aqui aparecerá o texto completo ou em modo paginado.</p>
+    <p id="historia-conteudo">Aqui aparece o texto ou a página atual.</p>
     <div class="buttons">
       <button id="btn-voltar" style="display:none;">←</button>
       <button id="btn-continuar" style="display:none;">→</button>
     </div>
   </div>
 
-  <!-- Supabase e script principal -->
+  <!-- Scripts -->
   <script type="module" src="js/supabase.js"></script>
   <script type="module" src="js/hisotirasqueescrevi.js"></script>
 </body>
