@@ -13,41 +13,42 @@
 <body>
 
   <!-- Navbar -->
-  <div class="navbar">
-    <!-- botão hamburger para mobile -->
-    <button id="navToggle" class="nav-toggle" aria-label="Abrir menu">
-      <i class="fas fa-bars"></i>
-    </button>
+ <div class="navbar">
+  <!-- Botão Hamburger (só aparece em mobile) -->
+  <button id="navToggle" class="nav-toggle" aria-label="Abrir menu">
+    <i class="fas fa-bars"></i>
+  </button>
 
-    <!-- links normais (desktop) ou menu mobile -->
-    <div class="nav-links">
-      <a href="index.html"><i class="fas fa-home"></i> Início</a>
+  <!-- Wrapping de todos os links, dropdowns, pesquisa e user-area -->
+  <div class="nav-links">
+    <a href="index.html"><i class="fas fa-home"></i> Início</a>
 
-      <div class="dropdown">
-        <a href="#"><i class="fas fa-pencil-alt"></i> Criar História</a>
-        <div class="dropdown-content">
-          <a href="diario.html">Escrever Diário</a>
-          <a href="historia.html">Escrever História</a>
-        </div>
-      </div>
-
-      <div class="dropdown">
-        <a href="#"><i class="fas fa-book"></i> Histórias</a>
-        <div class="dropdown-content">
-          <a href="hisotirasqueescrevi.html">Histórias que eu escrevi</a>
-          <a href="VerHistorias.html">Ler Histórias</a>
-        </div>
-      </div>
-
-      <div id="userMenuArea" class="user-area"></div>
-
-      <div class="search-box">
-        <input type="text" id="searchBar" placeholder="Pesquisar...">
-        <button id="searchBtn"><i class="fas fa-search"></i></button>
-        <div id="searchResults" class="search-results"></div>
+    <div class="dropdown">
+      <a href="#"><i class="fas fa-pencil-alt"></i> Criar História</a>
+      <div class="dropdown-content">
+        <a href="diario.html">Escrever Diário</a>
+        <a href="historia.html">Escrever História</a>
       </div>
     </div>
+
+    <div class="dropdown">
+      <a href="#"><i class="fas fa-book"></i> Histórias</a>
+      <div class="dropdown-content">
+        <a href="hisotirasqueescrevi.html">Histórias que eu escrevi</a>
+        <a href="VerHistorias.html">Ler Histórias</a>
+      </div>
+    </div>
+
+    <div id="userMenuArea" class="user-area"></div>
+
+    <div class="search-box">
+      <input type="text" id="searchBar" placeholder="Pesquisar...">
+      <button id="searchBtn"><i class="fas fa-search"></i></button>
+      <div id="searchResults" class="search-results"></div>
+    </div>
   </div>
+</div>
+
 
   <main>
     <h1>StoryFlow</h1>
