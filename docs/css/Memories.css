@@ -29,6 +29,7 @@
   cursor: pointer;
   padding: 5px;
   margin-right: 10px;
+  z-index: 1001;
 }
 
 /* Container dos links */
@@ -338,7 +339,7 @@ footer.visible {
 
 /* ====== RESPONSIVO (≤600px) ====== */
 @media (max-width: 600px) {
-  /* Navbar empilhada e menu hamburger */
+  /* Navbar: mostra hamburger, esconde links até abrir */
   .nav-toggle {
     display: block;
   }
@@ -365,7 +366,7 @@ footer.visible {
     margin: 5px 0;
   }
 
-  /* Texto e títulos ajustados */
+  /* Ajustes de texto */
   h1 { font-size: 40pt; }
   h2 { font-size: 14pt; }
 
