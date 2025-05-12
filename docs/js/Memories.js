@@ -222,12 +222,12 @@ function exibirSugestoes(lista) {
  * [10] INICIALIZAÇÃO
  ************************************************************/
 document.addEventListener('DOMContentLoaded', async () => {
-  // login e destaques
+  // 1) login e destaques
   await exibirUsuarioLogado();
   await fetchFeaturedStories();
   renderFeatured();
 
-  // pesquisa
+  // 2) pesquisa
   if (searchBar) {
     searchBar.oninput = () => {
       const v = searchBar.value;
@@ -240,7 +240,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
   }
 
-  // rodapé ao hover
+  // 3) rodapé ao hover
   document.body.addEventListener('mousemove', e => {
     const footer = document.querySelector('footer');
     if (!footer) return;
@@ -251,10 +251,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // --- NOVO: menu hamburger mobile ---
+  // 4) menu hamburger mobile
   const navToggle = document.getElementById('navToggle');
   const navLinks  = document.querySelector('.nav-links');
   if (navToggle && navLinks) {
-    navToggle.onclick = () => navLinks.classList.toggle('open');
+    navToggle.addEventListener('click', () => {
+      navLinks.classList.toggle('open');
+    });
   }
 });
