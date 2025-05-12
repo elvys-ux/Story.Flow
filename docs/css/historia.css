@@ -129,17 +129,8 @@ footer {
   transition: bottom 0.3s ease;
   z-index: 9999;
 }
-
 footer.visible {
   bottom: 0;
-}
-
-/* ====== RESPONSIVO ====== */
-@media (max-width: 600px) {
-  .navbar { flex-direction: column; }
-  .navbar a { margin-bottom: 10px; }
-  h1 { font-size: 40pt; }
-  h2 { font-size: 14pt; }
 }
 
 /* ====== LISTA LATERAL (on hover) ====== */
@@ -147,18 +138,18 @@ footer.visible {
   position: fixed;
   top: 60px;
   bottom: 0;
-  left: -250px;
   width: 250px;
   background-color: #333;
   padding: 10px;
   overflow-y: auto;
   overflow-x: hidden;
+  transform: translateX(-250px);
   transition: transform 0.3s ease;
   box-shadow: 2px 0 10px rgba(0,0,0,0.5);
   z-index: 10;
 }
 .title-list.visible {
-  transform: translateX(250px);
+  transform: translateX(0);
 }
 .title-list ul {
   list-style: none;
@@ -362,33 +353,54 @@ footer.visible {
   text-align: justify;
 }
 
-/* ====== CATEGORIAS NO CARTÃO (ajuste estético) ====== */
+/* ====== CATEGORIAS NO CARTÃO ====== */
 .cartao-container .categorias {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  justify-content: flex-start; /* alinha tudo à esquerda */
+  justify-content: flex-start;
   margin: 16px 0 24px;
 }
-
-/* Opcional: limites de largura para cada item, pra não ficarem muito largos */
 .cartao-container .categoria-wrapper {
   display: flex;
   align-items: center;
   gap: 6px;
-  min-width: 120px;     /* garante um tamanho mínimo */
-  max-width: 180px;     /* e um máximo, pra não esticar demais */
+  min-width: 120px;
+  max-width: 180px;
 }
-
 .cartao-container .categoria-wrapper input[type="checkbox"] {
   width: 18px;
   height: 18px;
   cursor: pointer;
 }
-
 .cartao-container .categoria-wrapper label {
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
+}
+
+/* ====== RESPONSIVO PARA MOBILE ====== */
+@media (max-width: 600px) {
+  .navbar {
+    flex-direction: column;
+  }
+  .navbar a {
+    margin-bottom: 10px;
+  }
+  h1 {
+    font-size: 40pt;
+  }
+  h2 {
+    font-size: 14pt;
+  }
+
+  /* Sidebar full-width on mobile */
+  .title-list {
+    width: 100%;
+    transform: translateX(-100%);
+  }
+  .title-list.visible {
+    transform: translateX(0);
+  }
 }
