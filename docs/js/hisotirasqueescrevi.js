@@ -21,7 +21,6 @@ async function exibirUsuarioLogado() {
 
   const userId = session.user.id;
   let displayName = session.user.email;
-
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("username")
@@ -49,7 +48,6 @@ async function getCurrentUserId() {
   return session?.user?.id || null;
 }
 
-// Histórias do usuário autenticado (salvas ou publicadas por ele)
 async function fetchUserStories() {
   const userId = await getCurrentUserId();
   if (!userId) return [];
@@ -61,7 +59,6 @@ async function fetchUserStories() {
   return data || [];
 }
 
-// Histórias publicadas (para pesquisa por qualquer visitante)
 async function fetchPublishedStories(query = "") {
   let builder = supabase
     .from("historias")
@@ -77,7 +74,6 @@ async function fetchPublishedStories(query = "") {
 }
 
 /* [C] CRUD de Histórias */
-// Salvar nova história
 async function salvarHistoria(titulo, descricao) {
   const userId = await getCurrentUserId();
   const { error } = await supabase
@@ -91,7 +87,6 @@ async function salvarHistoria(titulo, descricao) {
   }
 }
 
-// Excluir história existente
 async function excluirHistoria(id) {
   if (!confirm("Deseja mesmo excluir esta história?")) return;
   const { error } = await supabase
@@ -106,13 +101,11 @@ async function excluirHistoria(id) {
 }
 
 /* [D] Exibição de História */
-// Variáveis para paginação
-let modoCorrido = true;
-let partes = [];
-let indiceParte = 0;
+let modoCorrido   = true;
+let partes        = [];
+let indiceParte   = 0;
 let textoCompleto = "";
 
-// Abrir e exibir história completa (formatação básica)
 async function abrirHistoria(id) {
   const { data: [hist], error } = await supabase
     .from("historias")
@@ -124,7 +117,7 @@ async function abrirHistoria(id) {
     return;
   }
 
-  // Formatar texto: inserir \n\n a cada 5 pontos finais
+  // Formata a cada 5 pontos
   let contador = 0, out = "";
   for (const c of hist.descricao) {
     out += c;
@@ -142,18 +135,16 @@ async function abrirHistoria(id) {
   cont.innerText = textoCompleto;
   cont.setAttribute("data-full", textoCompleto);
 
-  // Resetar modo de leitura
   modoCorrido = true;
   partes = [];
   indiceParte = 0;
 }
 
-// Alternar modo de leitura entre texto corrido e páginas de 5 linhas
 function toggleReadingMode() {
-  const cont = document.getElementById("historia-conteudo");
-  const full = cont.getAttribute("data-full");
-  const btnV = document.getElementById("btn-voltar");
-  const btnC = document.getElementById("btn-continuar");
+  const cont  = document.getElementById("historia-conteudo");
+  const full  = cont.getAttribute("data-full");
+  const btnV  = document.getElementById("btn-voltar");
+  const btnC  = document.getElementById("btn-continuar");
 
   if (modoCorrido) {
     const linhas = full.split(/\r?\n/);
@@ -244,10 +235,24 @@ function exibirSugestoes(lista) {
 
 /* [G] Eventos e Inicialização */
 document.addEventListener("DOMContentLoaded", () => {
+  // 1) Login / mostrar usuário
   exibirUsuarioLogado();
+
+  // 2) Carregar lista lateral
   mostrarHistorias();
 
-  // Formulário de criação
+  // 3) Abrir / fechar menu lateral
+  const side = document.getElementById("titleListLeft");
+  document.body.addEventListener("mousemove", e => {
+    if (e.clientX < 50) side.classList.add("visible");
+  });
+  document.body.addEventListener("click", e => {
+    if (side.classList.contains("visible") && !side.contains(e.target)) {
+      side.classList.remove("visible");
+    }
+  });
+
+  // 4) Formulário de criação
   document.getElementById("formPrincipal")?.addEventListener("submit", e => {
     e.preventDefault();
     const t = document.getElementById("titulo").value.trim();
@@ -259,7 +264,7 @@ document.addEventListener("DOMContentLoaded", () => {
     salvarHistoria(t, d);
   });
 
-  // Pesquisa
+  // 5) Pesquisa
   const sb = document.getElementById("searchBar");
   const btn = document.getElementById("searchBtn");
   [btn, sb].forEach(el => {
@@ -272,12 +277,12 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Modos de leitura
+  // 6) Modos de leitura
   document.getElementById("toggleMode")?.addEventListener("click", toggleReadingMode);
   document.getElementById("btn-voltar")?.addEventListener("click", voltarPagina);
   document.getElementById("btn-continuar")?.addEventListener("click", continuarHistoria);
 
-  // Teclas de atalho
+  // 7) Teclas de atalho
   document.addEventListener("keydown", e => {
     const k = e.key.toLowerCase();
     if (["arrowleft","a","w"].includes(k)) voltarPagina();
