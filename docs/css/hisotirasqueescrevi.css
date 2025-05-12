@@ -68,18 +68,17 @@
 
 /* --- BARRA DE PESQUISA COM DROPDOWN --- */
 .search-box {
-    position: relative; /* Necessário para posicionar o dropdown de sugestões */
+    position: relative;
     display: inline-flex;
     align-items: center;
     background-color: white;
     border: 1px solid #ccc;
     border-radius: 5px;
-    padding: 0;  /* Remove padding para evitar espaço extra */
 }
 
 .search-box input[type="text"] {
     border: none;
-    padding: 5px 8px; /* Ajuste conforme necessário */
+    padding: 5px 8px;
     margin: 0;
     outline: none;
 }
@@ -94,22 +93,24 @@
 }
 
 #searchResults {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  width: 100%;
-  background-color: #fff;
-  border: 1px solid #ccc;
-  display: none;
-  z-index: 9999;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    display: none;
+    z-index: 9999;
 }
+
 #searchResults .suggestion-item {
-  padding: 6px;
-  border-bottom: 1px solid #ccc;
-  cursor: pointer;
+    padding: 6px;
+    border-bottom: 1px solid #ccc;
+    cursor: pointer;
 }
+
 #searchResults .suggestion-item:hover {
-  background-color: #f0f0f0;
+    background-color: #f0f0f0;
 }
 
 /* --- RESTANTE DO LAYOUT --- */
@@ -158,23 +159,24 @@ h2 {
     }
 }
 
-/* Barra de título à esquerda */
+/* --- BARRA DE TÍTULO À ESQUERDA --- */
 .title-list {
     position: fixed;
     top: 60px;
     bottom: 0;
-    left: -250px;
+    left: 0;
     width: 250px;
     background-color: #333;
     padding: 10px;
     overflow-y: auto;
     z-index: 10;
-    transition: transform 0.3s ease;
     box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
+    transform: translateX(-250px);
+    transition: transform 0.3s ease;
 }
 
 .title-list.visible {
-    transform: translateX(250px);
+    transform: translateX(0);
 }
 
 .title-list ul {
@@ -214,7 +216,7 @@ h2 {
     margin-left: 5px;
 }
 
-/* Estilo para o container da história */
+/* --- CONTAINER DA HISTÓRIA --- */
 .historia-container {
     background-color: #fff;
     padding: 20px;
@@ -241,7 +243,7 @@ h2 {
     margin-bottom: 20px;
 }
 
-/* Botão para alternar entre os modos - canto superior direito */
+/* Botão para alternar modo de leitura */
 .historia-container #toggleMode {
     position: absolute;
     top: 10px;
@@ -261,7 +263,7 @@ h2 {
     background-color: #555;
 }
 
-/* Estilo para os botões na parte inferior do container da história */
+/* Botões de navegação no container */
 .historia-container .buttons {
     display: flex;
     justify-content: space-between;
@@ -282,7 +284,8 @@ h2 {
     background-color: #555;
 }
 
-/* Exibição dos botões de navegação para o modo de leitura */
-#btn-voltar, #btn-continuar {
+/* Esconde inicialmente os botões de página */
+#btn-voltar,
+#btn-continuar {
     display: none;
 }
