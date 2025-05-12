@@ -321,3 +321,18 @@ function createPlaceholderCard() {
   div.innerHTML = '<h3>Placeholder</h3><p>(sem história)</p>';
   return div;
 }
+
+/*************************************************
+rodapé
+*************************************************/
+// Mostrar footer ao passar o rato
+document.body.addEventListener('mousemove', e => {
+  const footer = document.querySelector('footer');
+  if (!footer) return;
+
+  if (window.innerHeight - e.clientY < 50) { // Se o mouse estiver nos últimos 50px da tela
+    footer.classList.add('visible');
+  } else {
+    footer.classList.remove('visible');
+  }
+});
