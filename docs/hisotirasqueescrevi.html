@@ -5,95 +5,94 @@
   <title>StoryFlow - Histórias que eu escrevi</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Font Awesome -->
+  <!-- Ícones do Font Awesome (opcional) -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
   <!-- CSS principal -->
-  <link rel="stylesheet" href="css/historiasqueescrevi.css">
-
-  <!-- Supabase client e exibição de usuário -->
-  <script type="module" src="js/supabase.js"></script>
+  <link rel="stylesheet" href="css/hisotirasqueescrevi.css">
+   <script type="module" src="js/supabase.js"></script>
   <script type="module" src="js/userDisplay.js"></script>
 
   <style>
-    /* Estilo dropdown de pesquisa */
+    /* Exemplo de estilo p/ dropdown de pesquisa */
     #searchResults {
       display: none;
       position: absolute;
       background: #fff;
       border: 1px solid #ccc;
-      width: 240px;
+      width: 200px; /* Ajuste conforme necessidade */
       max-height: 200px;
       overflow-y: auto;
-      margin-top: 40px;
-      z-index: 9999;
+      margin-top: 40px; /* se precisar afastar do input */
+      z-index: 9999; /* para ficar acima de outros elementos */
     }
     .suggestion-item:hover {
       background-color: #f0f0f0;
     }
-    /* Botões fixos */
-    .toggle-mode-button,
-    .marker-button {
+    /* Botão "Alternar Modo" fixado */
+    .toggle-mode-button {
       position: absolute;
-      top: 70px;
+      top: 70px; /* Espaço abaixo da navbar */
+      right: 20px;
       padding: 10px 20px;
-      background-color: rgba(0,0,0,0.9);
-      color: #fff;
+      background-color: rgba(0, 0, 0, 0.9);
+      color: white;
       border: none;
       border-radius: 5px;
       cursor: pointer;
       font-size: 14px;
     }
-    .toggle-mode-button { right: 20px; }
-    .marker-button    { right: 150px; }
-    .toggle-mode-button:hover,
-    .marker-button:hover {
+    .toggle-mode-button:hover {
       background-color: #555;
     }
   </style>
 </head>
 <body>
 
-  <!-- Navbar -->
+  <!-- Barra de Navegação -->
   <div class="navbar">
-    <a href="index.html"><i class="fas fa-home"></i> Início</a>
+    <a href="index.html"><i class="fas fa-home"></i>Início</a>
     <div class="dropdown">
-      <a href="#"><i class="fas fa-pencil-alt"></i> Criar História</a>
+      <a href="#"><i class="fas fa-pencil-alt"></i>Criar História</a>
       <div class="dropdown-content">
         <a href="diario.html">Escrever Diário</a>
         <a href="historia.html">Escrever História</a>
       </div>
     </div>
     <div class="dropdown">
-      <a href="#"><i class="fas fa-book"></i> Histórias</a>
+      <a href="#"><i class="fas fa-book"></i>Histórias</a>
       <div class="dropdown-content">
-        <a href="historiasqueescrevi.html">Histórias que eu escrevi</a>
+        <a href="hisotirasqueescrevi.html">Histórias que eu escrevi</a>
         <a href="VerHistorias.html">Histórias escritas</a>
       </div>
     </div>
 
-    <!-- Área de usuário logado -->
+
+    <!-- Área para mostrar usuário logado -->
     <div id="userMenuArea"></div>
 
     <!-- Caixa de pesquisa -->
     <div class="search-box" style="position: relative;">
       <input type="text" id="searchBar" placeholder="Pesquisar...">
       <button id="searchBtn"><i class="fas fa-search"></i></button>
+      <!-- Div para sugestões (drop-down) -->
       <div id="searchResults"></div>
     </div>
   </div>
 
-  <!-- Botões fixos -->
+  <!-- Botão "Alternar Modo" -->
   <button id="toggleMode" class="toggle-mode-button">📝 Alternar Modo</button>
-  <button id="btnMarcador" class="marker-button">📍 Continuar Marcador</button>
 
-  <!-- Formulário principal -->
+  <!-- Form (id="formPrincipal") p/ criar histórias -->
   <form id="formPrincipal">
     <div class="title-list">
       <div class="categoria">
         <label for="categoria">Categoria:</label>
         <select id="categoria" name="categoria">
-          <!-- Carregado dinamicamente -->
+          <option value="Fantasia">Fantasia</option>
+          <option value="Terror">Terror</option>
+          <option value="Diário">Diário</option>
+          <option value="Aventura">Aventura</option>
         </select>
       </div>
 
@@ -110,24 +109,25 @@
     </div>
   </form>
 
-  <!-- Lista lateral de títulos -->
+  <!-- Lista de Títulos (visível ao passar mouse) -->
   <div id="titleListLeft" class="title-list">
     <ul id="titleListUl"></ul>
   </div>
 
-  <!-- Container principal de leitura -->
+  <!-- Container principal (exibição da história) -->
   <div class="historia-container">
     <h1 id="historia-titulo">Título da História</h1>
-    <div id="historia-conteudo" class="conteudo">
-      Aqui é onde a sua história será exibida.
-    </div>
+    <p id="historia-conteudo">Aqui é onde a sua história será exibida.</p>
     <div class="buttons">
-      <button id="btn-voltar">←</button>
-      <button id="btn-continuar">→</button>
+      <button id="btn-voltar" onclick="voltarPagina()">←</button>
+      <button id="btn-continuar" onclick="continuarHistoria()">→</button>
     </div>
   </div>
+  
 
-  <!-- Script principal atualizado -->
-  <script type="module" src="js/hisotirasqueescrevi.js"></script>
+
+  <!-- Script principal -->
+   <script type="module" src="js/hisotirasqueescrevi.js"></script>
+ 
 </body>
 </html>
