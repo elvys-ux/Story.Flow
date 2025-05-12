@@ -1,14 +1,14 @@
 // historiasqueescrevi.js
 import { supabase } from "./supabase.js";
 
-/* [A] Exibir usuário logado / Login-Logout */
+/* [Variáveis globais] */
+let isTitleListVisible = false;
+
+/* [A] Exibir usuário logado / Login–Logout */
 async function exibirUsuarioLogado() {
   const userArea = document.getElementById("userMenuArea");
   const { data: { session }, error } = await supabase.auth.getSession();
-  if (error) {
-    console.error("Erro ao obter sessão:", error);
-    return;
-  }
+  if (error) { console.error(error); return; }
 
   if (!session) {
     userArea.innerHTML = `
@@ -92,7 +92,8 @@ async function excluirHistoria(id) {
   const { error } = await supabase
     .from("historias")
     .delete()
-    .eq("id", id);
+    .eq("id", id)
+    .eq("user_id", await getCurrentUserId());
   if (error) {
     alert("Erro ao excluir: " + error.message);
   } else {
@@ -100,7 +101,7 @@ async function excluirHistoria(id) {
   }
 }
 
-/* [D] Exibição de História */
+/* [D] Exibição de História (com paginação opcional) */
 let modoCorrido   = true;
 let partes        = [];
 let indiceParte   = 0;
@@ -117,7 +118,7 @@ async function abrirHistoria(id) {
     return;
   }
 
-  // Formata a cada 5 pontos
+  // Formata a cada 5 pontos finais
   let contador = 0, out = "";
   for (const c of hist.descricao) {
     out += c;
@@ -190,7 +191,6 @@ async function mostrarHistorias() {
   lista.forEach(h => {
     const li = document.createElement("li");
     li.textContent = h.titulo || "(Sem título)";
-
     const span = document.createElement("span");
     span.classList.add("buttons");
 
@@ -233,6 +233,14 @@ function exibirSugestoes(lista) {
   box.style.display = "block";
 }
 
+/* [2] toggleTitleList, retirado do js/historia.js */
+function toggleTitleList(show) {
+  const list = document.getElementById("titleListLeft");
+  if (!list) return;
+  list.classList.toggle("visible", show);
+  isTitleListVisible = show;
+}
+
 /* [G] Eventos e Inicialização */
 document.addEventListener("DOMContentLoaded", () => {
   // 1) Login / mostrar usuário
@@ -241,14 +249,15 @@ document.addEventListener("DOMContentLoaded", () => {
   // 2) Carregar lista lateral
   mostrarHistorias();
 
-  // 3) Abrir / fechar menu lateral
-  const side = document.getElementById("titleListLeft");
+  // 3) Hover na borda esquerda e clique fora
   document.body.addEventListener("mousemove", e => {
-    if (e.clientX < 50) side.classList.add("visible");
+    if (e.clientX < 50) toggleTitleList(true);
   });
-  document.body.addEventListener("click", e => {
-    if (side.classList.contains("visible") && !side.contains(e.target)) {
-      side.classList.remove("visible");
+  document.body.addEventListener("mouseleave", () => toggleTitleList(false));
+  document.addEventListener("click", e => {
+    const list = document.getElementById("titleListLeft");
+    if (isTitleListVisible && list && !list.contains(e.target)) {
+      toggleTitleList(false);
     }
   });
 
@@ -265,7 +274,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // 5) Pesquisa
-  const sb = document.getElementById("searchBar");
+  const sb  = document.getElementById("searchBar");
   const btn = document.getElementById("searchBtn");
   [btn, sb].forEach(el => {
     if (!el) return;
@@ -282,7 +291,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-voltar")?.addEventListener("click", voltarPagina);
   document.getElementById("btn-continuar")?.addEventListener("click", continuarHistoria);
 
-  // 7) Teclas de atalho
+  // 7) Atalhos de teclado
   document.addEventListener("keydown", e => {
     const k = e.key.toLowerCase();
     if (["arrowleft","a","w"].includes(k)) voltarPagina();
