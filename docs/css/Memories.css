@@ -1,74 +1,92 @@
+/* ====== RESET BÁSICO ====== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 
-/* Estilo para a barra de navegação fixa */
+/* ====== NAVBAR ====== */
 .navbar {
-    position: fixed;
-    top: 0;
-    width: 100%;
-    background-color: rgba(0, 0, 0, 0.9);
-    padding: 12px;
-    z-index: 1000;
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  position: fixed;
+  top: 0;
+  width: 100%;
+  background-color: rgba(0,0,0,0.9);
+  padding: 12px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+}
+
+/* Hamburger botão (desktop escondido) */
+.nav-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.8rem;
+  cursor: pointer;
+  padding: 5px;
+  margin-right: 10px;
+}
+
+/* Container dos links */
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
 .navbar a {
-    font-family: Arial, sans-serif;
-    color: white;
-    text-decoration: none;
-    padding: 10px;
-    transition: background-color 0.3s, transform 0.3s;
-    border-radius: 5px;
+  font-family: Arial, sans-serif;
+  color: white;
+  text-decoration: none;
+  padding: 10px;
+  transition: background-color 0.3s, transform 0.3s;
+  border-radius: 5px;
 }
-
 .navbar a:hover {
-    background-color: rgba(0, 0, 0, 0.7);
-    transform: scale(1.1);
+  background-color: rgba(0,0,0,0.7);
+  transform: scale(1.1);
 }
-
 .navbar a i {
-    margin-right: 8px;
+  margin-right: 8px;
 }
 
+/* Dropdown */
 .dropdown {
-    position: relative;
-    display: inline-block;
+  position: relative;
 }
-
 .dropdown-content {
-    display: none;
-    position: absolute;
-    background-color: rgba(0, 0, 0, 0.5);
-    min-width: 150px;
-    box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.3);
-    z-index: 1;
+  display: none;
+  position: absolute;
+  background-color: rgba(0,0,0,0.5);
+  min-width: 150px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+  z-index: 1001;
 }
-
 .dropdown-content a {
-    color: white;
-    padding: 12px 16px;
-    text-decoration: none;
-    display: block;
+  color: white;
+  padding: 12px 16px;
+  display: block;
+  text-decoration: none;
 }
-
 .dropdown-content a:hover {
-    background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(255,255,255,0.2);
 }
-
 .dropdown:hover .dropdown-content {
-    display: block;
+  display: block;
 }
 
-/* Área para mostrar o usuário (nome ou "Login") */
+/* User area */
 #userMenuArea {
-    font-family: Arial, sans-serif;
-    color: white;
-    cursor: pointer;
+  font-family: Arial, sans-serif;
+  color: white;
+  cursor: pointer;
 }
 
-
-/* =================== SEARCH BOX =================== */
+/* ====== SEARCH BOX ====== */
 .search-box {
   position: relative;
   display: inline-flex;
@@ -109,7 +127,7 @@
   background-color: #f0f0f0;
 }
 
-/* =================== BODY E MAIN =================== */
+/* ====== BODY e MAIN ====== */
 body {
   font-family: 'Cinzel Decorative', serif;
   margin: 0;
@@ -133,17 +151,18 @@ h1 {
 h2 {
   font-size: 18pt;
   color: #333;
-  margin-bottom: 10px; /* Antes era 40px */
+  margin-bottom: 10px;
   max-width: 80%;
 }
 h3 {
-  margin-top: 0; /* Reduz ou remove a distância entre o h2 e o h3 */
   font-size: 14pt;
   color: #555;
 }
+
+/* ====== RODAPÉ ====== */
 footer {
   position: fixed;
-  bottom: -50px; /* escondido inicialmente */
+  bottom: -50px;
   left: 0;
   width: 100%;
   background-color: rgba(0,0,0,0.9);
@@ -153,27 +172,11 @@ footer {
   transition: bottom 0.3s ease;
   z-index: 9999;
 }
-
 footer.visible {
   bottom: 0;
 }
 
-@media (max-width: 600px) {
-  .navbar {
-    flex-direction: column;
-  }
-  .navbar a {
-    margin-bottom: 10px;
-  }
-  h1 {
-    font-size: 40pt;
-  }
-  h2 {
-    font-size: 14pt;
-  }
-}
-
-/* =================== MODAL =================== */
+/* ====== MODAL ====== */
 .modal-overlay {
   position: fixed;
   top: 0; left: 0;
@@ -226,8 +229,6 @@ footer.visible {
 .reading-options button:hover {
   background-color: #333;
 }
-
-/* =================== FORÇAR TEXTO MONOESPAÇADO E QUEBRAS =================== */
 #modalFullText {
   white-space: pre-wrap;
   font-family: monospace;
@@ -240,7 +241,7 @@ footer.visible {
   overflow-y: auto;
 }
 
-/* =================== AVISO CLIQUE FORA =================== */
+/* ====== AVISO CLIQUE FORA ====== */
 .warning-overlay {
   position: fixed;
   top: 0; left: 0;
@@ -274,7 +275,7 @@ footer.visible {
   background-color: #444;
 }
 
-/* =================== CARTÕES EM DESTAQUE =================== */
+/* ====== CARTÕES EM DESTAQUE ====== */
 #featuredStories {
   display: flex;
   flex-wrap: wrap;
@@ -290,8 +291,6 @@ footer.visible {
   box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
-  align-items: center;
   padding: 10px;
   text-align: center;
   transition: transform 0.2s;
@@ -305,19 +304,16 @@ footer.visible {
   font-size: 1.1em;
   color: #333;
 }
-/* Modificação para limitar a sinopse a 5 linhas */
 .featured-sheet .sheet-sinopse {
   font-size: 0.9em;
   color: #555;
   margin-bottom: 8px;
-  text-align: justify;
   white-space: pre-wrap;
   display: -webkit-box;
   -webkit-line-clamp: 5;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-
 .badge {
   background-color: #eee;
   color: #333;
@@ -326,7 +322,7 @@ footer.visible {
   border-radius: 4px;
 }
 
-/* =================== TOAST =================== */
+/* ====== TOAST ====== */
 .my-toast {
   position: fixed;
   bottom: 20px;
@@ -337,10 +333,48 @@ footer.visible {
   padding: 10px 20px;
   border-radius: 5px;
   opacity: 0.9;
-  z-index: 999999; /* z-index elevado para ficar acima de todos os elementos */
+  z-index: 999999;
 }
 
-/*************************************************************
- * [A] Exibir Toast (balão) no rodapé
- *************************************************************/
-/* (O restante do CSS continua conforme necessário) */
+/* ====== RESPONSIVO (≤600px) ====== */
+@media (max-width: 600px) {
+  /* Navbar empilhada e menu hamburger */
+  .nav-toggle {
+    display: block;
+  }
+  .nav-links {
+    display: none;
+    position: absolute;
+    top: 60px;
+    left: 0;
+    width: 100%;
+    flex-direction: column;
+    background-color: rgba(0,0,0,0.9);
+    padding: 10px 0;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+  }
+  .nav-links.open {
+    display: flex;
+  }
+  .nav-links a,
+  .nav-links .dropdown,
+  .nav-links .search-box,
+  #userMenuArea {
+    width: 100%;
+    text-align: center;
+    margin: 5px 0;
+  }
+
+  /* Texto e títulos ajustados */
+  h1 { font-size: 40pt; }
+  h2 { font-size: 14pt; }
+
+  /* Sidebar full-width */
+  .title-list {
+    width: 100%;
+    transform: translateX(-100%);
+  }
+  .title-list.visible {
+    transform: translateX(0);
+  }
+}
