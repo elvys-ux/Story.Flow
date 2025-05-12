@@ -1,61 +1,37 @@
-// hisotirasqueescrevi.js
+// historiasqueescrevi.js
 import { supabase } from "./supabase.js";
 
-/************************************************************
- * [A] LOGIN/LOGOUT
- ************************************************************/
+/* [A] LOGIN/LOGOUT */
 async function exibirUsuarioLogado() {
   const userArea = document.getElementById('userMenuArea');
-  if (!userArea) return;
-
   const { data: { session }, error } = await supabase.auth.getSession();
-  if (error) {
-    console.error("Erro ao obter sessão:", error);
-    return;
-  }
-
+  if (error) { console.error(error); return; }
   if (!session) {
-    userArea.innerHTML = `
-      <a href="Criacao.html" style="color:white;">
-        <i class="fas fa-user"></i> Login
-      </a>`;
+    userArea.innerHTML = `<a href="Criacao.html" style="color:white;"><i class="fas fa-user"></i> Login</a>`;
     userArea.onclick = null;
     return;
   }
-
   const userId = session.user.id;
   let displayName = session.user.email;
-
   const { data: profile, error: errProfile } = await supabase
-    .from("profiles")
-    .select("username")
-    .eq("id", userId)
-    .single();
-
-  if (!errProfile && profile?.username) {
-    displayName = profile.username;
-  }
-
+    .from("profiles").select("username").eq("id", userId).single();
+  if (!errProfile && profile?.username) displayName = profile.username;
   userArea.textContent = displayName;
   userArea.onclick = () => {
     if (confirm("Deseja fazer logout?")) {
-      supabase.auth.signOut().then(({ error: err }) => {
-        if (err) alert("Erro ao deslogar: " + err.message);
+      supabase.auth.signOut().then(({ error: e }) => {
+        if (e) alert("Erro ao deslogar: " + e.message);
         else window.location.href = "Criacao.html";
       });
     }
   };
 }
 
-/************************************************************
- * [B] HELPERS SUPABASE
- ************************************************************/
+/* [B] HELPERS */
 async function getCurrentUserId() {
   const { data: { session } } = await supabase.auth.getSession();
   return session?.user?.id || null;
 }
-
-// 1) Histórias salvas OU publicadas pelo usuário
 async function fetchUserStories() {
   const userId = await getCurrentUserId();
   if (!userId) return [];
@@ -63,11 +39,9 @@ async function fetchUserStories() {
     .from('historias')
     .select('id, cartao')
     .or(`created_by.eq.${userId},published_by.eq.${userId}`);
-  if (error) console.error("fetchUserStories:", error);
+  if (error) console.error(error);
   return data || [];
 }
-
-// 2) Histórias publicadas com cartão, filtradas por título ou autor
 async function fetchPublishedWithCartao(query = '') {
   const { data, error } = await supabase
     .from('historias')
@@ -75,30 +49,19 @@ async function fetchPublishedWithCartao(query = '') {
     .eq('published', true)
     .ilike('cartao->>tituloCartao', `%${query}%`)
     .or(`ilike(cartao->>autorCartao,%${query}%)`);
-  if (error) console.error("fetchPublishedWithCartao:", error);
+  if (error) console.error(error);
   return data || [];
 }
-
-// Excluir história por id
 async function excluirHistoriaPeloId(id) {
   if (!confirm("Deseja mesmo excluir a história?")) return;
-  const { error } = await supabase
-    .from('historias')
-    .delete()
-    .eq('id', id);
-  if (error) {
-    alert("Erro ao excluir: " + error.message);
-  } else {
-    mostrarHistorias();
-  }
+  const { error } = await supabase.from('historias').delete().eq('id', id);
+  if (error) alert("Erro ao excluir: " + error.message);
+  else mostrarHistorias();
 }
-
-// Salvar (insert) nova história
 async function salvarHistoria(titulo, descricao, autor) {
   const userId = await getCurrentUserId();
   const novo = {
-    titulo,
-    descricao,
+    titulo, descricao,
     created_by: userId,
     published_by: userId,
     published: true,
@@ -107,33 +70,62 @@ async function salvarHistoria(titulo, descricao, autor) {
       autorCartao: autor || "Desconhecido",
       sinopseCartao: descricao.substring(0,100),
       historiaCompleta: descricao,
-      likes: 0,
-      categorias: []
+      likes: 0, categorias: []
     }
   };
   const { error } = await supabase.from('historias').insert(novo);
-  if (error) {
-    alert("Erro ao salvar: " + error.message);
-  } else {
+  if (error) alert("Erro ao salvar: " + error.message);
+  else {
     document.getElementById('formPrincipal').reset();
     mostrarHistorias();
   }
 }
 
-/************************************************************
- * [C] VARIÁVEIS GLOBAIS PARA LEITURA
- ************************************************************/
+/* [C] LEITURA/PAGINAÇÃO */
 let modoCorrido = true;
 let partesHistoria = [];
 let parteAtual = 0;
-let currentStoryId = null;
 let textoCompleto = "";
-const wrapWidth = 80;
-const lineHeightPx = 22;
+function formatarTexto(str) {
+  let cnt = 0, out = "";
+  for (let c of str) {
+    out += c;
+    if (c === '.') {
+      cnt++;
+      if (cnt === 5) { out += '\n\n'; cnt = 0; }
+    }
+  }
+  return out;
+}
+function toggleReadingMode() {
+  const cont = document.getElementById('historia-conteudo');
+  const full = cont.getAttribute('data-full-text');
+  const btnV = document.getElementById('btn-voltar');
+  const btnC = document.getElementById('btn-continuar');
+  if (modoCorrido) {
+    const lines = full.split(/\r?\n/);
+    partesHistoria = [];
+    for (let i = 0; i < lines.length; i += 5) {
+      partesHistoria.push(lines.slice(i, i + 5).join('\n'));
+    }
+    parteAtual = 0;
+    exibirParteAtual();
+    btnV.style.display = btnC.style.display = partesHistoria.length > 1 ? 'inline-block' : 'none';
+    modoCorrido = false;
+  } else {
+    cont.innerText = full;
+    btnV.style.display = btnC.style.display = 'none';
+    modoCorrido = true;
+  }
+}
+function exibirParteAtual() {
+  document.getElementById('historia-conteudo')
+    .innerHTML = `<p>${partesHistoria[parteAtual]}</p>`;
+}
+function voltarPagina() { if (parteAtual > 0) { parteAtual--; exibirParteAtual(); } }
+function continuarHistoria() { if (parteAtual < partesHistoria.length - 1) { parteAtual++; exibirParteAtual(); } }
 
-/************************************************************
- * [D] LISTA LATERAL -> EXIBIÇÃO
- ************************************************************/
+/* [D] LISTA LATERAL */
 async function mostrarHistorias() {
   const ul = document.getElementById('titleListUl');
   ul.innerHTML = '';
@@ -144,136 +136,36 @@ async function mostrarHistorias() {
     li.textContent = titulo;
     const btns = document.createElement('span');
     btns.classList.add('buttons');
-
     const ler = document.createElement('button');
     ler.textContent = 'Ler';
     ler.onclick = () => abrirHistoriaPorId(h.id);
-
     const del = document.createElement('button');
     del.textContent = 'Excluir';
     del.onclick = () => excluirHistoriaPeloId(h.id);
-
     btns.append(ler, del);
     li.appendChild(btns);
     ul.appendChild(li);
   });
 }
 
-/************************************************************
- * [E] ABRIR HISTÓRIA E FORMATAÇÃO
- ************************************************************/
+/* [E] ABRIR HISTÓRIA */
 async function abrirHistoriaPorId(id) {
   const { data: [hist], error } = await supabase
     .from('historias')
     .select('id, descricao, cartao->>tituloCartao as titulo, cartao->>historiaCompleta as total')
     .eq('id', id);
-  if (error || !hist) {
-    alert("História não encontrada!");
-    return;
-  }
-  currentStoryId = hist.id;
+  if (error || !hist) return alert("História não encontrada!");
   textoCompleto = formatarTexto(hist.total || hist.descricao || "(Sem descrição)");
-  document.getElementById('historia-titulo').textContent = hist.titulo;
   const cont = document.getElementById('historia-conteudo');
   cont.innerText = textoCompleto;
   cont.setAttribute('data-full-text', textoCompleto);
+  document.getElementById('historia-titulo').textContent = hist.titulo;
   modoCorrido = true;
   partesHistoria = [];
   parteAtual = 0;
 }
 
-/************************************************************
- * [F] FORMATAÇÃO A CADA 5 PONTOS
- ************************************************************/
-function formatarTexto(str) {
-  let cnt = 0, out = '';
-  for (let c of str) {
-    out += c;
-    if (c === '.') {
-      cnt++;
-      if (cnt === 5) { out += '\n\n'; cnt = 0; }
-    }
-  }
-  return out;
-}
-
-/************************************************************
- * [G] MODO LEITURA: Corrido x Paginado
- ************************************************************/
-function toggleReadingMode() {
-  const cont = document.getElementById('historia-conteudo');
-  const btnV = document.getElementById('btn-voltar');
-  const btnC = document.getElementById('btn-continuar');
-  const full = cont.getAttribute('data-full-text');
-
-  if (modoCorrido) {
-    const lines = full.split(/\r?\n/);
-    partesHistoria = [];
-    for (let i=0; i<lines.length; i+=5) {
-      partesHistoria.push(lines.slice(i,i+5).join('\n'));
-    }
-    parteAtual = 0;
-    exibirParteAtual();
-    btnV.style.display = btnC.style.display = partesHistoria.length>1 ? 'inline-block' : 'none';
-    modoCorrido = false;
-  } else {
-    cont.innerText = full;
-    btnV.style.display = btnC.style.display = 'none';
-    modoCorrido = true;
-  }
-}
-
-function exibirParteAtual() {
-  document.getElementById('historia-conteudo')
-    .innerHTML = `<p>${partesHistoria[parteAtual]}</p>`;
-}
-
-function voltarPagina() {
-  if (parteAtual>0) { parteAtual--; exibirParteAtual(); }
-}
-
-function continuarHistoria() {
-  if (parteAtual<partesHistoria.length-1) { parteAtual++; exibirParteAtual(); }
-}
-
-/************************************************************
- * [H] MARCADOR DE LINHA
- ************************************************************/
-function wrapText(str, width) {
-  const out = [], len = str.length;
-  for (let i=0; i<len; i+=width) out.push(str.slice(i,i+width));
-  return out;
-}
-
-function highlightLine(num) {
-  const cont = document.getElementById("historia-conteudo");
-  const full = cont.getAttribute("data-full-text");
-  const lines = wrapText(full, wrapWidth);
-  if (num<1||num>lines.length) { alert("Linha fora do intervalo!"); return; }
-  lines[num-1] = `<span style="background:yellow">${lines[num-1]}</span>`;
-  cont.innerHTML = lines.join('<br>');
-  cont.scrollTo({ top: (num-1)*lineHeightPx, behavior: 'smooth' });
-}
-
-document.getElementById('historia-conteudo')?.addEventListener('click', e => {
-  if (!currentStoryId) return;
-  const rect = e.currentTarget.getBoundingClientRect();
-  const clickY = e.clientY - rect.top;
-  const line = Math.floor((clickY + e.currentTarget.scrollTop) / lineHeightPx) + 1;
-  localStorage.setItem(`line_${currentStoryId}`, line);
-  console.log("Linha salva:", line);
-});
-
-function continuarMarcador() {
-  if (!currentStoryId) return alert("Nenhuma linha salva.");
-  const saved = localStorage.getItem(`line_${currentStoryId}`);
-  if (!saved) return alert("Nenhuma linha salva.");
-  highlightLine(parseInt(saved,10));
-}
-
-/************************************************************
- * [I] PESQUISA (publicadas c/ cartão)
- ************************************************************/
+/* [F] PESQUISA */
 async function filtrarHistorias(query) {
   const dados = await fetchPublishedWithCartao(query);
   return dados.map(h => ({
@@ -282,7 +174,6 @@ async function filtrarHistorias(query) {
     autorCartao: h.autor
   }));
 }
-
 function exibirSugestoes(lista) {
   const box = document.getElementById('searchResults');
   if (!lista.length) {
@@ -295,19 +186,17 @@ function exibirSugestoes(lista) {
       </div>
     `).join('');
     box.querySelectorAll('.suggestion-item')
-       .forEach(item => item.addEventListener('click', () => {
-         abrirHistoriaPorId(item.dataset.id);
-         box.style.display = 'none';
-       }));
+      .forEach(item => item.addEventListener('click', () => {
+        abrirHistoriaPorId(item.dataset.id);
+        box.style.display = 'none';
+      }));
   }
   box.style.display = 'block';
 }
 
-/************************************************************
- * [J] MOUSE, TECLAS E DOMContentLoaded
- ************************************************************/
+/* [G] EVENTOS E INICIALIZAÇÃO */
 document.body.addEventListener('mousemove', e => {
-  if (e.clientX<50) document.getElementById('titleListLeft')?.classList.add('visible');
+  if (e.clientX < 50) document.getElementById('titleListLeft')?.classList.add('visible');
 });
 document.body.addEventListener('click', e => {
   const tl = document.getElementById('titleListLeft');
@@ -315,18 +204,14 @@ document.body.addEventListener('click', e => {
     tl.classList.remove('visible');
   }
 });
-
 document.addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
   if (['arrowleft','a','w'].includes(k)) voltarPagina();
   if (['arrowright','d','s'].includes(k)) continuarHistoria();
 });
-
 document.addEventListener('DOMContentLoaded', () => {
   exibirUsuarioLogado();
   mostrarHistorias();
-
-  // Formulário
   document.getElementById('formPrincipal')?.addEventListener('submit', e => {
     e.preventDefault();
     const t = document.getElementById('titulo').value.trim();
@@ -335,19 +220,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!t || !d) return alert("Preencha título e descrição!");
     salvarHistoria(t, d, a);
   });
-
-  // Pesquisa
   const sb = document.getElementById('searchBar');
   const btn = document.getElementById('searchBtn');
-  [btn, sb].forEach(el => el?.addEventListener(el===btn?'click':'input', async () => {
-    const q = sb.value.trim();
-    if (!q) return document.getElementById('searchResults').style.display='none';
-    exibirSugestoes(await filtrarHistorias(q));
-  }));
-
-  // Botões leitura e marcador
+  [btn, sb].forEach(el => {
+    if (!el) return;
+    const ev = el === btn ? 'click' : 'input';
+    el.addEventListener(ev, async () => {
+      const q = sb.value.trim();
+      if (!q) return document.getElementById('searchResults').style.display = 'none';
+      exibirSugestoes(await filtrarHistorias(q));
+    });
+  });
   document.getElementById('toggleMode')?.addEventListener('click', toggleReadingMode);
   document.getElementById('btn-voltar')?.addEventListener('click', voltarPagina);
   document.getElementById('btn-continuar')?.addEventListener('click', continuarHistoria);
-  document.getElementById('btnMarcador')?.addEventListener('click', continuarMarcador);
 });
