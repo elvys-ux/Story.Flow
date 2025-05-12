@@ -67,6 +67,8 @@
         <label for="descricao">Descrição</label>
         <textarea id="descricao" placeholder="Conte sua história..."></textarea>
 
+        <!-- Categorias (checklist) -->
+   
         <div id="categorias"></div>
 
         <div class="button-container">
@@ -75,12 +77,6 @@
           <button class="btn btn-nova-historia" type="button" id="novaHistoriaBtn">Nova História</button>
         </div>
       </form>
-
-      <!-- NOVO: LISTA DE HISTÓRIAS SALVAS -->
-      <div id="historiasSalvas" class="historias-salvas">
-        <h2>Histórias Salvas</h2>
-        <ul id="listaHistorias"></ul>
-      </div>
     </div>
 
     <!-- CONTÊINER: CARTÃO -->
@@ -105,6 +101,7 @@
         <input type="text" id="autor_cartao" placeholder="Seu nome (ou anônimo)">
       </div>
 
+      <!-- Categorias dinâmicas -->
       <div class="form-field">
         <label>Categorias:</label>
         <div class="categorias"></div>
