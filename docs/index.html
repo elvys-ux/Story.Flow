@@ -14,26 +14,38 @@
 
   <!-- Navbar -->
   <div class="navbar">
-    <a href="index.html"><i class="fas fa-home"></i> Início</a>
-    <div class="dropdown">
-      <a href="#"><i class="fas fa-pencil-alt"></i> Criar História</a>
-      <div class="dropdown-content">
-        <a href="diario.html">Escrever Diário</a>
-        <a href="historia.html">Escrever História</a>
+    <!-- botão hamburger para mobile -->
+    <button id="navToggle" class="nav-toggle" aria-label="Abrir menu">
+      <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- links normais (desktop) ou menu mobile -->
+    <div class="nav-links">
+      <a href="index.html"><i class="fas fa-home"></i> Início</a>
+
+      <div class="dropdown">
+        <a href="#"><i class="fas fa-pencil-alt"></i> Criar História</a>
+        <div class="dropdown-content">
+          <a href="diario.html">Escrever Diário</a>
+          <a href="historia.html">Escrever História</a>
+        </div>
       </div>
-    </div>
-    <div class="dropdown">
-      <a href="#"><i class="fas fa-book"></i> Histórias</a>
-      <div class="dropdown-content">
-        <a href="hisotirasqueescrevi.html">Histórias que eu escrevi</a>
-        <a href="VerHistorias.html">Ler Histórias</a>
+
+      <div class="dropdown">
+        <a href="#"><i class="fas fa-book"></i> Histórias</a>
+        <div class="dropdown-content">
+          <a href="hisotirasqueescrevi.html">Histórias que eu escrevi</a>
+          <a href="VerHistorias.html">Ler Histórias</a>
+        </div>
       </div>
-    </div>
-    <div id="userMenuArea" class="user-area"></div>
-    <div class="search-box">
-      <input type="text" id="searchBar" placeholder="Pesquisar...">
-      <button id="searchBtn"><i class="fas fa-search"></i></button>
-      <div id="searchResults" class="search-results"></div>
+
+      <div id="userMenuArea" class="user-area"></div>
+
+      <div class="search-box">
+        <input type="text" id="searchBar" placeholder="Pesquisar...">
+        <button id="searchBtn"><i class="fas fa-search"></i></button>
+        <div id="searchResults" class="search-results"></div>
+      </div>
     </div>
   </div>
 
@@ -68,6 +80,17 @@
   </footer>
 
   <!-- Scripts -->
+  <script>
+// script para abrir/fechar menu mobile
+document.addEventListener('DOMContentLoaded', () => {
+  const navToggle = document.getElementById('navToggle');
+  const navLinks  = document.querySelector('.nav-links');
+
+  navToggle.addEventListener('click', () => {
+    navLinks.classList.toggle('open');
+  });
+});
+  </script>
   <script type="module" src="js/supabase.js"></script>
   <script type="module" src="js/Memories.js"></script>
 </body>
