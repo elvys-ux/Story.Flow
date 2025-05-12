@@ -1,14 +1,18 @@
+// historiasqueescrevi.js
 import { supabase } from "./supabase.js";
 
-/* [A] AUTENTICAÇÃO */
+/* [A] Exibir usuário logado / Login-Logout */
 async function exibirUsuarioLogado() {
-  const userArea = document.getElementById('userMenuArea');
+  const userArea = document.getElementById("userMenuArea");
   const { data: { session }, error } = await supabase.auth.getSession();
-  if (error) { console.error(error); return; }
+  if (error) {
+    console.error("Erro ao obter sessão:", error);
+    return;
+  }
 
   if (!session) {
     userArea.innerHTML = `
-      <a href="Criacao.html" style="color:white;">
+      <a href="Criacao.html" style="color:white">
         <i class="fas fa-user"></i> Login
       </a>`;
     userArea.onclick = null;
@@ -18,291 +22,265 @@ async function exibirUsuarioLogado() {
   const userId = session.user.id;
   let displayName = session.user.email;
 
-  const { data: profile, error: errProfile } = await supabase
-    .from('profiles')
-    .select('username')
-    .eq('id', userId)
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("username")
+    .eq("id", userId)
     .single();
 
-  if (!errProfile && profile?.username) {
+  if (!profileError && profile?.username) {
     displayName = profile.username;
   }
 
   userArea.textContent = displayName;
   userArea.onclick = () => {
-    if (confirm('Deseja fazer logout?')) {
+    if (confirm("Deseja fazer logout?")) {
       supabase.auth.signOut().then(({ error }) => {
-        if (error) alert('Erro ao deslogar: ' + error.message);
-        else window.location.href = 'Criacao.html';
+        if (error) alert("Erro ao deslogar: " + error.message);
+        else window.location.href = "Criacao.html";
       });
     }
   };
 }
 
-/* [B] HELPERS DE DADOS */
+/* [B] Helpers Supabase */
 async function getCurrentUserId() {
   const { data: { session } } = await supabase.auth.getSession();
   return session?.user?.id || null;
 }
 
-// 1) Histórias salvas OU publicadas pelo usuário autenticado
+// Histórias do usuário autenticado (salvas ou publicadas por ele)
 async function fetchUserStories() {
   const userId = await getCurrentUserId();
   if (!userId) return [];
   const { data, error } = await supabase
-    .from('historias')
-    .select('id, cartao')
-    .or(`created_by.eq.${userId},published_by.eq.${userId}`);
-  if (error) console.error('fetchUserStories:', error);
+    .from("historias")
+    .select("id, titulo")
+    .eq("user_id", userId);
+  if (error) console.error("fetchUserStories:", error);
   return data || [];
 }
 
-// 2) Histórias publicadas com cartão, filtradas por título ou autor (qualquer usuário)
-async function fetchPublishedWithCartao(query = '') {
-  const filtro = query.trim();
+// Histórias publicadas (para pesquisa por qualquer visitante)
+async function fetchPublishedStories(query = "") {
   let builder = supabase
-    .from('historias')
-    .select(`
-      id,
-      cartao->>tituloCartao as titulo,
-      cartao->>autorCartao  as autor
-    `)
-    .eq('published', true);
-
-  if (filtro) {
-    const orFilter = 
-      `cartao->>tituloCartao.ilike.%${filtro}%,` +
-      `cartao->>autorCartao.ilike.%${filtro}%`;
-    builder = builder.or(orFilter);
+    .from("historias")
+    .select("id, titulo")
+    .eq("published", true);
+  const q = query.trim();
+  if (q) {
+    builder = builder.or(`titulo.ilike.%${q}%,descricao.ilike.%${q}%`);
   }
-
   const { data, error } = await builder;
-  if (error) console.error('fetchPublishedWithCartao:', error);
+  if (error) console.error("fetchPublishedStories:", error);
   return data || [];
 }
 
-// 3) Inserir nova história
-async function salvarHistoria(titulo, descricao, autor) {
+/* [C] CRUD de Histórias */
+// Salvar nova história
+async function salvarHistoria(titulo, descricao) {
   const userId = await getCurrentUserId();
-  const novo = {
-    titulo,
-    descricao,
-    created_by: userId,
-    published_by: userId,
-    published: true,
-    cartao: {
-      tituloCartao: titulo || '(Sem Título)',
-      autorCartao:  autor   || 'Desconhecido',
-      sinopseCartao: descricao.substring(0, 100),
-      historiaCompleta: descricao,
-      likes: 0,
-      categorias: []
-    }
-  };
-
-  const { error } = await supabase.from('historias').insert(novo);
-  if (error) {
-    alert('Erro ao salvar: ' + error.message);
-  } else {
-    document.getElementById('formPrincipal').reset();
-    mostrarHistorias();
-  }
-}
-
-// 4) Excluir história por ID
-async function excluirHistoriaPeloId(id) {
-  if (!confirm('Deseja mesmo excluir a história?')) return;
   const { error } = await supabase
-    .from('historias')
-    .delete()
-    .eq('id', id);
+    .from("historias")
+    .insert({ titulo, descricao, user_id: userId, published: true });
   if (error) {
-    alert('Erro ao excluir: ' + error.message);
+    alert("Erro ao salvar: " + error.message);
+  } else {
+    document.getElementById("formPrincipal").reset();
+    mostrarHistorias();
+  }
+}
+
+// Excluir história existente
+async function excluirHistoria(id) {
+  if (!confirm("Deseja mesmo excluir esta história?")) return;
+  const { error } = await supabase
+    .from("historias")
+    .delete()
+    .eq("id", id);
+  if (error) {
+    alert("Erro ao excluir: " + error.message);
   } else {
     mostrarHistorias();
   }
 }
 
-/* [C] FORMATAÇÃO E PAGINAÇÃO */
+/* [D] Exibição de História */
+// Variáveis para paginação
 let modoCorrido = true;
-let partesHistoria = [];
-let parteAtual     = 0;
-let textoCompleto  = '';
+let partes = [];
+let indiceParte = 0;
+let textoCompleto = "";
 
-function formatarTexto(str) {
-  let cnt = 0, out = '';
-  for (const c of str) {
+// Abrir e exibir história completa (formatação básica)
+async function abrirHistoria(id) {
+  const { data: [hist], error } = await supabase
+    .from("historias")
+    .select("titulo, descricao")
+    .eq("id", id);
+
+  if (error || !hist) {
+    alert("História não encontrada!");
+    return;
+  }
+
+  // Formatar texto: inserir \n\n a cada 5 pontos finais
+  let contador = 0, out = "";
+  for (const c of hist.descricao) {
     out += c;
-    if (c === '.') {
-      cnt += 1;
-      if (cnt === 5) {
-        out += '\n\n';
-        cnt = 0;
+    if (c === ".") {
+      contador++;
+      if (contador === 5) {
+        out += "\n\n";
+        contador = 0;
       }
     }
   }
-  return out;
+  textoCompleto = out;
+  document.getElementById("historia-titulo").textContent = hist.titulo;
+  const cont = document.getElementById("historia-conteudo");
+  cont.innerText = textoCompleto;
+  cont.setAttribute("data-full", textoCompleto);
+
+  // Resetar modo de leitura
+  modoCorrido = true;
+  partes = [];
+  indiceParte = 0;
 }
 
+// Alternar modo de leitura entre texto corrido e páginas de 5 linhas
 function toggleReadingMode() {
-  const cont   = document.getElementById('historia-conteudo');
-  const full   = cont.getAttribute('data-full-text');
-  const btnV   = document.getElementById('btn-voltar');
-  const btnC   = document.getElementById('btn-continuar');
+  const cont = document.getElementById("historia-conteudo");
+  const full = cont.getAttribute("data-full");
+  const btnV = document.getElementById("btn-voltar");
+  const btnC = document.getElementById("btn-continuar");
 
   if (modoCorrido) {
-    const lines = full.split(/\r?\n/);
-    partesHistoria = [];
-    for (let i = 0; i < lines.length; i += 5) {
-      partesHistoria.push(lines.slice(i, i + 5).join('\n'));
+    const linhas = full.split(/\r?\n/);
+    partes = [];
+    for (let i = 0; i < linhas.length; i += 5) {
+      partes.push(linhas.slice(i, i + 5).join("\n"));
     }
-    parteAtual = 0;
-    exibirParteAtual();
-    btnV.style.display = btnC.style.display = (partesHistoria.length > 1 ? 'inline-block' : 'none');
+    indiceParte = 0;
+    exibirParte();
+    btnV.style.display = btnC.style.display = (partes.length > 1 ? "inline-block" : "none");
     modoCorrido = false;
   } else {
     cont.innerText = full;
-    btnV.style.display = btnC.style.display = 'none';
+    btnV.style.display = btnC.style.display = "none";
     modoCorrido = true;
   }
 }
 
-function exibirParteAtual() {
-  document.getElementById('historia-conteudo')
-    .innerHTML = `<p>${partesHistoria[parteAtual]}</p>`;
+function exibirParte() {
+  document.getElementById("historia-conteudo")
+    .innerHTML = `<p>${partes[indiceParte]}</p>`;
 }
 
-function voltarPagina()   { if (parteAtual > 0)                     parteAtual-- && exibirParteAtual(); }
-function continuarHistoria() { if (parteAtual < partesHistoria.length - 1) parteAtual++ && exibirParteAtual(); }
+function voltarPagina() {
+  if (indiceParte > 0) {
+    indiceParte--;
+    exibirParte();
+  }
+}
 
-/* [D] LISTA LATERAL */
+function continuarHistoria() {
+  if (indiceParte < partes.length - 1) {
+    indiceParte++;
+    exibirParte();
+  }
+}
+
+/* [E] Lista lateral de Histórias do Usuário */
 async function mostrarHistorias() {
-  const ul = document.getElementById('titleListUl');
-  ul.innerHTML = '';
-  const historias = await fetchUserStories();
-  historias.forEach(h => {
-    const titulo = h.cartao?.tituloCartao || '(Sem Título)';
-    const li     = document.createElement('li');
-    li.textContent = titulo;
+  const ul = document.getElementById("titleListUl");
+  ul.innerHTML = "";
+  const lista = await fetchUserStories();
+  lista.forEach(h => {
+    const li = document.createElement("li");
+    li.textContent = h.titulo || "(Sem título)";
 
-    const btns = document.createElement('span');
-    btns.classList.add('buttons');
+    const span = document.createElement("span");
+    span.classList.add("buttons");
 
-    const ler = document.createElement('button');
-    ler.textContent = 'Ler';
-    ler.onclick     = () => abrirHistoriaPorId(h.id);
+    const btnLer = document.createElement("button");
+    btnLer.textContent = "Ler";
+    btnLer.onclick = () => abrirHistoria(h.id);
 
-    const deletar = document.createElement('button');
-    deletar.textContent = 'Excluir';
-    deletar.onclick     = () => excluirHistoriaPeloId(h.id);
+    const btnDel = document.createElement("button");
+    btnDel.textContent = "Excluir";
+    btnDel.onclick = () => excluirHistoria(h.id);
 
-    btns.append(ler, deletar);
-    li.appendChild(btns);
+    span.append(btnLer, btnDel);
+    li.appendChild(span);
     ul.appendChild(li);
   });
 }
 
-/* [E] EXIBIR UMA HISTÓRIA */
-async function abrirHistoriaPorId(id) {
-  const { data: [hist], error } = await supabase
-    .from('historias')
-    .select(`
-      descricao,
-      cartao->>tituloCartao     as titulo,
-      cartao->>historiaCompleta as total
-    `)
-    .eq('id', id);
-
-  if (error || !hist) {
-    alert('História não encontrada!');
-    return;
-  }
-
-  textoCompleto = formatarTexto(hist.total || hist.descricao || '(Sem descrição)');
-  const cont    = document.getElementById('historia-conteudo');
-  cont.innerText = textoCompleto;
-  cont.setAttribute('data-full-text', textoCompleto);
-  document.getElementById('historia-titulo').textContent = hist.titulo;
-  modoCorrido = true;
-  partesHistoria = [];
-  parteAtual = 0;
-}
-
-/* [F] PESQUISA */
+/* [F] Pesquisa pública de Histórias */
 async function filtrarHistorias(query) {
-  const dados = await fetchPublishedWithCartao(query);
-  return dados.map(h => ({
-    id:            h.id,
-    tituloCartao:  h.titulo,
-    autorCartao:   h.autor
-  }));
+  return await fetchPublishedStories(query);
 }
 
 function exibirSugestoes(lista) {
-  const box = document.getElementById('searchResults');
+  const box = document.getElementById("searchResults");
   if (!lista.length) {
     box.innerHTML = `<div style="padding:6px;">Nenhuma história encontrada</div>`;
   } else {
-    box.innerHTML = lista.map(s => `
-      <div class="suggestion-item" data-id="${s.id}">
-        <strong>${s.tituloCartao}</strong><br>
-        <em>Autor: ${s.autorCartao}</em>
-      </div>
-    `).join('');
-    box.querySelectorAll('.suggestion-item')
-       .forEach(item => item.addEventListener('click', () => {
-         abrirHistoriaPorId(item.dataset.id);
-         box.style.display = 'none';
+    box.innerHTML = lista
+      .map(h => `
+        <div class="suggestion-item" data-id="${h.id}">
+          <strong>${h.titulo}</strong>
+        </div>`)
+      .join("");
+    box.querySelectorAll(".suggestion-item")
+       .forEach(el => el.addEventListener("click", () => {
+         abrirHistoria(el.dataset.id);
+         box.style.display = "none";
        }));
   }
-  box.style.display = 'block';
+  box.style.display = "block";
 }
 
-/* [G] EVENTOS & INICIALIZAÇÃO */
-document.body.addEventListener('mousemove', e => {
-  if (e.clientX < 50) document.getElementById('titleListLeft')?.classList.add('visible');
-});
-
-document.body.addEventListener('click', e => {
-  const tl = document.getElementById('titleListLeft');
-  if (tl?.classList.contains('visible') && !tl.contains(e.target)) {
-    tl.classList.remove('visible');
-  }
-});
-
-document.addEventListener('keydown', e => {
-  const k = e.key.toLowerCase();
-  if (['arrowleft', 'a', 'w'].includes(k)) voltarPagina();
-  if (['arrowright','d','s'].includes(k)) continuarHistoria();
-});
-
-document.addEventListener('DOMContentLoaded', () => {
+/* [G] Eventos e Inicialização */
+document.addEventListener("DOMContentLoaded", () => {
   exibirUsuarioLogado();
   mostrarHistorias();
 
-  document.getElementById('formPrincipal')?.addEventListener('submit', e => {
+  // Formulário de criação
+  document.getElementById("formPrincipal")?.addEventListener("submit", e => {
     e.preventDefault();
-    const t = document.getElementById('titulo').value.trim();
-    const d = document.getElementById('descricao').value.trim();
-    const a = document.getElementById('autor')?.value.trim() || '';
-    if (!t || !d) return alert('Preencha título e descrição!');
-    salvarHistoria(t, d, a);
+    const t = document.getElementById("titulo").value.trim();
+    const d = document.getElementById("descricao").value.trim();
+    if (!t || !d) {
+      alert("Título e descrição são obrigatórios.");
+      return;
+    }
+    salvarHistoria(t, d);
   });
 
-  const sb  = document.getElementById('searchBar');
-  const btn = document.getElementById('searchBtn');
-
+  // Pesquisa
+  const sb = document.getElementById("searchBar");
+  const btn = document.getElementById("searchBtn");
   [btn, sb].forEach(el => {
     if (!el) return;
-    const ev = el === btn ? 'click' : 'input';
+    const ev = el === btn ? "click" : "input";
     el.addEventListener(ev, async () => {
       const q = sb.value.trim();
-      if (!q) return document.getElementById('searchResults').style.display = 'none';
+      if (!q) return document.getElementById("searchResults").style.display = "none";
       exibirSugestoes(await filtrarHistorias(q));
     });
   });
 
-  document.getElementById('toggleMode')?.addEventListener('click', toggleReadingMode);
-  document.getElementById('btn-voltar')?.addEventListener('click', voltarPagina);
-  document.getElementById('btn-continuar')?.addEventListener('click', continuarHistoria);
+  // Modos de leitura
+  document.getElementById("toggleMode")?.addEventListener("click", toggleReadingMode);
+  document.getElementById("btn-voltar")?.addEventListener("click", voltarPagina);
+  document.getElementById("btn-continuar")?.addEventListener("click", continuarHistoria);
+
+  // Teclas de atalho
+  document.addEventListener("keydown", e => {
+    const k = e.key.toLowerCase();
+    if (["arrowleft","a","w"].includes(k)) voltarPagina();
+    if (["arrowright","d","s"].includes(k)) continuarHistoria();
+  });
 });
