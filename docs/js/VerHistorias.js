@@ -11,7 +11,7 @@ const initialCount   = 20;
 const increment      = 5;
 
 // Elementos do DOM
-typedef const container      = document.getElementById('storiesContainer');
+const container      = document.getElementById('storiesContainer');
 const categoryFilter = document.getElementById('category-filter');
 const sortFilter     = document.getElementById('sort-filter');
 const searchForm     = document.getElementById('searchForm');
@@ -32,21 +32,24 @@ let categoryMap = {}; // mapeamento id → nome da categoria
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
-  // Impedir reload no submit
+  // Previne reload no submit de busca
   if (searchForm) {
     searchForm.addEventListener('submit', e => { e.preventDefault(); initialLoad(); });
   }
 
-  // Obter sessão
+  // Obtém sessão e curtidas do usuário
   const { data: { session } } = await supabase.auth.getSession();
-  sessionUserId = session?.user?.id ?? null;
+  sessionUserId = session?.user?.id || null;
   if (sessionUserId) {
     await fetchUserLikes();
   }
 
+  // Exibe login
   await exibirUsuarioLogado();
+  // Carrega categorias e histórias
   await fetchCategories();
   await fetchStoriesFromSupabase();
+  // Renderiza inicialmente
   initialLoad();
 
   // Filtros e paginação
@@ -58,18 +61,19 @@ async function init() {
     showBatch(increment);
   });
 
-  // Modal e warning
+  // Controles do modal
   modalClose.onclick   = () => modalOverlay.style.display = 'none';
   modalOverlay.onclick = e => { if (e.target === modalOverlay) warningOverlay.style.display = 'flex'; };
   warningYes.onclick   = () => { modalOverlay.style.display = 'none'; warningOverlay.style.display = 'none'; };
   warningNo.onclick    = () => warningOverlay.style.display = 'none';
 }
 
+// Exibe na navbar nome de usuário ou link de login
 async function exibirUsuarioLogado() {
   const area = document.getElementById('userMenuArea');
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
-    area.innerHTML = `<a href="Criacao.html"><i class="fas fa-user"></i> Login</a>`;
+    area.innerHTML = `<a href=\"Criacao.html\"><i class=\"fas fa-user\"></i> Login</a>`;
     return;
   }
   const { data: profile } = await supabase
@@ -77,7 +81,8 @@ async function exibirUsuarioLogado() {
     .select('username')
     .eq('id', session.user.id)
     .single();
-  area.textContent = profile?.username || session.user.email;
+  const name = profile?.username || session.user.email;
+  area.textContent = name;
   area.style.cursor = 'pointer';
   area.onclick = () => {
     if (confirm('Deseja fazer logout?')) {
@@ -86,6 +91,7 @@ async function exibirUsuarioLogado() {
   };
 }
 
+// Busca IDs que o usuário curtiu
 async function fetchUserLikes() {
   const { data, error } = await supabase
     .from('user_likes')
@@ -94,6 +100,7 @@ async function fetchUserLikes() {
   if (!error) likedStories = new Set(data.map(r => r.historia_id));
 }
 
+// Carrega categorias do banco
 async function fetchCategories() {
   const { data, error } = await supabase
     .from('categorias')
@@ -101,6 +108,7 @@ async function fetchCategories() {
   if (!error) categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
 }
 
+// Carrega histórias, cartões e categorias relacionadas
 async function fetchStoriesFromSupabase() {
   const { data: historias, error: errH } = await supabase
     .from('historias')
@@ -121,7 +129,7 @@ async function fetchStoriesFromSupabase() {
     .select('historia_id, categoria_id');
   const hcMap = {};
   hcData.forEach(({ historia_id, categoria_id }) => {
-    if (!hcMap[historia_id]) hcMap[historia_id] = [];
+    hcMap[historia_id] = hcMap[historia_id] || [];
     hcMap[historia_id].push(categoryMap[categoria_id]);
   });
 
@@ -143,31 +151,27 @@ async function fetchStoriesFromSupabase() {
   });
 }
 
-/**
- * formataComQuebra: insere <br> nas quebras de linha
- * e <br><br> após pontos finais
- */
+// Insere <br> em quebras de linha e <br><br> após pontos finais
 function formataComQuebra(texto = '') {
   const comLinhas = texto.replace(/\n/g, '<br>');
   return comLinhas.replace(/\.(?!$)/g, '.<br><br>');
 }
 
-/**
- * formatarTextoParaLeitura: gera spans clicáveis e parágrafos
- */
+// Converte texto em parágrafos com spans clicáveis para marcar posição
 function formatarTextoParaLeitura(texto = '') {
   let idx = 0;
-  return texto.split('\n').map(line => {
+  return texto.split(/\n+/).map(line => {
     const spans = line.split(' ').map(word => {
       const html = `<span data-index="${idx}" onclick="markReadingPosition(this)">${word}</span>`;
       idx++;
       return html;
     }).join(' ');
-    return `<p style="text-align:justify">${spans}</p>`;
+    return `<p style=\"text-align:justify\">${spans}</p>`;
   }).join('');
 }
 
-// Marca posição de leitura
+// Marca posição de leitura no localStorage
+document.window = window;
 window.markReadingPosition = function(el) {
   const pos = el.dataset.index;
   localStorage.setItem(`readingPosition_${currentStoryId}`, pos);
@@ -175,7 +179,7 @@ window.markReadingPosition = function(el) {
   el.style.background = 'yellow';
 };
 
-// Cria cartão de história
+// Cria e retorna o elemento de cartão de história
 function createStoryCard(story) {
   const div = document.createElement('div');
   div.className = 'sheet';
@@ -243,7 +247,7 @@ function createStoryCard(story) {
   return div;
 }
 
-// Abre modal de leitura
+// Abre modal com sinopse e botão Ler
 function abrirModal(story) {
   currentStoryId = story.id;
   modalTitle.textContent = story.cartao.tituloCartao;
@@ -255,7 +259,7 @@ function abrirModal(story) {
     modalFullText.innerHTML = formatarTextoParaLeitura(story.cartao.historiaCompleta);
     const saved = localStorage.getItem(`readingPosition_${story.id}`);
     if (saved) {
-      const el = modalFullText.querySelector(`span[data-index="${saved}"]`);
+      const el = modalFullText.querySelector(`span[data-index=\"${saved}\"]`);
       if (el) el.style.background = 'yellow';
     }
   };
@@ -271,7 +275,7 @@ function abrirModal(story) {
   modalOverlay.style.display = 'flex';
 }
 
-// Filtra histórias por busca, categoria e ordenação
+// Retorna lista filtrada e ordenada
 function getFilteredStories() {
   let arr = allStories.filter(st => {
     const t = searchBar.value.toLowerCase();
@@ -285,7 +289,7 @@ function getFilteredStories() {
   return arr;
 }
 
-// Exibe um lote de cartões
+// Exibe batch de cartões com placeholders
 function showBatch(count) {
   const slice = getFilteredStories().slice(currentOffset, currentOffset + count);
   slice.forEach(s => container.appendChild(createStoryCard(s)));
@@ -296,14 +300,14 @@ function showBatch(count) {
   loadMoreBtn.disabled = false;
 }
 
-// Carregamento inicial
+// Carrega inicialmente
 function initialLoad() {
   container.innerHTML = '';
   currentOffset = 0;
   showBatch(initialCount);
 }
 
-// Placeholder para falta de histórias
+// Placeholder quando falta histórias
 function createPlaceholderCard() {
   const div = document.createElement('div');
   div.className = 'sheet sheet-placeholder';
@@ -311,7 +315,7 @@ function createPlaceholderCard() {
   return div;
 }
 
-// Mostrar footer ao passar o rato
+// Exibe footer ao passar o rato
 document.body.addEventListener('mousemove', e => {
   const footer = document.querySelector('footer');
   if (!footer) return;
