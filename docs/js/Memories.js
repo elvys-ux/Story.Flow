@@ -93,7 +93,7 @@ async function fetchFeaturedStories() {
       historia_completa
     `)
     .order('likes', { ascending: false })
-    .limit(4);
+    .limit(initialCount);
 
   if (error) {
     console.error('Erro ao buscar destaques:', error);
@@ -159,9 +159,9 @@ function renderFeatured() {
 }
 
 /************************************************************
- * [7] MODAL: SINOPSE + BOTÃO “Ler”
+ * [7] MODAL: SINOPSE + BOTÃO “Ler” COM BUSCA ASSINCRONA
  ************************************************************/
-function openModal(story) {
+async function openModal(story) {
   isModalOpen     = true;
   currentStoryId  = story.id;
 
@@ -175,6 +175,20 @@ function openModal(story) {
     <p><strong>Data:</strong> ${story.cartao.dataCartao}</p>
     <p><strong>Curtidas:</strong> ${story.cartao.likes}</p>
   `;
+
+  // Busca a história completa caso não esteja no cartão
+  if (!story.cartao.historiaCompleta) {
+    const { data, error } = await supabase
+      .from('historias')
+      .select('descricao')
+      .eq('id', story.id)
+      .single();
+    if (error) {
+      console.error('Erro ao carregar história completa:', error);
+    } else {
+      story.cartao.historiaCompleta = data.descricao || '';
+    }
+  }
 
   document.getElementById('btnLer').onclick = () => {
     modalFullText.innerHTML = formatarTextoParaLeitura(story.cartao.historiaCompleta);
@@ -259,14 +273,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 /****************************************************************
-rodapé
-****************************************************************/
+ rodapé
+ ****************************************************************/
 // Mostrar footer ao passar o rato
 document.body.addEventListener('mousemove', e => {
   const footer = document.querySelector('footer');
   if (!footer) return;
 
-  if (window.innerHeight - e.clientY < 50) { // Se o mouse estiver nos últimos 50px da tela
+  if (window.innerHeight - e.clientY < 50) {
     footer.classList.add('visible');
   } else {
     footer.classList.remove('visible');
