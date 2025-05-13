@@ -349,3 +349,13 @@ footer.visible {
   }
 }
 
+
+
+/* Preserve quebras de linha e evita overflow nos textos */
+#modalFullText,
+.sheet-sinopse {
+  white-space: pre-wrap;    /* respeita quebras “\n” e espaços */
+  word-wrap: break-word;    /* parte palavras muito longas dentro da largura */
+}
+
+
