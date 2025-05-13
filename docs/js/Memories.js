@@ -10,7 +10,15 @@ async function exibirUsuarioLogado() {
 
   try {
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError || !session) {
+    if (sessionError) {
+      console.error('Erro ao obter sessão:', sessionError);
+      userArea.innerHTML = `<a href="Criacao.html" style="color:white;">
+        <i class="fas fa-user"></i> Login
+      </a>`;
+      return;
+    }
+
+    if (!session) {
       userArea.innerHTML = `<a href="Criacao.html" style="color:white;">
         <i class="fas fa-user"></i> Login
       </a>`;
@@ -50,6 +58,10 @@ async function exibirUsuarioLogado() {
  * [2] GLOBALS e ELEMENTOS
  ************************************************************/
 let allStories      = [];
+let currentOffset   = 0;
+const initialCount  = 4;
+const increment     = 4;
+
 const container      = document.getElementById('featuredStories');
 const searchBar      = document.getElementById('searchBar');
 const searchResults  = document.getElementById('searchResults');
@@ -98,6 +110,7 @@ async function fetchFeaturedStories() {
                           ? c.data_criacao.split('T')[0]
                           : '',
       autorCartao:      c.autor_cartao       || 'Anônimo',
+      categorias:       [],  // opcional: buscar categorias se necessário
       likes:            c.likes ?? 0
     }
   }));
@@ -107,11 +120,17 @@ async function fetchFeaturedStories() {
  * [4] FORMATADORES DE TEXTO
  ************************************************************/
 function formatarPor4Linhas(text) {
-  return text.split('\n').slice(0, 4).join('<br>');
+  return text
+    .split('\n')
+    .slice(0, 4)
+    .join('<br>');
 }
 
 function formatarTextoParaLeitura(text) {
-  return text.split('\n').map(l => `<p>${l}</p>`).join('');
+  return text
+    .split('\n')
+    .map(l => `<p>${l}</p>`)
+    .join('');
 }
 
 /************************************************************
@@ -189,7 +208,7 @@ warningNo.onclick = () => {
 };
 
 /************************************************************
- * [9] PESQUISA COM SUGESTÕES
+ * [9] PESQUISA COM SUGESTÕES (permanece inalterada)
  ************************************************************/
 function matchesSearch(story, txt) {
   const t = txt.trim().toLowerCase();
@@ -222,12 +241,10 @@ function exibirSugestoes(lista) {
  * [10] INICIALIZAÇÃO
  ************************************************************/
 document.addEventListener('DOMContentLoaded', async () => {
-  // 1) login e destaques
   await exibirUsuarioLogado();
   await fetchFeaturedStories();
   renderFeatured();
 
-  // 2) pesquisa
   if (searchBar) {
     searchBar.oninput = () => {
       const v = searchBar.value;
@@ -239,24 +256,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       exibirSugestoes(filtrados);
     };
   }
+});
 
-  // 3) rodapé ao hover
-  document.body.addEventListener('mousemove', e => {
-    const footer = document.querySelector('footer');
-    if (!footer) return;
-    if (window.innerHeight - e.clientY < 50) {
-      footer.classList.add('visible');
-    } else {
-      footer.classList.remove('visible');
-    }
-  });
+/****************************************************************
+rodapé
+****************************************************************/
+// Mostrar footer ao passar o rato
+document.body.addEventListener('mousemove', e => {
+  const footer = document.querySelector('footer');
+  if (!footer) return;
 
-  // 4) menu hamburger mobile
-  const navToggle = document.getElementById('navToggle');
-  const navLinks  = document.querySelector('.nav-links');
-  if (navToggle && navLinks) {
-    navToggle.addEventListener('click', () => {
-      navLinks.classList.toggle('open');
-    });
+  if (window.innerHeight - e.clientY < 50) { // Se o mouse estiver nos últimos 50px da tela
+    footer.classList.add('visible');
+  } else {
+    footer.classList.remove('visible');
   }
 });
