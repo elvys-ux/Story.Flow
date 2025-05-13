@@ -4,23 +4,17 @@
   <meta charset="UTF-8">
   <title>StoryFlow – Memories</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <!-- CSS principal -->
   <link rel="stylesheet" href="css/Memories.css">
 </head>
 <body>
 
-  <!-- NAVBAR -->
-<div class="navbar">
-  <!-- Botão hamburger (aparece em ≤600px) -->
-  <button id="navToggle" class="nav-toggle" aria-label="Abrir menu">
-    <i class="fas fa-bars"></i>
-  </button>
-
-  <!-- Todos os links, dropdowns, área de usuário e busca -->
-  <div class="nav-links">
+  <!-- Navbar -->
+  <div class="navbar">
     <a href="index.html"><i class="fas fa-home"></i> Início</a>
-
     <div class="dropdown">
       <a href="#"><i class="fas fa-pencil-alt"></i> Criar História</a>
       <div class="dropdown-content">
@@ -28,48 +22,53 @@
         <a href="historia.html">Escrever História</a>
       </div>
     </div>
-
     <div class="dropdown">
       <a href="#"><i class="fas fa-book"></i> Histórias</a>
       <div class="dropdown-content">
-        <a href="hisotirasqueescrevi.html">Histórias que eu escrevi</a>
+        <a href="hisotirasqueescrevi.css">Histórias que eu escrevi</a>
         <a href="VerHistorias.html">Ler Histórias</a>
       </div>
     </div>
-
-    <!-- Área de usuário -->
     <div id="userMenuArea" class="user-area"></div>
-
-    <!-- Caixa de pesquisa -->
     <div class="search-box">
       <input type="text" id="searchBar" placeholder="Pesquisar...">
       <button id="searchBtn"><i class="fas fa-search"></i></button>
       <div id="searchResults" class="search-results"></div>
     </div>
   </div>
-</div>
-
 
   <main>
-    <!-- ... restante do conteúdo ... -->
+    <h1>StoryFlow</h1>
+    <h2>Crie e personalize as suas histórias no StoryFlow.</h2>
+    <h3>Com recursos para guardar, editar e publicar histórias ao teu gosto.</h3>
+    <div id="featuredStories" class="featured-container"></div>
   </main>
 
-  <!-- Modal, Warning, Footer ... -->
+  <!-- Modal de leitura -->
+  <div id="modalOverlay" class="modal-overlay" style="display:none;">
+    <div class="modal-content">
+      <button id="modalClose" class="modal-close">Fechar</button>
+      <h2 id="modalTitle">Título da História</h2>
+      <div id="modalFullText" class="modal-text"></div>
+      <div id="modalInfo" class="modal-info"></div>
+    </div>
+  </div>
+
+  <!-- Aviso ao clicar fora -->
+  <div id="warningOverlay" class="warning-overlay" style="display:none;">
+    <div class="warning-box">
+      <p>Deseja fechar a leitura?</p>
+      <button id="warningYes">Sim</button>
+      <button id="warningNo">Não</button>
+    </div>
+  </div>
+
+  <footer>
+    © 2025 StoryFlow – Elvys – Turma Tis7 | <a href="Sobre.html">Termos de uso</a>
+  </footer>
 
   <!-- Scripts -->
   <script type="module" src="js/supabase.js"></script>
   <script type="module" src="js/Memories.js"></script>
-  <!-- Toggle Mobile Menu -->
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const navToggle = document.getElementById('navToggle');
-      const navLinks  = document.querySelector('.nav-links');
-      if (navToggle && navLinks) {
-        navToggle.addEventListener('click', () => {
-          navLinks.classList.toggle('open');
-        });
-      }
-    });
-  </script>
 </body>
 </html>
