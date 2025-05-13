@@ -1,6 +1,7 @@
 // js/VerHistorias.js
 import { supabase } from './supabase.js';
 
+// Estado da aplicação
 let sessionUserId    = null;
 let allStories       = [];
 let likedStories     = new Set();
@@ -9,8 +10,8 @@ let currentOffset    = 0;
 const initialCount   = 20;
 const increment      = 5;
 
-// DOM elements
-const container      = document.getElementById('storiesContainer');
+// Elementos do DOM
+typedef const container      = document.getElementById('storiesContainer');
 const categoryFilter = document.getElementById('category-filter');
 const sortFilter     = document.getElementById('sort-filter');
 const searchForm     = document.getElementById('searchForm');
@@ -26,18 +27,18 @@ const warningOverlay = document.getElementById('warningOverlay');
 const warningYes     = document.getElementById('warningYes');
 const warningNo      = document.getElementById('warningNo');
 
-let categoryMap = {}; // id → nome
+let categoryMap = {}; // mapeamento id → nome da categoria
 
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
-  // impedir reload no search form
+  // Impedir reload no submit
   if (searchForm) {
     searchForm.addEventListener('submit', e => { e.preventDefault(); initialLoad(); });
   }
 
-  // obter sessão
-  const { data:{ session } } = await supabase.auth.getSession();
+  // Obter sessão
+  const { data: { session } } = await supabase.auth.getSession();
   sessionUserId = session?.user?.id ?? null;
   if (sessionUserId) {
     await fetchUserLikes();
@@ -48,7 +49,7 @@ async function init() {
   await fetchStoriesFromSupabase();
   initialLoad();
 
-  // filtros e paginação
+  // Filtros e paginação
   searchBar.addEventListener('input', initialLoad);
   categoryFilter.addEventListener('change', initialLoad);
   sortFilter.addEventListener('change', initialLoad);
@@ -57,7 +58,7 @@ async function init() {
     showBatch(increment);
   });
 
-  // modal e warning
+  // Modal e warning
   modalClose.onclick   = () => modalOverlay.style.display = 'none';
   modalOverlay.onclick = e => { if (e.target === modalOverlay) warningOverlay.style.display = 'flex'; };
   warningYes.onclick   = () => { modalOverlay.style.display = 'none'; warningOverlay.style.display = 'none'; };
@@ -66,13 +67,16 @@ async function init() {
 
 async function exibirUsuarioLogado() {
   const area = document.getElementById('userMenuArea');
-  const { data:{ session } } = await supabase.auth.getSession();
+  const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
     area.innerHTML = `<a href="Criacao.html"><i class="fas fa-user"></i> Login</a>`;
     return;
   }
   const { data: profile } = await supabase
-    .from('profiles').select('username').eq('id', session.user.id).single();
+    .from('profiles')
+    .select('username')
+    .eq('id', session.user.id)
+    .single();
   area.textContent = profile?.username || session.user.email;
   area.style.cursor = 'pointer';
   area.onclick = () => {
@@ -84,13 +88,16 @@ async function exibirUsuarioLogado() {
 
 async function fetchUserLikes() {
   const { data, error } = await supabase
-    .from('user_likes').select('historia_id').eq('user_id', sessionUserId);
+    .from('user_likes')
+    .select('historia_id')
+    .eq('user_id', sessionUserId);
   if (!error) likedStories = new Set(data.map(r => r.historia_id));
 }
 
 async function fetchCategories() {
   const { data, error } = await supabase
-    .from('categorias').select('id, nome');
+    .from('categorias')
+    .select('id, nome');
   if (!error) categoryMap = Object.fromEntries(data.map(c => [c.id, c.nome]));
 }
 
@@ -136,18 +143,19 @@ async function fetchStoriesFromSupabase() {
   });
 }
 
-/** insere <br><br> após cada ponto final */
-function formataComQuebra(texto='') {
-  return texto
-    .split('.')
-    .map(s => s.trim())
-    .filter(s => s)
-    .map(s => `${s}.`)
-    .join('<br><br>');
+/**
+ * formataComQuebra: insere <br> nas quebras de linha
+ * e <br><br> após pontos finais
+ */
+function formataComQuebra(texto = '') {
+  const comLinhas = texto.replace(/\n/g, '<br>');
+  return comLinhas.replace(/\.(?!$)/g, '.<br><br>');
 }
 
-/** transforma em spans clicáveis para marcar leitura */
-function formatarTextoParaLeitura(texto='') {
+/**
+ * formatarTextoParaLeitura: gera spans clicáveis e parágrafos
+ */
+function formatarTextoParaLeitura(texto = '') {
   let idx = 0;
   return texto.split('\n').map(line => {
     const spans = line.split(' ').map(word => {
@@ -159,7 +167,7 @@ function formatarTextoParaLeitura(texto='') {
   }).join('');
 }
 
-// global para spans
+// Marca posição de leitura
 window.markReadingPosition = function(el) {
   const pos = el.dataset.index;
   localStorage.setItem(`readingPosition_${currentStoryId}`, pos);
@@ -167,41 +175,32 @@ window.markReadingPosition = function(el) {
   el.style.background = 'yellow';
 };
 
+// Cria cartão de história
 function createStoryCard(story) {
   const div = document.createElement('div');
   div.className = 'sheet';
 
-  // Título
   const h3 = document.createElement('h3');
   h3.textContent = story.cartao.tituloCartao;
   div.appendChild(h3);
 
-  // Sinopse limitada a 4 linhas
   const sin = document.createElement('div');
   sin.className = 'sheet-sinopse';
   sin.innerHTML = formataComQuebra(story.cartao.sinopseCartao);
-  Object.assign(sin.style, {
-    display: '-webkit-box',
-    WebkitBoxOrient: 'vertical',
-    WebkitLineClamp: '4',
-    overflow: 'hidden'
-  });
   div.appendChild(sin);
 
-  // “mais...”
   const mais = document.createElement('span');
   mais.className = 'ver-mais';
   mais.textContent = 'mais...';
   mais.onclick = () => abrirModal(story);
   div.appendChild(mais);
 
-  // Likes (se houver cartão)
   if (story.hasCartao) {
     const likeCont = document.createElement('div');
     likeCont.style.marginTop = '10px';
     const btn = document.createElement('button');
     const count = document.createElement('span');
-    btn.style.cssText = 'background:transparent;border:none;outline:none;padding:0;cursor:pointer;font-size:1.4rem';
+    btn.style.cssText = 'background:transparent;border:none;cursor:pointer;font-size:1.4rem';
 
     let userLiked = likedStories.has(story.id);
     function updateLikeUI() {
@@ -214,23 +213,15 @@ function createStoryCard(story) {
       if (!sessionUserId) { alert('Faça login para dar like.'); return; }
       if (userLiked) {
         story.cartao.likes--;
-        await supabase
-          .from('user_likes')
-          .delete()
-          .match({ user_id: sessionUserId, historia_id: story.id });
+        await supabase.from('user_likes').delete().match({ user_id: sessionUserId, historia_id: story.id });
       } else {
         story.cartao.likes++;
-        await supabase
-          .from('user_likes')
-          .insert({ user_id: sessionUserId, historia_id: story.id });
+        await supabase.from('user_likes').insert({ user_id: sessionUserId, historia_id: story.id });
       }
       userLiked = !userLiked;
       userLiked ? likedStories.add(story.id) : likedStories.delete(story.id);
       updateLikeUI();
-      await supabase
-        .from('cartoes')
-        .update({ likes: story.cartao.likes })
-        .eq('historia_id', story.id);
+      await supabase.from('cartoes').update({ likes: story.cartao.likes }).eq('historia_id', story.id);
     };
 
     likeCont.appendChild(btn);
@@ -238,7 +229,6 @@ function createStoryCard(story) {
     div.appendChild(likeCont);
   }
 
-  // Categorias
   const catCont = document.createElement('div');
   catCont.className = 'sheet-categories';
   (story.cartao.categorias.length ? story.cartao.categorias : ['Sem Categoria'])
@@ -253,23 +243,23 @@ function createStoryCard(story) {
   return div;
 }
 
+// Abre modal de leitura
 function abrirModal(story) {
   currentStoryId = story.id;
   modalTitle.textContent = story.cartao.tituloCartao;
-
-  // exibe sinopse + botão Ler
   modalFullText.innerHTML = formataComQuebra(story.cartao.sinopseCartao);
-  const ler = document.createElement('button');
-  ler.textContent = 'Ler';
-  ler.onclick = () => {
+
+  const lerBtn = document.createElement('button');
+  lerBtn.textContent = 'Ler';
+  lerBtn.onclick = () => {
     modalFullText.innerHTML = formatarTextoParaLeitura(story.cartao.historiaCompleta);
     const saved = localStorage.getItem(`readingPosition_${story.id}`);
-    if (saved !== null) {
+    if (saved) {
       const el = modalFullText.querySelector(`span[data-index="${saved}"]`);
       if (el) el.style.background = 'yellow';
     }
   };
-  modalFullText.appendChild(ler);
+  modalFullText.appendChild(lerBtn);
 
   modalInfo.innerHTML = `
     <p><strong>Data:</strong> ${story.cartao.dataCartao}</p>
@@ -281,6 +271,7 @@ function abrirModal(story) {
   modalOverlay.style.display = 'flex';
 }
 
+// Filtra histórias por busca, categoria e ordenação
 function getFilteredStories() {
   let arr = allStories.filter(st => {
     const t = searchBar.value.toLowerCase();
@@ -288,33 +279,31 @@ function getFilteredStories() {
       || st.cartao.tituloCartao.toLowerCase().includes(t)
       || st.cartao.autorCartao.toLowerCase().includes(t);
   });
-  if (categoryFilter.value) {
-    arr = arr.filter(st => st.cartao.categorias.includes(categoryFilter.value));
-  }
-  if (sortFilter.value === 'date') {
-    arr.sort((a,b) => b.cartao.dataCartao.localeCompare(a.cartao.dataCartao));
-  } else if (sortFilter.value === 'popularity') {
-    arr.sort((a,b) => b.cartao.likes - a.cartao.likes);
-  }
+  if (categoryFilter.value) arr = arr.filter(st => st.cartao.categorias.includes(categoryFilter.value));
+  if (sortFilter.value === 'date') arr.sort((a,b) => b.cartao.dataCartao.localeCompare(a.cartao.dataCartao));
+  else if (sortFilter.value === 'popularity') arr.sort((a,b) => b.cartao.likes - a.cartao.likes);
   return arr;
 }
 
+// Exibe um lote de cartões
 function showBatch(count) {
   const slice = getFilteredStories().slice(currentOffset, currentOffset + count);
   slice.forEach(s => container.appendChild(createStoryCard(s)));
-  for (let i = slice.length; i < count; i++) {
-    container.appendChild(createPlaceholderCard());
+  if (slice.length < count) {
+    for (let i = slice.length; i < count; i++) container.appendChild(createPlaceholderCard());
   }
   currentOffset += count;
   loadMoreBtn.disabled = false;
 }
 
+// Carregamento inicial
 function initialLoad() {
   container.innerHTML = '';
   currentOffset = 0;
   showBatch(initialCount);
 }
 
+// Placeholder para falta de histórias
 function createPlaceholderCard() {
   const div = document.createElement('div');
   div.className = 'sheet sheet-placeholder';
@@ -322,17 +311,10 @@ function createPlaceholderCard() {
   return div;
 }
 
-/*************************************************
-rodapé
-*************************************************/
 // Mostrar footer ao passar o rato
 document.body.addEventListener('mousemove', e => {
   const footer = document.querySelector('footer');
   if (!footer) return;
-
-  if (window.innerHeight - e.clientY < 50) { // Se o mouse estiver nos últimos 50px da tela
-    footer.classList.add('visible');
-  } else {
-    footer.classList.remove('visible');
-  }
+  if (window.innerHeight - e.clientY < 50) footer.classList.add('visible');
+  else footer.classList.remove('visible');
 });
