@@ -379,3 +379,43 @@ footer.visible {
     transform: translateX(0);
   }
 }
+
+
+/* ====== RESPONSIVO (≤600px) ====== */
+@media (max-width: 600px) {
+  /* mostra o botão hamburger */
+  .nav-toggle {
+    display: block;
+  }
+
+  /* esconde o container de links até o menu abrir */
+  .nav-links {
+    display: none;
+    position: absolute;
+    top: 60px;    /* logo abaixo da navbar */
+    left: 0;
+    width: 100%;
+    flex-direction: column;
+    background-color: rgba(0,0,0,0.9);
+    padding: 10px 0;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+  }
+  /* quando o JS adicionar “open” ela vira flex em coluna */
+  .nav-links.open {
+    display: flex;
+  }
+
+  /* itens do menu mobile ficam full-width e centralizados */
+  .nav-links a,
+  .nav-links .dropdown,
+  .nav-links .search-box,
+  #userMenuArea {
+    width: 100%;
+    text-align: center;
+    margin: 5px 0;
+  }
+
+  /* ajuste de títulos */
+  h1 { font-size: 40pt; }
+  h2 { font-size: 14pt; }
+}
