@@ -82,19 +82,22 @@
     © 2025 StoryFlow – Elvys – Turma Tis7 | <a href="Sobre.html">Termos de uso</a>
   </footer>
 
-  <!-- Scripts -->
-  <script>
-// script para abrir/fechar menu mobile
-document.addEventListener('DOMContentLoaded', () => {
-  const navToggle = document.getElementById('navToggle');
-  const navLinks  = document.querySelector('.nav-links');
-
-  navToggle.addEventListener('click', () => {
-    navLinks.classList.toggle('open');
-  });
-});
-  </script>
+    <!-- Scripts -->
+  <!-- Módulos Supabase e lógica principal -->
   <script type="module" src="js/supabase.js"></script>
   <script type="module" src="js/Memories.js"></script>
+
+  <!-- Script inline: menu hamburger -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const navToggle = document.getElementById('navToggle');
+      const navLinks  = document.querySelector('.nav-links');
+      if (navToggle && navLinks) {
+        navToggle.addEventListener('click', () => {
+          navLinks.classList.toggle('open');
+        });
+      }
+    });
+  </script>
 </body>
 </html>
