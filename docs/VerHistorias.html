@@ -10,7 +10,58 @@
   <!-- Seu CSS -->
   <link rel="stylesheet" href="css/VerHistorias.css">
 </head>
+   <title>Loader Interativo</title>
+  <style>
+    /* Reset básico */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+
+    /* Container full-screen */
+    #loader {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: #1a1a1a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      color: #fff;
+      font-family: sans-serif;
+      user-select: none;
+    }
+
+    /* Texto de instrução */
+    #hint {
+      margin-top: 1rem;
+      font-size: 0.9rem;
+      opacity: 0.6;
+    }
+
+    /* Spinner (circulo com bordas) */
+    .spinner {
+      width: 80px; height: 80px;
+      border: 8px solid rgba(255,255,255,0.2);
+      border-top-color: #4caf50;
+      border-radius: 50%;
+      animation: spin var(--speed) linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
 <body>
+  
+   <div id="loader">
+    <div class="spinner"></div>
+    <div id="hint">Mova o mouse para acelerar o carregamento</div>
+  </div>
+
+  <div id="main-content" style="visibility:hidden;">
+    <!-- Conteúdo principal da página -->
+  </div>
+  
   <!-- NAVBAR -->
   <nav class="navbar">
     <a href="index.html"><i class="fas fa-home"></i> Início</a>
@@ -88,6 +139,40 @@
   <footer>
     <small>© 2025 StoryFlow – Turma Tis7 | <a href="Sobre.html">Termos de uso</a></small>
   </footer>
+
+    <script>
+    (function(){
+      const spinner = document.querySelector('.spinner');
+      const loader  = document.getElementById('loader');
+      const main    = document.getElementById('main-content');
+
+      // Velocidade base (em segundos)
+      let speed = 2.0;
+      spinner.style.setProperty('--speed', speed + 's');
+
+      // Atualiza velocidade de rotação conforme posição do mouse
+      window.addEventListener('mousemove', e => {
+        // e.clientX varia de 0 a innerWidth
+        const pct = e.clientX / window.innerWidth;    // 0.0 a 1.0
+        const min = 0.2, max = 5.0;                   // limites de velocidade
+        speed = max - (max - min) * pct;
+        spinner.style.setProperty('--speed', speed + 's');
+      });
+
+      // Simula carregamento real (exemplo: 3s)
+      window.addEventListener('load', () => {
+        // Após X milissegundos, oculta loader
+        setTimeout(() => {
+          loader.style.transition = 'opacity 0.5s';
+          loader.style.opacity = 0;
+          loader.addEventListener('transitionend', () => {
+            loader.remove();
+            main.style.visibility = 'visible';
+          });
+        }, 3000);
+      });
+    })();
+  </script>
 
   <!-- Scripts -->
   <script type="module" src="js/supabase.js"></script>
