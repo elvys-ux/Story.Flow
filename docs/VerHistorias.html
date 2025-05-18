@@ -11,12 +11,11 @@
   <link rel="stylesheet" href="css/VerHistorias.css">
 </head>
   <title>Loader Interativo Avançado</title>
-  <style>
-    /* Reset básico */
+   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; }
 
-    /* Loader full-screen com gradiente suave */
+    /* Tela de loading full-screen */
     #loader {
       position: fixed;
       top: 0; left: 0;
@@ -29,40 +28,29 @@
       z-index: 9999;
     }
 
-    /* Container interno para limites de animação */
-    #area {
-      position: relative;
-      width: 80vw;
-      height: 60vh;
-      border: 2px dashed rgba(0,0,0,0.1);
-      background: rgba(255,255,255,0.6);
-    }
-
-    /* “Caixa” que se move e bate nas bordas */
-    #box {
+    /* Spinner circular */
+    .spinner {
       position: absolute;
-      width: 50px; height: 50px;
-      background-color: #4caf50;
-      border-radius: 8px;
+      width: 60px; height: 60px;
+      border: 8px solid rgba(0,0,0,0.1);
+      border-top-color: #4caf50;
+      border-radius: 50%;
       cursor: grab;
     }
 
-    /* Conteúdo principal, oculto até o fim do loader */
     #main-content { visibility: hidden; }
   </style>
   
 <body>
   
-  <div id="loader">
-    <div id="area">
-      <div id="box"></div>
-    </div>
+   <div id="loader">
+    <div class="spinner"></div>
   </div>
 
   <div id="main-content">
-    <!-- Seu conteúdo principal aqui -->
+    <!-- Conteúdo principal -->
   </div>
-  
+
   <!-- NAVBAR -->
   <nav class="navbar">
     <a href="index.html"><i class="fas fa-home"></i> Início</a>
@@ -141,46 +129,49 @@
     <small>© 2025 StoryFlow – Turma Tis7 | <a href="Sobre.html">Termos de uso</a></small>
   </footer>
 
- <script>
+<script>
     (function(){
-      const loader = document.getElementById('loader');
-      const box    = document.getElementById('box');
-      const area   = document.getElementById('area');
-      const main   = document.getElementById('main-content');
+      const spinner = document.querySelector('.spinner');
+      const loader  = document.getElementById('loader');
+      const main    = document.getElementById('main-content');
 
       // Estado de física
       let vx = (Math.random()*2+1) * (Math.random()<0.5?-1:1);
       let vy = (Math.random()*2+1) * (Math.random()<0.5?-1:1);
-      let x  = 0, y = 0;
-      const w = area.clientWidth - box.clientWidth;
-      const h = area.clientHeight - box.clientHeight;
+      let x = (window.innerWidth - spinner.clientWidth) / 2;
+      let y = (window.innerHeight - spinner.clientHeight) / 2;
+      const size = spinner.clientWidth;
 
       // Estado de arraste
       let dragging = false;
       let dragStart = {}, timeStart;
 
-      // Atualiza posição a cada frame
       function animate() {
         if (!dragging) {
           x += vx;
           y += vy;
-          // rebater nas bordas
-          if (x < 0)      { x = 0; vx = -vx; }
-          else if (x > w) { x = w; vx = -vx; }
-          if (y < 0)      { y = 0; vy = -vy; }
-          else if (y > h) { y = h; vy = -vy; }
-          box.style.transform = `translate(${x}px, ${y}px)`;
+          // colisão com bordas da viewport
+          if (x < 0)      { x = 0;      vx = -vx; }
+          if (x > window.innerWidth - size) {
+                          x = window.innerWidth - size; vx = -vx;
+          }
+          if (y < 0)      { y = 0;      vy = -vy; }
+          if (y > window.innerHeight - size) {
+                          y = window.innerHeight - size; vy = -vy;
+          }
+          spinner.style.transform = `translate(${x}px, ${y}px)`;
         }
         requestAnimationFrame(animate);
       }
       animate();
 
-      // Início do arraste
-      box.addEventListener('mousedown', e => {
+      // Iniciar arraste
+      spinner.addEventListener('mousedown', e => {
         dragging = true;
-        box.style.cursor = 'grabbing';
+        spinner.style.cursor = 'grabbing';
         dragStart = { mx: e.clientX, my: e.clientY, bx: x, by: y };
         timeStart = performance.now();
+        e.preventDefault();
       });
 
       // Durante arraste
@@ -188,25 +179,23 @@
         if (!dragging) return;
         const dx = e.clientX - dragStart.mx;
         const dy = e.clientY - dragStart.my;
-        x = Math.min(w, Math.max(0, dragStart.bx + dx));
-        y = Math.min(h, Math.max(0, dragStart.by + dy));
-        box.style.transform = `translate(${x}px, ${y}px)`;
+        x = Math.min(window.innerWidth - size, Math.max(0, dragStart.bx + dx));
+        y = Math.min(window.innerHeight - size, Math.max(0, dragStart.by + dy));
+        spinner.style.transform = `translate(${x}px, ${y}px)`;
       });
 
-      // Fim do arraste e cálculo de velocidade
+      // Final do arraste
       document.addEventListener('mouseup', e => {
         if (!dragging) return;
         dragging = false;
-        box.style.cursor = 'grab';
-        const dt = (performance.now() - timeStart) / 1000; // s
-        const dx = x - dragStart.bx;
-        const dy = y - dragStart.by;
-        // define velocidade baseada no gesto (limitado)
+        spinner.style.cursor = 'grab';
+        const dt = (performance.now() - timeStart) / 1000;
+        const dx = x - dragStart.bx, dy = y - dragStart.by;
         vx = Math.max(-10, Math.min(10, dx / dt));
         vy = Math.max(-10, Math.min(10, dy / dt));
       });
 
-      // Simula término de carregamento em 3 s
+      // Remover loader após carregamento (simulação 3s)
       window.addEventListener('load', () => {
         setTimeout(() => {
           loader.style.transition = 'opacity 0.5s';
@@ -219,7 +208,6 @@
       });
     })();
   </script>
-
   <!-- Scripts -->
   <script type="module" src="js/supabase.js"></script>
   <script type="module" src="js/VerHistorias.js"></script>
