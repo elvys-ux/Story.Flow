@@ -172,9 +172,10 @@ function createStoryCard(story) {
   h3.textContent = story.cartao.tituloCartao;
   div.appendChild(h3);
 
-  // Sinopse com quebras
+  // Sinopse com quebras de linha via CSS
   const sin = document.createElement('div');
   sin.className = 'sheet-sinopse';
+  sin.style.whiteSpace = 'pre-wrap';               // preserva quebras de linha
   sin.innerHTML = formatSinopse(story.cartao.sinopseCartao);
   div.appendChild(sin);
 
@@ -238,15 +239,19 @@ function createStoryCard(story) {
 function openModal(story) {
   currentStoryId = story.id;
   modalTitle.textContent = story.cartao.tituloCartao;
+
+  // preserva quebras de linha também no modal
+  modalFullText.style.whiteSpace = 'pre-wrap';
   modalFullText.innerHTML = formatSinopse(story.cartao.sinopseCartao);
 
   const readBtn = document.createElement('button');
   readBtn.textContent = 'Ler';
   readBtn.onclick = () => {
-    // exibe texto completo com quebras simples
+    modalFullText.style.whiteSpace = 'pre-wrap';
     modalFullText.innerHTML = formatSinopse(story.cartao.historiaCompleta);
   };
-  modalFullText.appendChild(readBtn);
+  // insere o botão antes das informações
+  modalFullText.parentNode.insertBefore(readBtn, modalInfo);
 
   modalInfo.innerHTML = `
     <p><strong>Data:</strong> ${story.cartao.dataCartao}</p>
