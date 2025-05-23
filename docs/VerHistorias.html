@@ -3,6 +3,11 @@
 <head>
  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+/>
+
   <title>StoryFlow – Ler Histórias</title>
   <!-- ... seus outros <meta> e links ... -->
  <link rel="stylesheet" href="css/VerHistorias.css">
@@ -62,47 +67,45 @@
 
 /* mobile.css */
 
-/* 1) Por padrão (desktop), esconda o hambúrguer */
+/* 1) Por padrão, no desktop, esconda o hambúrguer */
 .navbar .hamburger {
-  display: none;
+  display: none !important;
   cursor: pointer;
   padding: 0 12px;
 }
 
-/* Ajuste extra para garantir visibilidade do ícone */
+/* ajuste de visibilidade do ícone */
 .navbar .hamburger i {
   font-size: 1.8rem;
-  color: #fff; /* branco para contrastar com a barra preta */
+  color: #fff;
 }
 
-/* 2) Em telas até 768px: esconde os links e mostra o ícone */
+/* 2) Em telas até 768px, esconda os itens e mostre o hambúrguer */
 @media (max-width: 768px) {
-  /* oculta links/direct dropdowns/user-area/busca */
+  /* oculta links / dropdowns / user-area / busca */
   .navbar > a,
   .navbar > .dropdown,
   .navbar > #userMenuArea,
   .navbar > #searchForm {
-    display: none;
+    display: none !important;
   }
 
-  /* exibe o ícone hamburguer */
+  /* exibe o ícone */
   .navbar .hamburger {
-    display: inline-block;
+    display: inline-block !important;
   }
 
-  /* quando .open estiver na navbar, empilha todos os itens */
+  /* quando .open estiver na navbar, empilha tudo */
   .navbar.open {
     display: flex !important;
     flex-direction: column;
     align-items: stretch;
   }
-
-  /* exibe cada item em coluna */
   .navbar.open > a,
   .navbar.open > .dropdown,
   .navbar.open > #userMenuArea,
   .navbar.open > #searchForm {
-    display: block;
+    display: block !important;
     background: rgba(0,0,0,0.9);
     color: #fff;
     text-align: left;
@@ -110,9 +113,9 @@
     border-top: 1px solid #333;
   }
 
-  /* garante que dropdown-content apareça corretamente */
+  /* ajusta dropdown-content em mobile */
   .navbar.open .dropdown-content {
-    position: static;
+    position: static !important;
     background: rgba(0,0,0,0.85);
     margin: 0;
   }
@@ -282,26 +285,23 @@
 })();
 
 
-// js/mobile-menu.js
 
+// js/mobile-menu.js
 document.addEventListener('DOMContentLoaded', () => {
   const navbar    = document.querySelector('.navbar');
-  const hamburger = navbar.querySelector('.hamburger');
-
+  const hamburger = navbar?.querySelector('.hamburger');
   if (!hamburger) return;
 
-  // ao clicar no ícone, alterna .open na navbar
+  // abre/fecha o menu
   hamburger.addEventListener('click', () => {
     navbar.classList.toggle('open');
   });
 
-  // ao clicar em qualquer link (ou botão de busca), fecha o menu
+  // fecha ao clicar em qualquer link ou botão de busca
   navbar.querySelectorAll('> a, > .dropdown > a, > #searchForm button')
-         .forEach(el => {
-           el.addEventListener('click', () => {
-             navbar.classList.remove('open');
-           });
-         });
+         .forEach(el => el.addEventListener('click', () => {
+           navbar.classList.remove('open');
+         }));
 });
 
  
