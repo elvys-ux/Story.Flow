@@ -2,15 +2,17 @@
 
 document.addEventListener('DOMContentLoaded', () => {
   const navbar    = document.querySelector('.navbar');
-  const hamburger = document.querySelector('.navbar .hamburger');
+  const hamburger = document.querySelector('.hamburger');
 
-  // Ao clicar no ícone, alterna a exibição dos itens
+  if (!navbar || !hamburger) return;
+
+  // abre/fecha o menu
   hamburger.addEventListener('click', () => {
     navbar.classList.toggle('open');
   });
 
-  // Fecha o menu quando qualquer link for clicado
-  navbar.querySelectorAll('a').forEach(link => {
+  // fecha o menu ao clicar em qualquer item
+  navbar.querySelectorAll('.navbar-menu a').forEach(link => {
     link.addEventListener('click', () => {
       navbar.classList.remove('open');
     });
