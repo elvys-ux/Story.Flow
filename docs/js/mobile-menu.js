@@ -2,18 +2,18 @@
 
 document.addEventListener('DOMContentLoaded', () => {
   const navbar    = document.querySelector('.navbar');
-  const hamburger = document.querySelector('.hamburger');
+  const hamburger = navbar.querySelector('.hamburger');
 
-  if (!navbar || !hamburger) return;
+  if (!hamburger) return;
 
-  // abre/fecha o menu
+  // Abre ou fecha o menu ao clicar no ícone
   hamburger.addEventListener('click', () => {
     navbar.classList.toggle('open');
   });
 
-  // fecha o menu ao clicar em qualquer item
-  navbar.querySelectorAll('.navbar-menu a').forEach(link => {
-    link.addEventListener('click', () => {
+  // Fecha o menu quando qualquer item de link for clicado
+  navbar.querySelectorAll('> a, > .dropdown > a, > #searchForm button').forEach(el => {
+    el.addEventListener('click', () => {
       navbar.classList.remove('open');
     });
   });
