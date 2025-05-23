@@ -60,34 +60,44 @@
 
     /* --- MOBILE MENU INLINE PARA TESTE --- */
 
-/* Esconde o hambúrguer por padrão (desktop) */
+/* mobile.css */
+
+/* 1) Por padrão (desktop), esconda o hambúrguer */
 .navbar .hamburger {
   display: none;
   cursor: pointer;
-  font-size: 1.6rem;
-  color: #fff;
-  padding: 0 10px;
+  padding: 0 12px;
 }
 
-/* Em telas ≤768px: esconde itens e mostra o hambúrguer */
+/* Ajuste extra para garantir visibilidade do ícone */
+.navbar .hamburger i {
+  font-size: 1.8rem;
+  color: #fff; /* branco para contrastar com a barra preta */
+}
+
+/* 2) Em telas até 768px: esconde os links e mostra o ícone */
 @media (max-width: 768px) {
-  /* Esconde links, dropdowns, user-area e busca */
+  /* oculta links/direct dropdowns/user-area/busca */
   .navbar > a,
   .navbar > .dropdown,
   .navbar > #userMenuArea,
   .navbar > #searchForm {
     display: none;
   }
-  /* Mostra o ícone */
+
+  /* exibe o ícone hamburguer */
   .navbar .hamburger {
     display: inline-block;
   }
-  /* Quando .open, empilha tudo */
+
+  /* quando .open estiver na navbar, empilha todos os itens */
   .navbar.open {
     display: flex !important;
     flex-direction: column;
     align-items: stretch;
   }
+
+  /* exibe cada item em coluna */
   .navbar.open > a,
   .navbar.open > .dropdown,
   .navbar.open > #userMenuArea,
@@ -96,15 +106,18 @@
     background: rgba(0,0,0,0.9);
     color: #fff;
     text-align: left;
-    padding: 10px;
+    padding: 12px;
     border-top: 1px solid #333;
   }
-  /* ajusta dropdown-content */
+
+  /* garante que dropdown-content apareça corretamente */
   .navbar.open .dropdown-content {
     position: static;
-    background: rgba(0,0,0,0.8);
+    background: rgba(0,0,0,0.85);
+    margin: 0;
   }
 }
+
     
   </style>
 </head>
@@ -269,22 +282,28 @@
 })();
 
 
- document.addEventListener('DOMContentLoaded', () => {
+// js/mobile-menu.js
+
+document.addEventListener('DOMContentLoaded', () => {
   const navbar    = document.querySelector('.navbar');
   const hamburger = navbar.querySelector('.hamburger');
+
   if (!hamburger) return;
 
-  // abre / fecha menu
+  // ao clicar no ícone, alterna .open na navbar
   hamburger.addEventListener('click', () => {
     navbar.classList.toggle('open');
   });
 
-  // fecha ao clicar em qualquer link
+  // ao clicar em qualquer link (ou botão de busca), fecha o menu
   navbar.querySelectorAll('> a, > .dropdown > a, > #searchForm button')
-         .forEach(el => el.addEventListener('click', () => {
-           navbar.classList.remove('open');
-         }));
+         .forEach(el => {
+           el.addEventListener('click', () => {
+             navbar.classList.remove('open');
+           });
+         });
 });
+
  
 </script>
 
