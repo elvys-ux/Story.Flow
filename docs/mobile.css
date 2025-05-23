@@ -1,0 +1,31 @@
+/* mobile.css */
+
+/* Em telas até 768px: esconde links e exibe o ícone hamburguer */
+@media (max-width: 768px) {
+  .navbar a,
+  .navbar .dropdown {
+    display: none;
+  }
+
+  .navbar .hamburger {
+    display: block;
+    cursor: pointer;
+    font-size: 1.6rem;
+    color: #fff;
+    padding: 10px;
+  }
+
+  /* Quando a navbar tiver a classe .open, mostra os itens em coluna */
+  .navbar.open {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .navbar.open a,
+  .navbar.open .dropdown {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    background: rgba(0,0,0,0.9);
+    text-align: left;
+  }
+}
