@@ -1,54 +1,59 @@
 <!DOCTYPE html>
 <html lang="pt">
 <head>
-  <meta charset="UTF-8">
+ <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>StoryFlow – Ler Histórias</title>
-  <meta name="description" content="Leia as histórias da comunidade em StoryFlow, filtre por categoria, pesquise por título ou autor e navegue entre cartões.">
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <!-- Seu CSS -->
-  <link rel="stylesheet" href="css/VerHistorias.css">
-</head>
-  <title>Loader Interativo Avançado</title>
-   <style>
+  <!-- ... seus outros <meta> e links ... -->
+  <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; }
 
-    /* Tela de loading full-screen */
+    /* Loader full‐screen */
     #loader {
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
       background: linear-gradient(135deg, #e0f7fa, #ffffff);
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       user-select: none;
       z-index: 9999;
+      text-align: center;
+      padding: 1rem;
     }
 
-    /* Spinner circular */
+    /* Spinner */
     .spinner {
-      position: absolute;
       width: 60px; height: 60px;
       border: 8px solid rgba(0,0,0,0.1);
       border-top-color: #4caf50;
       border-radius: 50%;
       cursor: grab;
+      margin-bottom: 1.5rem;
     }
+
+    /* Verso */
+    #quote {
+      max-width: 80%;
+      font-style: italic;
+      color: #333;
+      line-height: 1.4;
+      opacity: 0;
+      animation: fadeIn 0.8s forwards;
+      margin-bottom: 1rem;
+    }
+    @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
 
     #main-content { visibility: hidden; }
   </style>
-  
+</head>
 <body>
-  
-   <div id="loader">
+  <div id="loader" aria-live="polite" aria-busy="true">
     <div class="spinner"></div>
-  </div>
-
-  <div id="main-content">
-    <!-- Conteúdo principal -->
+    <div id="quote">Carregando conteúdo…</div>
   </div>
 
   <!-- NAVBAR -->
@@ -129,80 +134,90 @@
     <small>© 2025 StoryFlow – Turma Tis7 | <a href="Sobre.html">Termos de uso</a></small>
   </footer>
 
-<script>
+ <script>
     (function(){
-      const spinner = document.querySelector('.spinner');
-      const loader  = document.getElementById('loader');
-      const main    = document.getElementById('main-content');
-
-      // Estado de física
-      let vx = (Math.random()*2+1) * (Math.random()<0.5?-1:1);
-      let vy = (Math.random()*2+1) * (Math.random()<0.5?-1:1);
-      let x = (window.innerWidth - spinner.clientWidth) / 2;
-      let y = (window.innerHeight - spinner.clientHeight) / 2;
+      const spinner     = document.querySelector('.spinner');
+      const loader      = document.getElementById('loader');
+      const main        = document.getElementById('main-content');
+      const quoteEl     = document.getElementById('quote');
+      let versos        = ["Carregando conteúdo…"]; // fallback
+      let dragging      = false, dragStart = {}, timeStart;
+      let vx = (Math.random()*2+1)*(Math.random()<0.5?-1:1);
+      let vy = (Math.random()*2+1)*(Math.random()<0.5?-1:1);
+      let x  = (window.innerWidth - spinner.clientWidth)/2;
+      let y  = (window.innerHeight - spinner.clientHeight)/2;
       const size = spinner.clientWidth;
 
-      // Estado de arraste
-      let dragging = false;
-      let dragStart = {}, timeStart;
+      // Busca versos de poemas
+      async function carregarVersos() {
+        try {
+          const res = await fetch('https://poetrydb.org/random/10/lines');
+          const poemas = await res.json();
+          const linhas = poemas.flatMap(p => p.lines).filter(l => l.trim());
+          if (linhas.length) versos = linhas;
+        } catch (e) {
+          // mantém fallback
+        }
+      }
 
+      // Atualiza verso aleatório
+      function atualizarVerso() {
+        const idx = Math.floor(Math.random()*versos.length);
+        quoteEl.textContent = versos[idx];
+      }
+
+      // Animação do spinner
       function animate() {
         if (!dragging) {
-          x += vx;
-          y += vy;
-          // colisão com bordas da viewport
-          if (x < 0)      { x = 0;      vx = -vx; }
-          if (x > window.innerWidth - size) {
-                          x = window.innerWidth - size; vx = -vx;
-          }
-          if (y < 0)      { y = 0;      vy = -vy; }
-          if (y > window.innerHeight - size) {
-                          y = window.innerHeight - size; vy = -vy;
-          }
+          x += vx; y += vy;
+          if (x < 0 || x > window.innerWidth - size) vx = -vx;
+          if (y < 0 || y > window.innerHeight - size) vy = -vy;
+          x = Math.min(Math.max(0, x), window.innerWidth - size);
+          y = Math.min(Math.max(0, y), window.innerHeight - size);
           spinner.style.transform = `translate(${x}px, ${y}px)`;
         }
         requestAnimationFrame(animate);
       }
-      animate();
 
-      // Iniciar arraste
       spinner.addEventListener('mousedown', e => {
-        dragging = true;
-        spinner.style.cursor = 'grabbing';
-        dragStart = { mx: e.clientX, my: e.clientY, bx: x, by: y };
-        timeStart = performance.now();
-        e.preventDefault();
+        dragging = true; spinner.style.cursor = 'grabbing';
+        dragStart = { mx:e.clientX, my:e.clientY, bx:x, by:y };
+        timeStart = performance.now(); e.preventDefault();
       });
-
-      // Durante arraste
       document.addEventListener('mousemove', e => {
         if (!dragging) return;
-        const dx = e.clientX - dragStart.mx;
-        const dy = e.clientY - dragStart.my;
-        x = Math.min(window.innerWidth - size, Math.max(0, dragStart.bx + dx));
-        y = Math.min(window.innerHeight - size, Math.max(0, dragStart.by + dy));
+        const dx = e.clientX - dragStart.mx, dy = e.clientY - dragStart.my;
+        x = Math.min(window.innerWidth-size, Math.max(0, dragStart.bx+dx));
+        y = Math.min(window.innerHeight-size, Math.max(0, dragStart.by+dy));
         spinner.style.transform = `translate(${x}px, ${y}px)`;
       });
-
-      // Final do arraste
-      document.addEventListener('mouseup', e => {
+      document.addEventListener('mouseup', () => {
         if (!dragging) return;
-        dragging = false;
-        spinner.style.cursor = 'grab';
-        const dt = (performance.now() - timeStart) / 1000;
-        const dx = x - dragStart.bx, dy = y - dragStart.by;
-        vx = Math.max(-10, Math.min(10, dx / dt));
-        vy = Math.max(-10, Math.min(10, dy / dt));
+        dragging = false; spinner.style.cursor = 'grab';
+        const dt = (performance.now()-timeStart)/1000;
+        vx = Math.max(-10, Math.min(10, (x-dragStart.bx)/dt));
+        vy = Math.max(-10, Math.min(10, (y-dragStart.by)/dt));
       });
 
-      // Remover loader após carregamento (simulação 3s)
-      window.addEventListener('load', () => {
+      // Quando a página carregar…
+      window.addEventListener('load', async () => {
+        // 1) carrega versos e começa a alternar
+        await carregarVersos();
+        atualizarVerso();
+        const interval = setInterval(atualizarVerso, 2000);
+
+        // 2) inicia animação do spinner
+        animate();
+
+        // 3) após 3s tira o loader
         setTimeout(() => {
+          clearInterval(interval);
           loader.style.transition = 'opacity 0.5s';
           loader.style.opacity = 0;
           loader.addEventListener('transitionend', () => {
             loader.remove();
             main.style.visibility = 'visible';
+            loader.removeAttribute('aria-busy');
           });
         }, 3000);
       });
