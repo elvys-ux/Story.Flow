@@ -9,33 +9,34 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; }
 
-    /* Loader full‐screen */
-    #loader {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: linear-gradient(135deg, #e0f7fa, #ffffff);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      user-select: none;
-      z-index: 9999;
-      text-align: center;
-      padding: 1rem;
-    }
+  <style>
+  /* Loader full‐screen */
+  #loader {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #e0f7fa, #ffffff);
+    z-index: 9999;
+    text-align: center;
+    padding: 1rem;
+  }
 
-    /* Spinner */
-    .spinner {
-      width: 60px; height: 60px;
-      border: 8px solid rgba(0,0,0,0.1);
-      border-top-color: #4caf50;
-      border-radius: 50%;
-      cursor: grab;
-      margin-bottom: 1.5rem;
-    }
+  /* Spinner estático no centro */
+  .spinner {
+    width: 60px;
+    height: 60px;
+    border: 8px solid rgba(0,0,0,0.1);
+    border-top-color: #4caf50;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Verso (em português) */
+  /* Texto do verso */
   #quote {
     max-width: 80%;
     font-style: italic;
@@ -43,14 +44,18 @@
     line-height: 1.4;
     opacity: 0;
     animation: fadeIn 0.8s forwards;
-    margin-bottom: 1rem;
+    margin: 0;
+    padding: 0 1rem;
   }
   @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+
+  /* Oculta o conteúdo principal enquanto carrega */
+  #main-content { visibility: hidden; }
 </style>
 
 <div id="loader" aria-live="polite" aria-busy="true">
   <div class="spinner"></div>
-  <div id="quote">Carregando conteúdo…</div>
+  <p id="quote">Carregando conteúdo…</p>
 </div>
 
   <!-- NAVBAR -->
@@ -133,104 +138,46 @@
 
 <script>
 (function(){
-  const spinner = document.querySelector('.spinner');
   const loader  = document.getElementById('loader');
   const main    = document.getElementById('main-content');
   const quoteEl = document.getElementById('quote');
 
-  // Versos em português (fallback)
-  let versos = [
-    "Carregando conteúdo…",
-    "Era uma vez…",
-    "Prepare-se para uma nova aventura.",
-    "As palavras têm poder."
+  // Lista de versos estáticos
+  const versos = [
+    "Ser feliz sem motivo é a mais autêntica forma de felicidade.",
+    "A poesia não quer fãs, quer tôdas as bocas, quer a boca inteira do homem.",
+    "E quando penso que tenho todas as respostas, muda-me uma letra e encontro outras perguntas.",
+    "Eu canto porque o instante existe e a minha vida está completa.",
+    "No meio do caminho tinha uma pedra, tinha uma pedra no meio do caminho.",
+    "Tudo vale a pena se a alma não é pequena."
   ];
 
-  // Física do spinner
-  let vx = (Math.random()*2+1)*(Math.random()<0.5?-1:1);
-  let vy = (Math.random()*2+1)*(Math.random()<0.5?-1:1);
-  let x  = (window.innerWidth - spinner.clientWidth)/2;
-  let y  = (window.innerHeight - spinner.clientHeight)/2;
-  const size = spinner.clientWidth;
-
-  // Arraste
-  let dragging = false, dragStart = {}, timeStart;
-
-  // Ajusta posição após resize
-  window.addEventListener('resize', () => {
-    x = Math.min(x, window.innerWidth - size);
-    y = Math.min(y, window.innerHeight - size);
-  });
-
-  // Busca versos de poesias em português (exemplo fictício, substitua pela sua API se tiver)
-  async function carregarVersos() {
-    try {
-      const res = await fetch('https://api.exemplo.com/poemas/random/10'); 
-      const data = await res.json();       // [{verso: "…"}, …]
-      const linhas = data.map(p => p.verso).filter(l => l.trim());
-      if (linhas.length) versos = linhas;
-    } catch (e) {
-      // mantém os versos de fallback
-    }
-  }
-
+  // Exibe um verso aleatório
   function atualizarVerso() {
-    quoteEl.textContent = versos[Math.floor(Math.random()*versos.length)];
+    const idx = Math.floor(Math.random() * versos.length);
+    quoteEl.textContent = versos[idx];
+    quoteEl.style.opacity = '0';
+    void quoteEl.offsetWidth;            // reinicia animação
+    quoteEl.style.animation = 'fadeIn 0.8s forwards';
   }
 
-  function animate() {
-    if (!dragging) {
-      x += vx; y += vy;
-      // bate nas bordas e inverte direção
-      if (x <= 0 || x >= window.innerWidth - size) vx = -vx;
-      if (y <= 0 || y >= window.innerHeight - size) vy = -vy;
-      x = Math.min(Math.max(0, x), window.innerWidth - size);
-      y = Math.min(Math.max(0, y), window.innerHeight - size);
-      spinner.style.transform = `translate(${x}px, ${y}px)`;
-    }
-    requestAnimationFrame(animate);
-  }
-
-  // Eventos de drag
-  spinner.addEventListener('mousedown', e => {
-    dragging = true; spinner.style.cursor = 'grabbing';
-    dragStart = { mx:e.clientX, my:e.clientY, bx:x, by:y };
-    timeStart = performance.now(); e.preventDefault();
-  });
-  document.addEventListener('mousemove', e => {
-    if (!dragging) return;
-    const dx = e.clientX - dragStart.mx, dy = e.clientY - dragStart.my;
-    x = Math.min(Math.max(0, dragStart.bx+dx), window.innerWidth-size);
-    y = Math.min(Math.max(0, dragStart.by+dy), window.innerHeight-size);
-    spinner.style.transform = `translate(${x}px, ${y}px)`;
-  });
-  document.addEventListener('mouseup', () => {
-    if (!dragging) return;
-    dragging = false; spinner.style.cursor = 'grab';
-    const dt = (performance.now()-timeStart)/1000;
-    vx = Math.max(-10, Math.min(10, (x-dragStart.bx)/dt));
-    vy = Math.max(-10, Math.min(10, (y-dragStart.by)/dt));
-  });
-
-  // Inicia tudo imediatamente
-  (async () => {
-    await carregarVersos();
+  // Ciclo de inicialização
+  window.addEventListener('load', () => {
     atualizarVerso();
-    const interval = setInterval(atualizarVerso, 2000);
-    animate();
+    const interval = setInterval(atualizarVerso, 2500);
 
-    // Remove loader após 3s
+    // Após 3s, remove o loader
     setTimeout(() => {
       clearInterval(interval);
       loader.style.transition = 'opacity 0.5s';
       loader.style.opacity = '0';
       loader.addEventListener('transitionend', () => {
-        loader.remove(); 
+        loader.remove();
         main.style.visibility = 'visible';
         loader.removeAttribute('aria-busy');
       });
     }, 3000);
-  })();
+  });
 })();
 </script>
   <!-- Scripts -->
