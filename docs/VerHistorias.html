@@ -74,37 +74,49 @@
    
   <!-- NAVBAR -->
   <nav class="navbar">
-  <!-- botão hamburguer -->
-  <button class="hamburger" aria-label="Abrir menu">
-    <span></span>
-    <span></span>
-    <span></span>
-  </button>
+  <!-- Botão hamburguer (aparece só em telas ≤768px) -->
+  <span class="hamburger" aria-label="Abrir menu">
+    <i class="fas fa-bars"></i>
+  </span>
 
-  <!-- itens de navegação -->
-  <div class="navbar-menu">
-    <a href="index.html"><i class="fas fa-home"></i> Início</a>
-    <div class="dropdown">
-      <a href="#"><i class="fas fa-pencil-alt"></i> Criar História</a>
-      <div class="dropdown-content">
-        <a href="diario.html">Escrever Diário</a>
-        <a href="historia.html">Escrever História</a>
-      </div>
+  <!-- Links principais -->
+  <a href="index.html"><i class="fas fa-home"></i> Início</a>
+
+  <!-- Dropdown “Criar História” -->
+  <div class="dropdown">
+    <a href="#"><i class="fas fa-pencil-alt"></i> Criar História</a>
+    <div class="dropdown-content">
+      <a href="diario.html">Escrever Diário</a>
+      <a href="historia.html">Escrever História</a>
     </div>
-    <div class="dropdown">
-      <a href="#"><i class="fas fa-book"></i> Histórias</a>
-      <div class="dropdown-content">
-        <a href="hisotirasqueescrevi.html">Minhas Histórias</a>
-        <a href="VerHistorias.html">Ler Histórias</a>
-      </div>
-    </div>
-    <div id="userMenuArea" class="user-area"></div>
-    <form id="searchForm" class="search-box">
-      <input type="text" id="searchBar" placeholder="Pesquisar por título ou autor…" autocomplete="off">
-      <button type="submit" id="searchBtn"><i class="fas fa-search"></i></button>
-    </form>
   </div>
+
+  <!-- Dropdown “Histórias” -->
+  <div class="dropdown">
+    <a href="#"><i class="fas fa-book"></i> Histórias</a>
+    <div class="dropdown-content">
+      <a href="hisotirasqueescrevi.html">Minhas Histórias</a>
+      <a href="VerHistorias.html">Ler Histórias</a>
+    </div>
+  </div>
+
+  <!-- Área do usuário (login ou nome) -->
+  <div id="userMenuArea" class="user-area"></div>
+
+  <!-- Caixa de busca -->
+  <form id="searchForm" class="search-box">
+    <input
+      type="text"
+      id="searchBar"
+      placeholder="Pesquisar por título ou autor…"
+      autocomplete="off"
+    />
+    <button type="submit" id="searchBtn">
+      <i class="fas fa-search"></i>
+    </button>
+  </form>
 </nav>
+
 
   <!-- FILTROS -->
   <div class="filter-bar">
