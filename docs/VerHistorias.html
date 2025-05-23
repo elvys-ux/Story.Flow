@@ -137,113 +137,64 @@
   </div>
 
 
- 
-<!-- SCRIPT DO LOADER -->
-  <script>
-  (function(){
-    const loader  = document.getElementById('loader');
-    const page    = document.getElementById('page-wrapper');
-    const quoteEl = document.getElementById('quote');
+   <!-- Scripts -->
+<!-- loader + page-wrapper conforme já estruturado -->
+<script>
+(async function(){
+  const loader  = document.getElementById('loader');
+  const page    = document.getElementById('page-wrapper');
+  const quoteEl = document.getElementById('quote');
 
-    // Frases estáticas
-    const versosOriginais = [
+  // 1) Busca todas as frases em PT-BR da API AlluGo
+  let versosOriginais;
+  try {
+    const res  = await fetch('https://allugofrases.herokuapp.com/frases');
+    const json = await res.json();
+    versosOriginais = json.map(item => item.frase); 
+  } catch {
+    // fallback mínimo em caso de erro
+    versosOriginais = [
       "Ser feliz sem motivo é a mais autêntica forma de felicidade.",
-      "A poesia não quer fãs, quer a boca inteira do homem.",
-      "E quando penso que tenho todas as respostas, muda-me uma letra e encontro outras perguntas.",
-      "Eu canto porque o instante existe e a minha vida está completa.",
-      "No meio do caminho tinha uma pedra, tinha uma pedra no meio do caminho.",
-      "Tudo vale a pena se a alma não é pequena."
+      "Tudo vale a pena se a alma não é pequena.",
+      "No meio do caminho tinha uma pedra, tinha uma pedra no meio do caminho."
     ];
+  }
 
-    // Embaralha e prepara fila sem repetição
-    let fila = [];
-    function embaralhar() {
-      fila = versosOriginais
-        .map(v => ({ v, r: Math.random() }))
-        .sort((a,b)=>a.r-b.r)
-        .map(o=>o.v);
-    }
+  // 2) Prepara fila sem repetições
+  let fila = [];
+  function embaralhar() {
+    fila = versosOriginais
+      .map(v => ({ v, r: Math.random() }))
+      .sort((a, b) => a.r - b.r)
+      .map(o => o.v);
+  }
 
-    function atualizarVerso(){
-      if (fila.length === 0) embaralhar();
-      quoteEl.textContent = fila.shift();
-      quoteEl.style.opacity = '0';
-      void quoteEl.offsetWidth;  // reinicia animação
-      quoteEl.style.animation = 'fadeIn 0.8s forwards';
-    }
+  function atualizarVerso(){
+    if (fila.length === 0) embaralhar();
+    quoteEl.textContent = fila.shift();
+    quoteEl.style.opacity = '0'; void quoteEl.offsetWidth;
+    quoteEl.style.animation = 'fadeIn 0.8s forwards';
+  }
 
-    window.addEventListener('load', () => {
-      embaralhar();
-      atualizarVerso();
-      const intervalo = setInterval(atualizarVerso, 2500);
+  // 3) Exibe versos até remover o loader
+  embaralhar();
+  atualizarVerso();
+  const intervalo = setInterval(atualizarVerso, 2500);
 
-      // Após 3s, remove o loader e mostra tudo
-      setTimeout(() => {
-        clearInterval(intervalo);
-        loader.style.transition = 'opacity .5s';
-        loader.style.opacity = '0';
-        loader.addEventListener('transitionend', () => {
-          loader.remove();
-          page.style.visibility = 'visible';
-          document.body.classList.remove('loading');
-        });
-      }, 3000);
+  setTimeout(() => {
+    clearInterval(intervalo);
+    loader.style.transition = 'opacity .5s';
+    loader.style.opacity = '0';
+    loader.addEventListener('transitionend', () => {
+      loader.remove();
+      page.style.visibility = 'visible';
+      document.body.classList.remove('loading');
     });
-  })();
-  </script><!-- SCRIPT DO LOADER -->
-  <script>
-  (function(){
-    const loader  = document.getElementById('loader');
-    const page    = document.getElementById('page-wrapper');
-    const quoteEl = document.getElementById('quote');
+  }, 3000);
+})();
+</script>
 
-    // Frases estáticas
-    const versosOriginais = [
-      "Ser feliz sem motivo é a mais autêntica forma de felicidade.",
-      "A poesia não quer fãs, quer a boca inteira do homem.",
-      "E quando penso que tenho todas as respostas, muda-me uma letra e encontro outras perguntas.",
-      "Eu canto porque o instante existe e a minha vida está completa.",
-      "No meio do caminho tinha uma pedra, tinha uma pedra no meio do caminho.",
-      "Tudo vale a pena se a alma não é pequena."
-    ];
 
-    // Embaralha e prepara fila sem repetição
-    let fila = [];
-    function embaralhar() {
-      fila = versosOriginais
-        .map(v => ({ v, r: Math.random() }))
-        .sort((a,b)=>a.r-b.r)
-        .map(o=>o.v);
-    }
-
-    function atualizarVerso(){
-      if (fila.length === 0) embaralhar();
-      quoteEl.textContent = fila.shift();
-      quoteEl.style.opacity = '0';
-      void quoteEl.offsetWidth;  // reinicia animação
-      quoteEl.style.animation = 'fadeIn 0.8s forwards';
-    }
-
-    window.addEventListener('load', () => {
-      embaralhar();
-      atualizarVerso();
-      const intervalo = setInterval(atualizarVerso, 2500);
-
-      // Após 3s, remove o loader e mostra tudo
-      setTimeout(() => {
-        clearInterval(intervalo);
-        loader.style.transition = 'opacity .5s';
-        loader.style.opacity = '0';
-        loader.addEventListener('transitionend', () => {
-          loader.remove();
-          page.style.visibility = 'visible';
-          document.body.classList.remove('loading');
-        });
-      }, 3000);
-    });
-  })();
-  </script>
-  <!-- Scripts -->
   <script type="module" src="js/supabase.js"></script>
   <script type="module" src="js/VerHistorias.js"></script>
 </body>
