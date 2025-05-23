@@ -145,6 +145,64 @@
   }
 }
 
+/* mobile-search.css */
+
+/* 1) Esconde o overlay por padrão */
+.search-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 2000;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 2) Quando ativo, mostra em flex */
+.search-overlay.active {
+  display: flex;
+}
+
+/* 3) Modal interno */
+.search-modal {
+  background: #fff;
+  padding: 1rem;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 400px;
+  position: relative;
+}
+
+/* 4) Botão fechar */
+.search-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  cursor: pointer;
+}
+
+/* 5) Formulário */
+.mobile-search-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+.mobile-search-form input {
+  flex: 1;
+  padding: 0.5rem;
+  font-size: 1rem;
+}
+.mobile-search-form button {
+  background: #333;
+  border: none;
+  padding: 0 1rem;
+  color: #fff;
+  cursor: pointer;
+  font-size: 1.2rem;
+}
     
   </style>
 </head>
@@ -166,6 +224,10 @@
   <span class="hamburger" aria-label="Menu">
     <i class="fas fa-bars"></i>
   </span>
+ <!-- botão para abrir pesquisa -->
+<span class="search-toggle" aria-label="Abrir busca">
+  <i class="fas fa-search"></i>
+</span>
 
   <!-- links / dropdowns originais -->
   <a href="index.html"><i class="fas fa-home"></i> Início</a>
@@ -244,6 +306,21 @@
     <small>© 2025 StoryFlow – Turma Tis7 | <a href="Sobre.html">Termos de uso</a></small>
   </footer>
   </div>
+ 
+<!-- Overlay de pesquisa -->
+<div class="search-overlay" id="searchOverlay">
+  <div class="search-modal">
+    <button class="search-close" aria-label="Fechar busca">&times;</button>
+    <form id="mobileSearchForm" class="mobile-search-form">
+      <input
+        type="text"
+        id="mobileSearchInput"
+        placeholder="Pesquisar por título ou autor…"
+      />
+      <button type="submit"><i class="fas fa-search"></i></button>
+    </form>
+  </div>
+</div>
 
 
    <!-- Scripts -->
@@ -353,6 +430,45 @@ document.addEventListener('DOMContentLoaded', () => {
     link.addEventListener('click', () => {
       navbar.classList.remove('open');
     });
+  });
+});
+
+
+ // js/mobile-search.js
+
+document.addEventListener('DOMContentLoaded', () => {
+  const overlay = document.getElementById('searchOverlay');
+  const openBtn = document.querySelector('.search-toggle');
+  const closeBtn = overlay.querySelector('.search-close');
+  const input = document.getElementById('mobileSearchInput');
+  const form = document.getElementById('mobileSearchForm');
+
+  openBtn.addEventListener('click', () => {
+    overlay.classList.add('active');
+    input.focus();
+  });
+
+  closeBtn.addEventListener('click', () => {
+    overlay.classList.remove('active');
+  });
+
+  // fechar ao clicar fora do modal
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.classList.remove('active');
+  });
+
+  // opcional: reenviar para o seu handler de busca
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    const term = input.value.trim();
+    if (term) {
+      // dispara sua lógica de busca existente:
+      document.getElementById('searchBar').value = term;
+      document.getElementById('searchForm').dispatchEvent(
+        new Event('submit', { cancelable: true })
+      );
+      overlay.classList.remove('active');
+    }
   });
 });
 
