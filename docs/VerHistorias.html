@@ -41,6 +41,21 @@
       animation: fadeIn 0.8s forwards;
       margin: 0; padding: 0 1rem;
     }
+
+    /* Animação de saída */
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* Classes para controlar o fade */
+#quote.fade-in {
+  animation: fadeIn 0.8s forwards;
+}
+#quote.fade-out {
+  animation: fadeOut 0.8s forwards;
+}
+
     @keyframes fadeIn { from{opacity:0} to{opacity:1} }
   </style>
 </head>
@@ -146,17 +161,16 @@
   const page    = document.getElementById('page-wrapper');
   const quoteEl = document.getElementById('quote');
 
-  // 1) Carrega o JSON local de frases (versos.json está em docs/, mesmo nível de VerHistorias.html)
+  // 1) Carrega o JSON local
   let versosOriginais;
   try {
     const res  = await fetch('versos.json');
-    versosOriginais = await res.json();   // array de strings
-  } catch (e) {
-    console.error('Falha ao carregar versos.json:', e);
+    versosOriginais = await res.json();
+  } catch {
     versosOriginais = ['Carregando conteúdo…'];
   }
 
-  // 2) Embaralha sem repetir
+  // 2) Prepara fila
   let fila = [];
   function embaralhar() {
     fila = versosOriginais
@@ -165,21 +179,32 @@
       .map(o => o.v);
   }
 
+  // 3) Atualiza com fade-out e fade-in
   function atualizarVerso() {
-    if (!fila.length) embaralhar();
-    quoteEl.textContent = fila.shift();
-    quoteEl.style.opacity = '0'; void quoteEl.offsetWidth;
-    quoteEl.style.animation = 'fadeIn 0.8s forwards';
+    // fade-out
+    quoteEl.classList.remove('fade-in');
+    quoteEl.classList.add('fade-out');
+
+    setTimeout(() => {
+      if (!fila.length) embaralhar();
+      quoteEl.textContent = fila.shift();
+
+      // fade-in
+      quoteEl.classList.remove('fade-out');
+      quoteEl.classList.add('fade-in');
+    }, 800);
   }
 
-  // 3) Exibição e remoção do loader
+  // 4) Executa loader
   embaralhar();
+  // primeira exibição com fade-in
+  quoteEl.classList.add('fade-in');
   atualizarVerso();
   const intervalo = setInterval(atualizarVerso, 2500);
 
   setTimeout(() => {
     clearInterval(intervalo);
-    loader.style.transition = 'opacity 0.5s';
+    loader.style.transition = 'opacity .5s';
     loader.style.opacity = '0';
     loader.addEventListener('transitionend', () => {
       loader.remove();
@@ -189,6 +214,7 @@
   }, 3000);
 })();
 </script>
+
 
 
   <script type="module" src="js/supabase.js"></script>
