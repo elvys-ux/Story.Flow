@@ -35,26 +35,23 @@
       margin-bottom: 1.5rem;
     }
 
-    /* Verso */
-    #quote {
-      max-width: 80%;
-      font-style: italic;
-      color: #333;
-      line-height: 1.4;
-      opacity: 0;
-      animation: fadeIn 0.8s forwards;
-      margin-bottom: 1rem;
-    }
-    @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+    /* Verso (em português) */
+  #quote {
+    max-width: 80%;
+    font-style: italic;
+    color: #333;
+    line-height: 1.4;
+    opacity: 0;
+    animation: fadeIn 0.8s forwards;
+    margin-bottom: 1rem;
+  }
+  @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+</style>
 
-    #main-content { visibility: hidden; }
-  </style>
-</head>
-<body>
-  <div id="loader" aria-live="polite" aria-busy="true">
-    <div class="spinner"></div>
-    <div id="quote">Carregando conteúdo…</div>
-  </div>
+<div id="loader" aria-live="polite" aria-busy="true">
+  <div class="spinner"></div>
+  <div id="quote">Carregando conteúdo…</div>
+</div>
 
   <!-- NAVBAR -->
   <nav class="navbar">
@@ -134,95 +131,108 @@
     <small>© 2025 StoryFlow – Turma Tis7 | <a href="Sobre.html">Termos de uso</a></small>
   </footer>
 
- <script>
-    (function(){
-      const spinner     = document.querySelector('.spinner');
-      const loader      = document.getElementById('loader');
-      const main        = document.getElementById('main-content');
-      const quoteEl     = document.getElementById('quote');
-      let versos        = ["Carregando conteúdo…"]; // fallback
-      let dragging      = false, dragStart = {}, timeStart;
-      let vx = (Math.random()*2+1)*(Math.random()<0.5?-1:1);
-      let vy = (Math.random()*2+1)*(Math.random()<0.5?-1:1);
-      let x  = (window.innerWidth - spinner.clientWidth)/2;
-      let y  = (window.innerHeight - spinner.clientHeight)/2;
-      const size = spinner.clientWidth;
+<script>
+(function(){
+  const spinner = document.querySelector('.spinner');
+  const loader  = document.getElementById('loader');
+  const main    = document.getElementById('main-content');
+  const quoteEl = document.getElementById('quote');
 
-      // Busca versos de poemas
-      async function carregarVersos() {
-        try {
-          const res = await fetch('https://poetrydb.org/random/10/lines');
-          const poemas = await res.json();
-          const linhas = poemas.flatMap(p => p.lines).filter(l => l.trim());
-          if (linhas.length) versos = linhas;
-        } catch (e) {
-          // mantém fallback
-        }
-      }
+  // Versos em português (fallback)
+  let versos = [
+    "Carregando conteúdo…",
+    "Era uma vez…",
+    "Prepare-se para uma nova aventura.",
+    "As palavras têm poder."
+  ];
 
-      // Atualiza verso aleatório
-      function atualizarVerso() {
-        const idx = Math.floor(Math.random()*versos.length);
-        quoteEl.textContent = versos[idx];
-      }
+  // Física do spinner
+  let vx = (Math.random()*2+1)*(Math.random()<0.5?-1:1);
+  let vy = (Math.random()*2+1)*(Math.random()<0.5?-1:1);
+  let x  = (window.innerWidth - spinner.clientWidth)/2;
+  let y  = (window.innerHeight - spinner.clientHeight)/2;
+  const size = spinner.clientWidth;
 
-      // Animação do spinner
-      function animate() {
-        if (!dragging) {
-          x += vx; y += vy;
-          if (x < 0 || x > window.innerWidth - size) vx = -vx;
-          if (y < 0 || y > window.innerHeight - size) vy = -vy;
-          x = Math.min(Math.max(0, x), window.innerWidth - size);
-          y = Math.min(Math.max(0, y), window.innerHeight - size);
-          spinner.style.transform = `translate(${x}px, ${y}px)`;
-        }
-        requestAnimationFrame(animate);
-      }
+  // Arraste
+  let dragging = false, dragStart = {}, timeStart;
 
-      spinner.addEventListener('mousedown', e => {
-        dragging = true; spinner.style.cursor = 'grabbing';
-        dragStart = { mx:e.clientX, my:e.clientY, bx:x, by:y };
-        timeStart = performance.now(); e.preventDefault();
+  // Ajusta posição após resize
+  window.addEventListener('resize', () => {
+    x = Math.min(x, window.innerWidth - size);
+    y = Math.min(y, window.innerHeight - size);
+  });
+
+  // Busca versos de poesias em português (exemplo fictício, substitua pela sua API se tiver)
+  async function carregarVersos() {
+    try {
+      const res = await fetch('https://api.exemplo.com/poemas/random/10'); 
+      const data = await res.json();       // [{verso: "…"}, …]
+      const linhas = data.map(p => p.verso).filter(l => l.trim());
+      if (linhas.length) versos = linhas;
+    } catch (e) {
+      // mantém os versos de fallback
+    }
+  }
+
+  function atualizarVerso() {
+    quoteEl.textContent = versos[Math.floor(Math.random()*versos.length)];
+  }
+
+  function animate() {
+    if (!dragging) {
+      x += vx; y += vy;
+      // bate nas bordas e inverte direção
+      if (x <= 0 || x >= window.innerWidth - size) vx = -vx;
+      if (y <= 0 || y >= window.innerHeight - size) vy = -vy;
+      x = Math.min(Math.max(0, x), window.innerWidth - size);
+      y = Math.min(Math.max(0, y), window.innerHeight - size);
+      spinner.style.transform = `translate(${x}px, ${y}px)`;
+    }
+    requestAnimationFrame(animate);
+  }
+
+  // Eventos de drag
+  spinner.addEventListener('mousedown', e => {
+    dragging = true; spinner.style.cursor = 'grabbing';
+    dragStart = { mx:e.clientX, my:e.clientY, bx:x, by:y };
+    timeStart = performance.now(); e.preventDefault();
+  });
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const dx = e.clientX - dragStart.mx, dy = e.clientY - dragStart.my;
+    x = Math.min(Math.max(0, dragStart.bx+dx), window.innerWidth-size);
+    y = Math.min(Math.max(0, dragStart.by+dy), window.innerHeight-size);
+    spinner.style.transform = `translate(${x}px, ${y}px)`;
+  });
+  document.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false; spinner.style.cursor = 'grab';
+    const dt = (performance.now()-timeStart)/1000;
+    vx = Math.max(-10, Math.min(10, (x-dragStart.bx)/dt));
+    vy = Math.max(-10, Math.min(10, (y-dragStart.by)/dt));
+  });
+
+  // Inicia tudo imediatamente
+  (async () => {
+    await carregarVersos();
+    atualizarVerso();
+    const interval = setInterval(atualizarVerso, 2000);
+    animate();
+
+    // Remove loader após 3s
+    setTimeout(() => {
+      clearInterval(interval);
+      loader.style.transition = 'opacity 0.5s';
+      loader.style.opacity = '0';
+      loader.addEventListener('transitionend', () => {
+        loader.remove(); 
+        main.style.visibility = 'visible';
+        loader.removeAttribute('aria-busy');
       });
-      document.addEventListener('mousemove', e => {
-        if (!dragging) return;
-        const dx = e.clientX - dragStart.mx, dy = e.clientY - dragStart.my;
-        x = Math.min(window.innerWidth-size, Math.max(0, dragStart.bx+dx));
-        y = Math.min(window.innerHeight-size, Math.max(0, dragStart.by+dy));
-        spinner.style.transform = `translate(${x}px, ${y}px)`;
-      });
-      document.addEventListener('mouseup', () => {
-        if (!dragging) return;
-        dragging = false; spinner.style.cursor = 'grab';
-        const dt = (performance.now()-timeStart)/1000;
-        vx = Math.max(-10, Math.min(10, (x-dragStart.bx)/dt));
-        vy = Math.max(-10, Math.min(10, (y-dragStart.by)/dt));
-      });
-
-      // Quando a página carregar…
-      window.addEventListener('load', async () => {
-        // 1) carrega versos e começa a alternar
-        await carregarVersos();
-        atualizarVerso();
-        const interval = setInterval(atualizarVerso, 2000);
-
-        // 2) inicia animação do spinner
-        animate();
-
-        // 3) após 3s tira o loader
-        setTimeout(() => {
-          clearInterval(interval);
-          loader.style.transition = 'opacity 0.5s';
-          loader.style.opacity = 0;
-          loader.addEventListener('transitionend', () => {
-            loader.remove();
-            main.style.visibility = 'visible';
-            loader.removeAttribute('aria-busy');
-          });
-        }, 3000);
-      });
-    })();
-  </script>
+    }, 3000);
+  })();
+})();
+</script>
   <!-- Scripts -->
   <script type="module" src="js/supabase.js"></script>
   <script type="module" src="js/VerHistorias.js"></script>
