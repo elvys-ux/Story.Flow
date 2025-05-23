@@ -6,8 +6,6 @@
   <title>StoryFlow – Ler Histórias</title>
   <!-- ... seus outros <meta> e links ... -->
  <link rel="stylesheet" href="css/VerHistorias.css">
- <link rel="stylesheet" href="css/mobile.css">
-
    <style>
     /* Impede scroll e esconde todo o conteúdo real */
     body.loading { overflow: hidden; }
@@ -72,14 +70,10 @@
   <!-- TODO: TODO o seu conteúdo real fica AQUI DENTRO -->
   <div id="page-wrapper">
 
-   
-<!-- NAVBAR -->   
-<nav class="navbar">
-  <!-- botão hambúrguer (invisível no desktop) -->
-  <span class="hamburger"><i class="fas fa-bars"></i></span>
 
-  <!-- Wrapping dos itens de navegação -->
-  <div class="navbar-menu">
+   
+  <!-- NAVBAR -->
+  <nav class="navbar">
     <a href="index.html"><i class="fas fa-home"></i> Início</a>
     <div class="dropdown">
       <a href="#"><i class="fas fa-pencil-alt"></i> Criar História</a>
@@ -100,8 +94,7 @@
       <input type="text" id="searchBar" placeholder="Pesquisar por título ou autor…" autocomplete="off">
       <button type="submit" id="searchBtn"><i class="fas fa-search"></i></button>
     </form>
-  </div>
-</nav>
+  </nav>
 
   <!-- FILTROS -->
   <div class="filter-bar">
@@ -226,6 +219,5 @@
 
   <script type="module" src="js/supabase.js"></script>
   <script type="module" src="js/VerHistorias.js"></script>
-  <script src="js/mobile-menu.js"></script>
 </body>
 </html>
