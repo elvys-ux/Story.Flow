@@ -1,31 +1,64 @@
 /* mobile.css */
 
-/* Em telas até 768px: esconde links e exibe o ícone hamburguer */
+/* Por padrão (desktop), esconde o hambúrguer e mostra o menu inline */
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.hamburger {
+  display: none;
+}
+.navbar-menu {
+  display: flex;
+  gap: 1rem;
+}
+
+/* Em telas pequenas (<=768px), ativa o menu hambúrguer */
 @media (max-width: 768px) {
-  .navbar a,
-  .navbar .dropdown {
-    display: none;
+  /* layout do container */
+  .navbar {
+    position: relative;
+    flex-direction: row;
+    justify-content: space-between;
   }
 
-  .navbar .hamburger {
+  /* exibe o ícone */
+  .hamburger {
     display: block;
     cursor: pointer;
-    font-size: 1.6rem;
+    font-size: 1.8rem;
     color: #fff;
-    padding: 10px;
+    padding: 0.5rem;
   }
 
-  /* Quando a navbar tiver a classe .open, mostra os itens em coluna */
-  .navbar.open {
+  /* esconde o menu padrão */
+  .navbar-menu {
+    display: none;
     flex-direction: column;
-    align-items: flex-start;
-  }
-  .navbar.open a,
-  .navbar.open .dropdown {
-    display: block;
+    position: absolute;
+    top: 100%;
+    left: 0;
     width: 100%;
-    padding: 10px;
-    background: rgba(0,0,0,0.9);
-    text-align: left;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 1000;
+  }
+
+  /* quando `.open` estiver ativo, mostra o menu */
+  .navbar.open .navbar-menu {
+    display: flex;
+  }
+
+  /* estilos para os itens do menu mobile */
+  .navbar-menu a,
+  .navbar-menu .dropdown {
+    padding: 1rem;
+    border-bottom: 1px solid #333;
+    color: #fff;
+    text-decoration: none;
+  }
+  .navbar-menu .dropdown-content {
+    position: static;
+    background: #222;
   }
 }
