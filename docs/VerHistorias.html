@@ -146,33 +146,17 @@
   const page    = document.getElementById('page-wrapper');
   const quoteEl = document.getElementById('quote');
 
-  // 1) Busca o HTML do Pensador via proxy AllOrigins
-  async function carregarVersosDoPensador() {
-    try {
-      const proxyUrl = 'https://api.allorigins.win/raw?url='
-        + encodeURIComponent('https://www.pensador.com/frases_de_poetas_famosos/');
-      const res  = await fetch(proxyUrl);
-      const html = await res.text();
-      const doc  = new DOMParser().parseFromString(html, 'text/html');
-
-      // 2) Seleciona apenas os <p> dentro da área de conteúdo principal,
-      //    filtrando por tamanho (descarta intros muito curtas).
-      const paras = Array.from(doc.querySelectorAll('.conteudo p'));
-      return paras
-        .map(p => p.textContent.trim())
-        .filter(texto => texto.length > 30); // ajusta o limiar conforme quiser
-    } catch (e) {
-      console.error('Erro ao carregar do Pensador:', e);
-      return [];
-    }
-  }
-
-  // 3) Carrega e prepara a fila sem repetições
-  let versosOriginais = await carregarVersosDoPensador();
-  if (versosOriginais.length === 0) {
-    // se falhar, lógico é ter um mínimo local
+  // 1) Carrega o JSON local de frases (versos.json está em docs/, mesmo nível de VerHistorias.html)
+  let versosOriginais;
+  try {
+    const res  = await fetch('versos.json');
+    versosOriginais = await res.json();   // array de strings
+  } catch (e) {
+    console.error('Falha ao carregar versos.json:', e);
     versosOriginais = ['Carregando conteúdo…'];
   }
+
+  // 2) Embaralha sem repetir
   let fila = [];
   function embaralhar() {
     fila = versosOriginais
@@ -180,6 +164,7 @@
       .sort((a,b) => a.r - b.r)
       .map(o => o.v);
   }
+
   function atualizarVerso() {
     if (!fila.length) embaralhar();
     quoteEl.textContent = fila.shift();
@@ -187,14 +172,14 @@
     quoteEl.style.animation = 'fadeIn 0.8s forwards';
   }
 
-  // 4) Roda o loader
+  // 3) Exibição e remoção do loader
   embaralhar();
   atualizarVerso();
   const intervalo = setInterval(atualizarVerso, 2500);
 
   setTimeout(() => {
     clearInterval(intervalo);
-    loader.style.transition = 'opacity .5s';
+    loader.style.transition = 'opacity 0.5s';
     loader.style.opacity = '0';
     loader.addEventListener('transitionend', () => {
       loader.remove();
