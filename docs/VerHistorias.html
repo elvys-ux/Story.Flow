@@ -203,7 +203,48 @@
   cursor: pointer;
   font-size: 1.2rem;
 }
-    
+    /* —— A PARTIR DAQUI, só adicionar —— */
+
+/* Mantém a navbar fixa no topo */
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1500;
+}
+
+/* Overlay cobrindo toda a tela, abaixo da navbar */
+.search-overlay {
+  position: fixed;
+  inset: 0;
+  display: none;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 2000;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 4rem;  /* altura da navbar */
+  overflow: hidden;
+}
+.search-overlay.active {
+  display: flex;
+}
+
+/* Modal de busca posicionado no topo do overlay */
+.search-modal {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 400px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+/* —— FIM DA ACRÉSCIMO —— */
+
   </style>
 </head>
 <body class="loading">
@@ -434,41 +475,45 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
- // js/mobile-search.js
-
 document.addEventListener('DOMContentLoaded', () => {
-  const overlay = document.getElementById('searchOverlay');
-  const openBtn = document.querySelector('.search-toggle');
+  const overlay  = document.getElementById('searchOverlay');
+  const openBtn  = document.querySelector('.search-toggle');
   const closeBtn = overlay.querySelector('.search-close');
-  const input = document.getElementById('mobileSearchInput');
-  const form = document.getElementById('mobileSearchForm');
+  const input    = document.getElementById('mobileSearchInput');
+  const form     = document.getElementById('mobileSearchForm');
 
+  // Abre o overlay e trava o scroll de fundo
   openBtn.addEventListener('click', () => {
     overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
     input.focus();
   });
 
+  // Fecha pelo botão “×” e destrava o scroll
   closeBtn.addEventListener('click', () => {
     overlay.classList.remove('active');
+    document.body.style.overflow = '';
   });
 
-  // fechar ao clicar fora do modal
+  // Fecha clicando fora do modal
   overlay.addEventListener('click', e => {
-    if (e.target === overlay) overlay.classList.remove('active');
+    if (e.target === overlay) {
+      overlay.classList.remove('active');
+      document.body.style.overflow = '';
+    }
   });
 
-  // opcional: reenviar para o seu handler de busca
+  // Reusa o seu form de busca principal
   form.addEventListener('submit', e => {
     e.preventDefault();
     const term = input.value.trim();
-    if (term) {
-      // dispara sua lógica de busca existente:
-      document.getElementById('searchBar').value = term;
-      document.getElementById('searchForm').dispatchEvent(
-        new Event('submit', { cancelable: true })
-      );
-      overlay.classList.remove('active');
-    }
+    if (!term) return;
+    // preenche a barra normal e dispara a busca
+    document.getElementById('searchBar').value = term;
+    document.getElementById('searchForm')
+      .dispatchEvent(new Event('submit', { cancelable: true }));
+    overlay.classList.remove('active');
+    document.body.style.overflow = '';
   });
 });
 
