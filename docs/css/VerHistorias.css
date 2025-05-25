@@ -17,48 +17,47 @@ body {
 
 /* ====== NAVBAR FIXA ====== */
 .navbar {
-    position: fixed;
-    top: 0;
-    width: 100%;
-    background-color: rgba(0, 0, 0, 0.9);
-    padding: 12px;
-    z-index: 1000;
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  position: fixed;
+  top: 0;
+  width: 100%;
+  background-color: rgba(0, 0, 0, 0.9);
+  padding: 12px;
+  z-index: 1000;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 }
 
 .navbar a {
-    font-family: Arial, sans-serif;
-    color: white;
-    text-decoration: none;
-    padding: 10px;
-    transition: background-color 0.3s, transform 0.3s;
-    border-radius: 5px;
+  font-family: Arial, sans-serif;
+  color: white;
+  text-decoration: none;
+  padding: 10px;
+  transition: background-color 0.3s, transform 0.3s;
+  border-radius: 5px;
 }
 
 .navbar a:hover {
-    background-color: rgba(0, 0, 0, 0.7);
-    transform: scale(1.1);
+  background-color: rgba(0, 0, 0, 0.7);
+  transform: scale(1.1);
 }
 
 .navbar a i {
-    margin-right: 8px;
+  margin-right: 8px;
 }
 
-/* mantém a estrutura pai */
+/* mantém a estrutura pai para o dropdown */
 .navbar .dropdown {
-  position: relative;    /* se precisar de posicionamento, senão pode remover */
+  position: relative;
 }
 
-/* base do submenu: oculto, mas no fluxo do documento */
+/* base do submenu: oculto, mas ocupa espaço no fluxo quando expandir */
 .navbar .dropdown-content {
-  max-height: 0;          /* começa colapsado */
+  max-height: 0;             /* começa colapsado */
   overflow: hidden;
   transition: max-height .3s ease;
   background-color: rgba(0,0,0,0.5);
-  /* remova position:absolute e display:none */
 }
 
 /* estilo dos links internos permanece igual */
@@ -73,19 +72,17 @@ body {
   background-color: rgba(255,255,255,0.2);
 }
 
-/* quando você faz parent-li.open (via JS), o submenu expande e empurra os itens abaixo */
+/* quando via JS adiciona .open ao dropdown, o submenu expande */
 .navbar .dropdown.open > .dropdown-content {
-  max-height: 200px;   /* ajuste conforme número de itens e altura */
+  max-height: 200px;   /* ajuste conforme número de itens */
 }
-
 
 /* Área para mostrar o usuário (nome ou "Login") */
 #userMenuArea {
-    font-family: Arial, sans-serif;
-    color: white;
-    cursor: pointer;
+  font-family: Arial, sans-serif;
+  color: white;
+  cursor: pointer;
 }
-
 
 /* =================== SEARCH BOX =================== */
 .search-box {
@@ -96,11 +93,13 @@ body {
   background-color: white;
   border-radius: 5px;
 }
+
 .search-box input[type="text"] {
   border: none;
   padding: 5px;
   outline: none;
 }
+
 .search-box button {
   background-color: black;
   color: white;
@@ -110,30 +109,12 @@ body {
   border-radius: 5px;
 }
 
-
-/* dropdown permanece igual */
-.dropdown { position: relative; }
-.dropdown-content {
-  display: none;
-  position: absolute;
-  background: rgba(0,0,0,0.8);
-  min-width: 150px;
-  border-radius: 4px;
-  z-index: 1001;
-}
-.dropdown:hover .dropdown-content { display: block; }
-.dropdown-content a {
-  display: block;
-  color: #fff;
-  padding: 8px 12px;
-}
-.dropdown-content a:hover { background: rgba(255,255,255,0.2); }
-
 /* ====== FILTROS ====== */
 .filter-bar {
   margin: 20px auto 0;
   text-align: center;
 }
+
 .filter-bar select {
   margin: 0 10px;
   padding: 8px;
@@ -152,11 +133,13 @@ body {
   flex-direction: column;
   align-items: center;
 }
+
 .stories-section h2 {
   font-size: 2rem;
   margin-bottom: 16px;
   color: #333;
 }
+
 .stories-container {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -232,18 +215,15 @@ body {
 .like-btn {
   background: none;
   border: none;
-  font-size: 1.6rem;  /* coração bem visível */
+  font-size: 1.6rem;
   cursor: pointer;
   padding: 0;
   margin-bottom: 8px;
   line-height: 1;
 }
-
-/* Se quiseres mudar cor ao hover: */
 .like-btn:hover {
   transform: scale(1.2);
 }
-
 
 /* ====== PAGINAÇÃO ====== */
 .pagination button {
@@ -328,18 +308,16 @@ footer {
   left: 0;
   width: 100%;
   background-color: rgba(0,0,0,0.9);
-  color: white;
+  color: white
+  ;
   text-align: center;
   padding: 5px 0;
   transition: bottom 0.3s ease;
   z-index: 9999;
 }
-
 footer.visible {
   bottom: 0;
 }
-
-
 
 /* ====== RESPONSIVO ====== */
 @media (max-width: 768px) {
@@ -352,12 +330,9 @@ footer.visible {
   }
 }
 
-
-
 /* Preserve quebras de linha e evita overflow nos textos */
 #modalFullText,
 .sheet-sinopse {
-  white-space: pre-wrap;    /* respeita quebras “\n” e espaços */
-  word-wrap: break-word;    /* parte palavras muito longas dentro da largura */
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
-
