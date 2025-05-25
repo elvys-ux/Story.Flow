@@ -47,34 +47,37 @@ body {
     margin-right: 8px;
 }
 
-.dropdown {
-    position: relative;
-    display: inline-block;
+/* mantém a estrutura pai */
+.navbar .dropdown {
+  position: relative;    /* se precisar de posicionamento, senão pode remover */
 }
 
-.dropdown-content {
-    display: none;
-    position: absolute;
-    background-color: rgba(0, 0, 0, 0.5);
-    min-width: 150px;
-    box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.3);
-    z-index: 1;
+/* base do submenu: oculto, mas no fluxo do documento */
+.navbar .dropdown-content {
+  max-height: 0;          /* começa colapsado */
+  overflow: hidden;
+  transition: max-height .3s ease;
+  background-color: rgba(0,0,0,0.5);
+  /* remova position:absolute e display:none */
 }
 
-.dropdown-content a {
-    color: white;
-    padding: 12px 16px;
-    text-decoration: none;
-    display: block;
+/* estilo dos links internos permanece igual */
+.navbar .dropdown-content a {
+  color: white;
+  padding: 12px 16px;
+  text-decoration: none;
+  display: block;
 }
 
-.dropdown-content a:hover {
-    background-color: rgba(255, 255, 255, 0.2);
+.navbar .dropdown-content a:hover {
+  background-color: rgba(255,255,255,0.2);
 }
 
-.dropdown:hover .dropdown-content {
-    display: block;
+/* quando você faz parent-li.open (via JS), o submenu expande e empurra os itens abaixo */
+.navbar .dropdown.open > .dropdown-content {
+  max-height: 200px;   /* ajuste conforme número de itens e altura */
 }
+
 
 /* Área para mostrar o usuário (nome ou "Login") */
 #userMenuArea {
