@@ -1,17 +1,18 @@
 <!DOCTYPE html>
 <html lang="pt">
 <head>
- <meta charset="UTF-8">
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
- <link
-  rel="stylesheet"
-  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
-/>
-
   <title>StoryFlow – Ler Histórias</title>
-  <!-- ... seus outros <meta> e links ... -->
- <link rel="stylesheet" href="css/VerHistorias.css">
-   <style>
+  <!-- Font Awesome -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+  />
+  <!-- Seu CSS externo -->
+  <link rel="stylesheet" href="css/VerHistorias.css">
+
+  <style>
     /* Impede scroll e esconde todo o conteúdo real */
     body.loading { overflow: hidden; }
     #page-wrapper {
@@ -48,80 +49,81 @@
     }
 
     /* Animação de saída */
-@keyframes fadeOut {
-  from { opacity: 1; }
-  to   { opacity: 0; }
-}
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to   { opacity: 0; }
+    }
 
-/* Classes para controlar o fade */
-#quote.fade-in {
-  animation: fadeIn 0.8s forwards;
-}
-#quote.fade-out {
-  animation: fadeOut 0.8s forwards;
-}
+    /* Classes para controlar o fade */
+    #quote.fade-in {
+      animation: fadeIn 0.8s forwards;
+    }
+    #quote.fade-out {
+      animation: fadeOut 0.8s forwards;
+    }
 
     @keyframes fadeIn { from{opacity:0} to{opacity:1} }
 
-
     /* --- Hamburger --- */
-.hamburger {
-  display: none;
-  flex-direction: column;
-  justify-content: space-around;
-  width: 2rem; height: 2rem;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  margin: 1rem;
-  z-index: 10000;
-  position: fixed;
-  top: 0; left: 0;
-}
-.hamburger span {
-  display: block;
-  width: 100%; height: 3px;
-  background: #fff;
-}
+    .hamburger {
+      display: none;
+      flex-direction: column;
+      justify-content: space-around;
+      width: 2rem; height: 2rem;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      margin: 1rem;
+      z-index: 10000;
+      position: fixed;
+      top: 0; left: 0;
+    }
+    .hamburger span {
+      display: block;
+      width: 100%; height: 3px;
+      background: #fff;
+    }
 
-/* --- Navbar responsiva --- */
-@media (max-width: 768px) {
-  .hamburger { display: flex; }
-  .navbar {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%;
-    max-height: 0;
-    overflow: hidden;
-    background: #111;
-    transition: max-height .3s ease;
-    z-index: 9999;
-    flex-direction: column;
-  }
-  .navbar.open {
-    max-height: 100vh;
-  }
-  .navbar a, 
-  .navbar .dropdown { padding: 1rem; }
-}
+    /* --- Navbar responsiva --- */
+    @media (max-width: 768px) {
+      .hamburger { display: flex; }
+      .navbar {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%;
+        max-height: 0;
+        overflow: hidden;
+        background: #111;
+        transition: max-height .3s ease;
+        z-index: 9999;
+        flex-direction: column;
+      }
+      .navbar.open {
+        max-height: 100vh;
+      }
+      .navbar a,
+      .navbar .dropdown { padding: 1rem; }
+    }
 
   </style>
 </head>
-
-
- 
 <body class="loading">
-  <!-- LOADER… -->
+
+  <!-- LOADER full‐screen -->
+  <div id="loader" aria-live="polite" aria-busy="true">
+    <div class="spinner"></div>
+    <p id="quote">Carregando conteúdo…</p>
+  </div>
 
   <div id="page-wrapper">
-    <!-- 1) Botão hamburger: fora da <nav>, só com spans -->
+    <!-- BOTÃO HAMBURGER (fora da nav) -->
     <button id="btnHamburger" class="hamburger" aria-label="Abrir menu">
       <span></span>
       <span></span>
       <span></span>
     </button>
 
-    <!-- 2) Navbar -->
+    <!-- NAVBAR -->
     <nav class="navbar">
       <a href="index.html"><i class="fas fa-home"></i> Início</a>
 
@@ -150,164 +152,137 @@
       </form>
     </nav>
 
-  <!-- FILTROS -->
-  <div class="filter-bar">
-    <label for="category-filter">Categoria:</label>
-    <select id="category-filter" aria-label="Filtrar por categoria">
-      <option value="">Todas as categorias</option>
-      <option value="Fantasia">Fantasia</option>
-      <option value="Terror">Terror</option>
-      <option value="Comédia">Comédia</option>
-      <option value="Ficção Científica">Ficção Científica</option>
-      <option value="Drama">Drama</option>
-    </select>
-    <label for="sort-filter">Ordenar por:</label>
-    <select id="sort-filter" aria-label="Ordenar histórias">
-      <option value="date">Data</option>
-      <option value="popularity">Popularidade</option>
-    </select>
-  </div>
+    <!-- FILTROS -->
+    <div class="filter-bar">
+      <label for="category-filter">Categoria:</label>
+      <select id="category-filter" aria-label="Filtrar por categoria">
+        <option value="">Todas as categorias</option>
+        <option value="Fantasia">Fantasia</option>
+        <option value="Terror">Terror</option>
+        <option value="Comédia">Comédia</option>
+        <option value="Ficção Científica">Ficção Científica</option>
+        <option value="Drama">Drama</option>
+      </select>
+      <label for="sort-filter">Ordenar por:</label>
+      <select id="sort-filter" aria-label="Ordenar histórias">
+        <option value="date">Data</option>
+        <option value="popularity">Popularidade</option>
+      </select>
+    </div>
 
-  <!-- SEÇÃO DE HISTÓRIAS -->
-  <main>
-    <section class="stories-section">
-      <h2>Histórias da Comunidade</h2>
-      <div id="storiesContainer" class="stories-container" aria-live="polite"></div>
-      <div class="pagination">
-        <button id="loadMoreBtn" aria-label="Carregar mais histórias">Carregar Mais</button>
+    <!-- SEÇÃO DE HISTÓRIAS -->
+    <main>
+      <section class="stories-section">
+        <h2>Histórias da Comunidade</h2>
+        <div id="storiesContainer" class="stories-container" aria-live="polite"></div>
+        <div class="pagination">
+          <button id="loadMoreBtn" aria-label="Carregar mais histórias">Carregar Mais</button>
+        </div>
+      </section>
+    </main>
+
+    <!-- MODAL DE LEITURA -->
+    <div id="modalOverlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle" style="display:none;">
+      <div class="modal-content">
+        <button id="modalClose" class="modal-close" aria-label="Fechar modal">&times;</button>
+        <h2 id="modalTitle">Título da História</h2>
+        <div id="modalFullText" class="modal-text"></div>
+        <button id="continuarBtn" class="continuar-btn" style="display:none;">Continuar</button>
+        <div id="modalInfo" class="modal-info"></div>
       </div>
-    </section>
-  </main>
+    </div>
 
-  <!-- MODAL DE LEITURA -->
-  <div id="modalOverlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle" style="display:none;">
-    <div class="modal-content">
-      <button id="modalClose" class="modal-close" aria-label="Fechar modal">&times;</button>
-      <h2 id="modalTitle">Título da História</h2>
-      <div id="modalFullText" class="modal-text"></div>
-      <!-- botão Continuar, controlado pelo JS -->
-      <button id="continuarBtn" class="continuar-btn" style="display:none;">Continuar</button>
-      <div id="modalInfo" class="modal-info"></div>
+    <!-- AVISO AO CLICAR FORA -->
+    <div id="warningOverlay" class="warning-overlay" style="display:none;" role="alertdialog" aria-modal="true" aria-labelledby="warningText">
+      <div class="warning-box">
+        <p id="warningText">Deseja fechar a leitura?</p>
+        <button id="warningYes">Sim</button>
+        <button id="warningNo">Não</button>
+      </div>
+    </div>
+
+    <footer>
+      <small>© 2025 StoryFlow – Turma Tis7 | <a href="Sobre.html">Termos de uso</a></small>
+    </footer>
+  </div>
+
+  <!-- Overlay de pesquisa -->
+  <div class="search-overlay" id="searchOverlay">
+    <div class="search-modal">
+      <button class="search-close" aria-label="Fechar busca">&times;</button>
+      <form id="mobileSearchForm" class="mobile-search-form">
+        <input type="text" id="mobileSearchInput" placeholder="Pesquisar por título ou autor…">
+        <button type="submit"><i class="fas fa-search"></i></button>
+      </form>
     </div>
   </div>
 
-  <!-- AVISO AO CLICAR FORA -->
-  <div id="warningOverlay" class="warning-overlay" style="display:none;" role="alertdialog" aria-modal="true" aria-labelledby="warningText">
-    <div class="warning-box">
-      <p id="warningText">Deseja fechar a leitura?</p>
-      <button id="warningYes">Sim</button>
-      <button id="warningNo">Não</button>
-    </div>
-  </div>
+  <!-- Scripts -->
+  <script>
+    (async function(){
+      const loader  = document.getElementById('loader');
+      const page    = document.getElementById('page-wrapper');
+      const quoteEl = document.getElementById('quote');
+      let versos;
 
-  <footer>
-    <small>© 2025 StoryFlow – Turma Tis7 | <a href="Sobre.html">Termos de uso</a></small>
-  </footer>
-  </div>
- 
-<!-- Overlay de pesquisa -->
-<div class="search-overlay" id="searchOverlay">
-  <div class="search-modal">
-    <button class="search-close" aria-label="Fechar busca">&times;</button>
-    <form id="mobileSearchForm" class="mobile-search-form">
-      <input
-        type="text"
-        id="mobileSearchInput"
-        placeholder="Pesquisar por título ou autor…"
-      />
-      <button type="submit"><i class="fas fa-search"></i></button>
-    </form>
-  </div>
-</div>
+      try {
+        versos = await (await fetch('versos.json')).json();
+      } catch {
+        versos = ['Carregando conteúdo…'];
+      }
 
+      let fila = [];
+      function embaralhar() {
+        fila = versos.map(v => ({ v, r: Math.random() }))
+                    .sort((a,b) => a.r - b.r)
+                    .map(o => o.v);
+      }
 
-   <!-- Scripts -->
-<!-- loader + page-wrapper conforme já estruturado -->
- 
-<script>
-(async function(){
-  const loader  = document.getElementById('loader');
-  const page    = document.getElementById('page-wrapper');
-  const quoteEl = document.getElementById('quote');
+      function atualizarVerso() {
+        quoteEl.classList.remove('fade-in');
+        quoteEl.classList.add('fade-out');
+        setTimeout(() => {
+          if (!fila.length) embaralhar();
+          quoteEl.textContent = fila.shift();
+          quoteEl.classList.remove('fade-out');
+          quoteEl.classList.add('fade-in');
+        }, 800);
+      }
 
-  // 1) Carrega o JSON local
-  let versosOriginais;
-  try {
-    const res  = await fetch('versos.json');
-    versosOriginais = await res.json();
-  } catch {
-    versosOriginais = ['Carregando conteúdo…'];
-  }
-
-  // 2) Prepara fila
-  let fila = [];
-  function embaralhar() {
-    fila = versosOriginais
-      .map(v => ({ v, r: Math.random() }))
-      .sort((a,b) => a.r - b.r)
-      .map(o => o.v);
-  }
-
-  // 3) Atualiza com fade-out e fade-in
-  function atualizarVerso() {
-    // fade-out
-    quoteEl.classList.remove('fade-in');
-    quoteEl.classList.add('fade-out');
-
-    setTimeout(() => {
-      if (!fila.length) embaralhar();
-      quoteEl.textContent = fila.shift();
-
-      // fade-in
-      quoteEl.classList.remove('fade-out');
+      embaralhar();
       quoteEl.classList.add('fade-in');
-    }, 800);
-  }
+      atualizarVerso();
+      const intervalo = setInterval(atualizarVerso, 2500);
 
-  // 4) Executa loader
-  embaralhar();
-  // primeira exibição com fade-in
-  quoteEl.classList.add('fade-in');
-  atualizarVerso();
-  const intervalo = setInterval(atualizarVerso, 2500);
+      window.addEventListener('load', () => {
+        clearInterval(intervalo);
+        loader.style.transition = 'opacity .5s';
+        loader.style.opacity = '0';
+        loader.addEventListener('transitionend', () => {
+          loader.remove();
+          page.style.visibility = 'visible';
+          document.body.classList.remove('loading');
+        });
+      });
+    })();
 
-  setTimeout(() => {
-    clearInterval(intervalo);
-    loader.style.transition = 'opacity .5s';
-    loader.style.opacity = '0';
-    loader.addEventListener('transitionend', () => {
-      loader.remove();
-      page.style.visibility = 'visible';
-      document.body.classList.remove('loading');
+    // HAMBURGER MENU
+    const btnHamburger = document.getElementById('btnHamburger');
+    const navbar       = document.querySelector('.navbar');
+    btnHamburger.addEventListener('click', () => {
+      navbar.classList.toggle('open');
     });
-  }, 3000);
-})();
 
-
-
-// HAMBURGER MENU
-const btnHamburger = document.getElementById('btnHamburger');
-const navbar       = document.querySelector('.navbar');
-
-btnHamburger.addEventListener('click', () => {
-  navbar.classList.toggle('open');
-});
-
-// SUBMENU QUE “EMPURRA” ITENS ABAIXO
-document.querySelectorAll('.navbar .dropdown > a')
-  .forEach(toggle => {
-    toggle.addEventListener('click', e => {
-      e.preventDefault();
-      const parent = toggle.parentElement;        // <div class="dropdown">
-      parent.classList.toggle('open');
-    });
-  });
-
- 
-</script>
-
-
-
+    // SUBMENU QUE “EMPURRA” ITENS ABAIXO
+    document.querySelectorAll('.navbar .dropdown > .toggle')
+      .forEach(toggle => {
+        toggle.addEventListener('click', e => {
+          e.preventDefault();
+          toggle.parentElement.classList.toggle('open');
+        });
+      });
+  </script>
+  
   <script type="module" src="js/supabase.js"></script>
   <script type="module" src="js/VerHistorias.js"></script>
 </body>
