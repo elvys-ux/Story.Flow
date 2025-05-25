@@ -107,23 +107,26 @@
 
   </style>
 </head>
+
+
+ 
 <body class="loading">
   <!-- LOADER… -->
 
   <div id="page-wrapper">
-    <!-- BOTÃO HAMBURGER (fora da <nav>) -->
+    <!-- 1) Botão hamburger: fora da <nav>, só com spans -->
     <button id="btnHamburger" class="hamburger" aria-label="Abrir menu">
       <span></span>
       <span></span>
       <span></span>
     </button>
 
-    <!-- NAVBAR -->
+    <!-- 2) Navbar -->
     <nav class="navbar">
       <a href="index.html"><i class="fas fa-home"></i> Início</a>
 
       <div class="dropdown">
-        <a href="#" class="toggle"><i class="fas fa-pencil-alt"></i> Criar História</a>
+        <a href="#" class="toggle"><i class="fas fa-pencil-alt"></i> Criar História ▾</a>
         <div class="dropdown-content">
           <a href="diario.html">Escrever Diário</a>
           <a href="historia.html">Escrever História</a>
@@ -131,7 +134,7 @@
       </div>
 
       <div class="dropdown">
-        <a href="#" class="toggle"><i class="fas fa-book"></i> Histórias</a>
+        <a href="#" class="toggle"><i class="fas fa-book"></i> Histórias ▾</a>
         <div class="dropdown-content">
           <a href="hisotirasqueescrevi.html">Minhas Histórias</a>
           <a href="VerHistorias.html">Ler Histórias</a>
@@ -139,8 +142,10 @@
       </div>
 
       <div id="userMenuArea" class="user-area"></div>
+
       <form id="searchForm" class="search-box">
-        <input type="text" id="searchBar" placeholder="Pesquisar por título ou autor…" autocomplete="off">
+        <input type="text" id="searchBar"
+               placeholder="Pesquisar por título ou autor…" autocomplete="off">
         <button type="submit"><i class="fas fa-search"></i></button>
       </form>
     </nav>
