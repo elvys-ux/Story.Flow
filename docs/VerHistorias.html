@@ -92,7 +92,25 @@
   }
 
   /* --- Navbar responsiva --- */
- 
+  @media (max-width: 768px) {
+    .hamburger { display: flex; }
+    .navbar {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%;
+      max-height: 0;
+      overflow: hidden;
+      background: #111;
+      transition: max-height .3s ease;
+      z-index: 9999;
+      flex-direction: column;
+    }
+    .navbar.open {
+      max-height: 100vh;
+    }
+    .navbar a,
+    .navbar .dropdown { padding: 1rem; }
+  }
 </style>
 
 </head>
