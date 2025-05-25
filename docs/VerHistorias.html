@@ -218,53 +218,61 @@
   </div>
 
   <!-- Scripts -->
-  <script>
-    (async function(){
-      const loader  = document.getElementById('loader');
-      const page    = document.getElementById('page-wrapper');
-      const quoteEl = document.getElementById('quote');
-      let versos;
+<script>
+  (function(){
+    const loader  = document.getElementById('loader');
+    const page    = document.getElementById('page-wrapper');
+    const quoteEl = document.getElementById('quote');
+    let versos    = ['Carregando conteúdo…'];
 
-      try {
-        versos = await (await fetch('versos.json')).json();
-      } catch {
-        versos = ['Carregando conteúdo…'];
-      }
+    // Tenta carregar os versos de versos.json
+    fetch('versos.json')
+      .then(res => res.json())
+      .then(json => versos = json)
+      .catch(() => { /* se falhar, mantém o default */ });
 
-      let fila = [];
-      function embaralhar() {
-        fila = versos.map(v => ({ v, r: Math.random() }))
-                    .sort((a,b) => a.r - b.r)
-                    .map(o => o.v);
-      }
+    // Prepara fila de frases
+    let fila = [];
+    function embaralhar() {
+      fila = versos
+        .map(v => ({ v, r: Math.random() }))
+        .sort((a,b) => a.r - b.r)
+        .map(o => o.v);
+    }
 
-      function atualizarVerso() {
-        quoteEl.classList.remove('fade-in');
-        quoteEl.classList.add('fade-out');
-        setTimeout(() => {
-          if (!fila.length) embaralhar();
-          quoteEl.textContent = fila.shift();
-          quoteEl.classList.remove('fade-out');
-          quoteEl.classList.add('fade-in');
-        }, 800);
-      }
+    // Atualiza o verso com fade
+    function atualizar() {
+      quoteEl.classList.remove('fade-in');
+      quoteEl.classList.add('fade-out');
+      setTimeout(() => {
+        if (!fila.length) embaralhar();
+        quoteEl.textContent = fila.shift();
+        quoteEl.classList.remove('fade-out');
+        quoteEl.classList.add('fade-in');
+      }, 800);
+    }
 
-      embaralhar();
-      quoteEl.classList.add('fade-in');
-      atualizarVerso();
-      const intervalo = setInterval(atualizarVerso, 2500);
+    embaralhar();
+    quoteEl.classList.add('fade-in');
+    atualizar();
+    const intervalo = setInterval(atualizar, 2500);
 
-      window.addEventListener('load', () => {
-        clearInterval(intervalo);
-        loader.style.transition = 'opacity .5s';
-        loader.style.opacity = '0';
-        loader.addEventListener('transitionend', () => {
-          loader.remove();
-          page.style.visibility = 'visible';
-          document.body.classList.remove('loading');
-        });
+    // Finaliza o loader (fade-out + revelar conteúdo)
+    function finalizar() {
+      clearInterval(intervalo);
+      loader.style.transition = 'opacity .5s';
+      loader.style.opacity = '0';
+      loader.addEventListener('transitionend', () => {
+        loader.remove();
+        page.style.visibility = 'visible';
+        document.body.classList.remove('loading');
       });
-    })();
+    }
+
+    // Quando a página termina de carregar
+    window.addEventListener('load', finalizar);
+    // Se o script rodar após o load ter ocorrido
+    if (document.readyState === 'complete') finalizar();
 
     // HAMBURGER MENU
     const btnHamburger = document.getElementById('btnHamburger');
@@ -273,7 +281,7 @@
       navbar.classList.toggle('open');
     });
 
-    // SUBMENU QUE “EMPURRA” ITENS ABAIXO
+    // DROPDOWNS que empurram itens
     document.querySelectorAll('.navbar .dropdown > .toggle')
       .forEach(toggle => {
         toggle.addEventListener('click', e => {
@@ -281,7 +289,9 @@
           toggle.parentElement.classList.toggle('open');
         });
       });
-  </script>
+  })();
+</script>
+
   
   <script type="module" src="js/supabase.js"></script>
   <script type="module" src="js/VerHistorias.js"></script>
