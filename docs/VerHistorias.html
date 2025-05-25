@@ -108,34 +108,36 @@
   </style>
 </head>
 <body class="loading">
+  <!-- LOADER… -->
 
-  <!-- LOADER full-screen -->
-  <div id="loader" aria-live="polite" aria-busy="true">
-    <div class="spinner"></div>
-    <p id="quote">Carregando conteúdo…</p>
-  </div>
-
-  <!-- CONTEÚDO PRINCIPAL -->
   <div id="page-wrapper">
+    <!-- BOTÃO HAMBURGER (fora da <nav>) -->
+    <button id="btnHamburger" class="hamburger" aria-label="Abrir menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
     <!-- NAVBAR -->
     <nav class="navbar">
-     
-<button id="btnHamburger" class="hamburger" aria-label="Abrir menu">
       <a href="index.html"><i class="fas fa-home"></i> Início</a>
+
       <div class="dropdown">
-        <a href="#"><i class="fas fa-pencil-alt"></i> Criar História</a>
+        <a href="#" class="toggle"><i class="fas fa-pencil-alt"></i> Criar História</a>
         <div class="dropdown-content">
           <a href="diario.html">Escrever Diário</a>
           <a href="historia.html">Escrever História</a>
         </div>
       </div>
+
       <div class="dropdown">
-        <a href="#"><i class="fas fa-book"></i> Histórias</a>
+        <a href="#" class="toggle"><i class="fas fa-book"></i> Histórias</a>
         <div class="dropdown-content">
           <a href="hisotirasqueescrevi.html">Minhas Histórias</a>
           <a href="VerHistorias.html">Ler Histórias</a>
         </div>
       </div>
+
       <div id="userMenuArea" class="user-area"></div>
       <form id="searchForm" class="search-box">
         <input type="text" id="searchBar" placeholder="Pesquisar por título ou autor…" autocomplete="off">
