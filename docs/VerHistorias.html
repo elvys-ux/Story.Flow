@@ -64,6 +64,47 @@
     @keyframes fadeIn { from{opacity:0} to{opacity:1} }
 
 
+    /* --- Hamburger --- */
+.hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: space-around;
+  width: 2rem; height: 2rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  margin: 1rem;
+  z-index: 10000;
+  position: fixed;
+  top: 0; left: 0;
+}
+.hamburger span {
+  display: block;
+  width: 100%; height: 3px;
+  background: #fff;
+}
+
+/* --- Navbar responsiva --- */
+@media (max-width: 768px) {
+  .hamburger { display: flex; }
+  .navbar {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%;
+    max-height: 0;
+    overflow: hidden;
+    background: #111;
+    transition: max-height .3s ease;
+    z-index: 9999;
+    flex-direction: column;
+  }
+  .navbar.open {
+    max-height: 100vh;
+  }
+  .navbar a, 
+  .navbar .dropdown { padding: 1rem; }
+}
+
   </style>
 </head>
 <body class="loading">
@@ -79,7 +120,7 @@
     <!-- NAVBAR -->
     <nav class="navbar">
      
-
+<button id="btnHamburger" class="hamburger" aria-label="Abrir menu">
       <a href="index.html"><i class="fas fa-home"></i> Início</a>
       <div class="dropdown">
         <a href="#"><i class="fas fa-pencil-alt"></i> Criar História</a>
@@ -237,6 +278,23 @@
 
 
 
+// HAMBURGER MENU
+const btnHamburger = document.getElementById('btnHamburger');
+const navbar       = document.querySelector('.navbar');
+
+btnHamburger.addEventListener('click', () => {
+  navbar.classList.toggle('open');
+});
+
+// SUBMENU QUE “EMPURRA” ITENS ABAIXO
+document.querySelectorAll('.navbar .dropdown > a')
+  .forEach(toggle => {
+    toggle.addEventListener('click', e => {
+      e.preventDefault();
+      const parent = toggle.parentElement;        // <div class="dropdown">
+      parent.classList.toggle('open');
+    });
+  });
 
  
 </script>
