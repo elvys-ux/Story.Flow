@@ -54,6 +54,12 @@ async function init() {
   // Renderiza primeiros cartões
   initialLoad();
 
+  
+  // Agora que o container já está populado, tira o loader
+  if (window.finalizeLoader) {
+    window.finalizeLoader();
+  }
+
   // Listeners de filtro e paginação
   searchBar.addEventListener('input', initialLoad);
   categoryFilter.addEventListener('change', initialLoad);
