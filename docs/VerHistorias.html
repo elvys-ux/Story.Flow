@@ -239,7 +239,7 @@
   <!-- Scripts -->
 <script>
 
-  (function(){
+(function(){
     const loader  = document.getElementById('loader');
     const page    = document.getElementById('page-wrapper');
     const quoteEl = document.getElementById('quote');
@@ -285,53 +285,20 @@
       });
     }
 
-    // Exponha para ser chamado por VerHistorias.js
+    // Expõe a função globalmente, sem chamar automaticamente
     window.finalizeLoader = finalizarLoader;
 
-    // Configure o ciclo após DOM pronto
+    // Quando o DOM estiver pronto, começa o ciclo de frases
     document.addEventListener('DOMContentLoaded', iniciarCiclo);
 
-    // Botão hamburger e dropdowns
-    const btnHamburger = document.getElementById('btnHamburger');
-    const navbar       = document.querySelector('.navbar');
-    btnHamburger.addEventListener('click', () => navbar.classList.toggle('open'));
-
-    document.querySelectorAll('.navbar .dropdown > .toggle')
-      .forEach(toggle => {
-        toggle.addEventListener('click', e => {
-          e.preventDefault();
-          toggle.parentElement.classList.toggle('open');
-        });
-      });
-  })();
-
-
-
-    // Configura menu hamburger e dropdowns
+    // Configura botão hamburger
     const btnHamburger = document.getElementById('btnHamburger');
     const navbar       = document.querySelector('.navbar');
     btnHamburger.addEventListener('click', () => {
       navbar.classList.toggle('open');
     });
 
-    document.querySelectorAll('.navbar .dropdown > .toggle')
-      .forEach(toggle => {
-        toggle.addEventListener('click', e => {
-          e.preventDefault();
-          toggle.parentElement.classList.toggle('open');
-        });
-      });
-  })();
-
-  
-    // HAMBURGER MENU
-    const btnHamburger = document.getElementById('btnHamburger');
-    const navbar       = document.querySelector('.navbar');
-    btnHamburger.addEventListener('click', () => {
-      navbar.classList.toggle('open');
-    });
-
-    // DROPDOWNS que empurram itens
+    // Configura dropdowns que empurram itens
     document.querySelectorAll('.navbar .dropdown > .toggle')
       .forEach(toggle => {
         toggle.addEventListener('click', e => {
