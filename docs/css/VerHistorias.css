@@ -336,4 +336,39 @@ footer.visible {
   white-space: pre-wrap;
   word-wrap: break-word;
 }
-s
+
+
+
+
+
+
+
+
+/* ====================== OVERRIDES DA NAVBAR ====================== */
+
+/* === DESKTOP: sempre fixa e dropdown só por hover === */
+@media (min-width: 769px) {
+  .navbar {
+    transform: none !important;
+    transition: none !important;
+  }
+  /* remove qualquer abertura por classe .open no desktop */
+  .navbar .dropdown.open > .dropdown-content {
+    max-height: 0 !important;
+    display: none !important;
+  }
+  /* mantém o hover padrão */
+  .navbar .dropdown:hover > .dropdown-content {
+    display: block !important;
+    max-height: none !important;
+  }
+  /* esconder o botão hamburger no desktop */
+  .hamburger {
+    display: none !important;
+  }
+}
+
+/* === MOBILE: comportamento original que você já tem === */
+@media (max-width: 768px) {
+  /* nada aqui – seu CSS mobile continua valendo */
+}
