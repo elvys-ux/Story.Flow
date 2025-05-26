@@ -91,39 +91,34 @@
     display: none !important;
   }
 
- /* --- Navbar responsiva (mobile) --- */
+/* --- Navbar responsiva (mobile) --- */
 @media (max-width: 768px) {
-  /* o hamburger aparece em cima */
+  /* botão hamburger aparece */
   .hamburger {
     display: flex;
   }
 
-  /* por padrão, nav escondida */
+  /* navbar sempre ocupando topo, mas empurrada pra cima */
   .navbar {
-    display: none;
-    flex-direction: column;
     position: fixed;
     top: 0; left: 0;
     width: 100%;
-    max-height: 0;
-    overflow: hidden;
-    background: transparent !important;  /* sem faixa preta atrás */
-    box-shadow: none !important;
-    transition: max-height .3s ease, display .3s ease;
+    transform: translateY(-100%);  /* fora da tela */
+    transition: transform .3s ease;
+    background: rgba(0,0,0,0.9);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    flex-direction: column;
     z-index: 9999;
   }
 
-  /* ao abrir, nav fica visível e expande */
+  /* ao abrir, traz de volta */
   .navbar.open {
-    display: flex;
-    max-height: 100vh;
-    background: rgba(0,0,0,0.9);         /* ou outro BG quando aberta */
-    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    transform: translateY(0);
   }
 
-  /* padding interno nos links e dropdowns */
-  .navbar.open a,
-  .navbar.open .dropdown {
+  /* espaçamento interno */
+  .navbar a,
+  .navbar .dropdown {
     padding: 1rem;
   }
 }
