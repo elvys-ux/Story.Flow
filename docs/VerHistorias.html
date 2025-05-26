@@ -238,19 +238,22 @@
 
   <!-- Scripts -->
 <script>
+
   (function(){
     const loader  = document.getElementById('loader');
     const page    = document.getElementById('page-wrapper');
     const quoteEl = document.getElementById('quote');
     let versos    = ['Carregando conteúdo…'];
+    let fila      = [];
+    let intervalo;
 
-    // Tenta buscar os versos
+    // 1) Tenta carregar JSON de versos
     fetch('versos.json')
-      .then(res => res.json())
+      .then(res => res.ok ? res.json() : Promise.reject())
       .then(json => versos = json)
-      .catch(() => {});
+      .catch(() => { /* mantém o default */ });
 
-    let fila = [];
+    // 2) Embaralha a fila
     function embaralhar() {
       fila = versos
         .map(v => ({ v, r: Math.random() }))
@@ -258,23 +261,19 @@
         .map(o => o.v);
     }
 
-    function atualizar() {
-      quoteEl.classList.remove('fade-in');
-      quoteEl.classList.add('fade-out');
-      setTimeout(() => {
-        if (!fila.length) embaralhar();
-        quoteEl.textContent = fila.shift();
-        quoteEl.classList.remove('fade-out');
-        quoteEl.classList.add('fade-in');
-      }, 800);
+    // 3) Atualiza o verso mostrado
+    function atualizarVerso() {
+      if (!fila.length) embaralhar();
+      quoteEl.textContent = fila.shift();
     }
 
-    embaralhar();
-    quoteEl.classList.add('fade-in');
-    atualizar();
-    const intervalo = setInterval(atualizar, 2500);
+    // 4) Inicia o ciclo de frases
+    function iniciarCiclo() {
+      atualizarVerso();
+      intervalo = setInterval(atualizarVerso, 2500);
+    }
 
-    // Função para remover o loader quando tudo estiver pronto
+    // 5) Finaliza o loader (fade‐out e revela conteúdo)
     function finalizarLoader() {
       clearInterval(intervalo);
       loader.style.transition = 'opacity .5s';
@@ -286,8 +285,27 @@
       });
     }
 
-    // Expõe no escopo global sem executar imediatamente
+    // Exponha para ser chamado por VerHistorias.js
     window.finalizeLoader = finalizarLoader;
+
+    // Configure o ciclo após DOM pronto
+    document.addEventListener('DOMContentLoaded', iniciarCiclo);
+
+    // Botão hamburger e dropdowns
+    const btnHamburger = document.getElementById('btnHamburger');
+    const navbar       = document.querySelector('.navbar');
+    btnHamburger.addEventListener('click', () => navbar.classList.toggle('open'));
+
+    document.querySelectorAll('.navbar .dropdown > .toggle')
+      .forEach(toggle => {
+        toggle.addEventListener('click', e => {
+          e.preventDefault();
+          toggle.parentElement.classList.toggle('open');
+        });
+      });
+  })();
+
+
 
     // Configura menu hamburger e dropdowns
     const btnHamburger = document.getElementById('btnHamburger');
