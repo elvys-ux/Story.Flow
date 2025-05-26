@@ -244,13 +244,12 @@
     const quoteEl = document.getElementById('quote');
     let versos    = ['Carregando conteúdo…'];
 
-    // Tenta carregar os versos de versos.json
+    // Tenta buscar os versos
     fetch('versos.json')
       .then(res => res.json())
       .then(json => versos = json)
-      .catch(() => { /* se falhar, mantém o default */ });
+      .catch(() => {});
 
-    // Prepara fila de frases
     let fila = [];
     function embaralhar() {
       fila = versos
@@ -259,7 +258,6 @@
         .map(o => o.v);
     }
 
-    // Atualiza o verso com fade
     function atualizar() {
       quoteEl.classList.remove('fade-in');
       quoteEl.classList.add('fade-out');
@@ -276,8 +274,8 @@
     atualizar();
     const intervalo = setInterval(atualizar, 2500);
 
-    // Finaliza o loader (fade-out + revelar conteúdo)
-    function finalizar() {
+    // Função para remover o loader quando tudo estiver pronto
+    function finalizarLoader() {
       clearInterval(intervalo);
       loader.style.transition = 'opacity .5s';
       loader.style.opacity = '0';
@@ -288,11 +286,26 @@
       });
     }
 
-    // Quando a página termina de carregar
-    window.addEventListener('load', finalizar);
-    // Se o script rodar após o load ter ocorrido
-    if (document.readyState === 'complete') finalizar();
+    // Expõe no escopo global sem executar imediatamente
+    window.finalizeLoader = finalizarLoader;
 
+    // Configura menu hamburger e dropdowns
+    const btnHamburger = document.getElementById('btnHamburger');
+    const navbar       = document.querySelector('.navbar');
+    btnHamburger.addEventListener('click', () => {
+      navbar.classList.toggle('open');
+    });
+
+    document.querySelectorAll('.navbar .dropdown > .toggle')
+      .forEach(toggle => {
+        toggle.addEventListener('click', e => {
+          e.preventDefault();
+          toggle.parentElement.classList.toggle('open');
+        });
+      });
+  })();
+
+  
     // HAMBURGER MENU
     const btnHamburger = document.getElementById('btnHamburger');
     const navbar       = document.querySelector('.navbar');
