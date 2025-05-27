@@ -16,59 +16,72 @@ body {
 }
 
 /* ====== NAVBAR FIXA ====== */
-/* === NAVBAR E HAMBURGER === */
-
-/* Desktop (sempre visível) */
 .navbar {
-  display: flex !important;
-}
-.hamburger {
-  display: none !important;
+  position: fixed;
+  top: 0;
+  width: 100%;
+  background-color: rgba(0, 0, 0, 0.9);
+  padding: 12px;
+  z-index: 1000;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 }
 
-/* Mobile (≤768px): esconde a navbar, mostra o hamburger */
-@media (max-width: 768px) {
-  .navbar {
-    display: none;
-    flex-direction: column;
-    width: 100%;
-    background: rgba(0,0,0,0.9);
-    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-    position: fixed;
-    top: 0; left: 0;
-    z-index: 1000;
-  }
-  .navbar.open {
-    display: flex;
-  }
-  .hamburger {
-    display: flex;
-    position: fixed;
-    top: 1rem; left: 1rem;
-    width: 2rem; height: 2rem;
-    background: rgba(0,0,0,0.7);
-    border-radius: 4px;
-    padding: 0.3rem;
-    flex-direction: column;
-    justify-content: space-around;
-    z-index: 1001;
-  }
-  .hamburger span {
-    display: block;
-    height: 3px;
-    background: #fff;
-  }
+.navbar a {
+  font-family: Arial, sans-serif;
+  color: white;
+  text-decoration: none;
+  padding: 10px;
+  transition: background-color 0.3s, transform 0.3s;
+  border-radius: 5px;
+}
 
-  /* dentro do mobile, dropdown abre/fecha por .open */
-  .navbar .dropdown-content {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height .3s ease;
-    position: static;
-  }
-  .navbar .dropdown.open > .dropdown-content {
-    max-height: 200px; /* ajuste à altura necessária */
-  }
+.navbar a:hover {
+  background-color: rgba(0, 0, 0, 0.7);
+  transform: scale(1.1);
+}
+
+.navbar a i {
+  margin-right: 8px;
+}
+
+/* mantém a estrutura pai para o dropdown */
+.navbar .dropdown {
+  position: relative;
+}
+
+/* base do submenu: oculto, mas ocupa espaço no fluxo quando expandir */
+.navbar .dropdown-content {
+  max-height: 0;             /* começa colapsado */
+  overflow: hidden;
+  transition: max-height .3s ease;
+  background-color: rgba(0,0,0,0.5);
+}
+
+/* estilo dos links internos permanece igual */
+.navbar .dropdown-content a {
+  color: white;
+  padding: 12px 16px;
+  text-decoration: none;
+  display: block;
+}
+
+.navbar .dropdown-content a:hover {
+  background-color: rgba(255,255,255,0.2);
+}
+
+/* quando via JS adiciona .open ao dropdown, o submenu expande */
+.navbar .dropdown.open > .dropdown-content {
+  max-height: 200px;   /* ajuste conforme número de itens */
+}
+
+/* Área para mostrar o usuário (nome ou "Login") */
+#userMenuArea {
+  font-family: Arial, sans-serif;
+  color: white;
+  cursor: pointer;
 }
 
 /* =================== SEARCH BOX =================== */
@@ -322,40 +335,4 @@ footer.visible {
 .sheet-sinopse {
   white-space: pre-wrap;
   word-wrap: break-word;
-}
-
-
-
-
-
-
-
-
-/* ====================== OVERRIDES DA NAVBAR ====================== */
-
-/* === DESKTOP: sempre fixa e dropdown só por hover === */
-@media (min-width: 769px) {
-  .navbar {
-    transform: none !important;
-    transition: none !important;
-  }
-  /* remove qualquer abertura por classe .open no desktop */
-  .navbar .dropdown.open > .dropdown-content {
-    max-height: 0 !important;
-    display: none !important;
-  }
-  /* mantém o hover padrão */
-  .navbar .dropdown:hover > .dropdown-content {
-    display: block !important;
-    max-height: none !important;
-  }
-  /* esconder o botão hamburger no desktop */
-  .hamburger {
-    display: none !important;
-  }
-}
-
-/* === MOBILE: comportamento original que você já tem === */
-@media (max-width: 768px) {
-  /* nada aqui – seu CSS mobile continua valendo */
 }
