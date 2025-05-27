@@ -302,7 +302,7 @@ function getFilteredStories() {
   if (sortFilter.value === 'date') {
     arr.sort((a, b) => b.cartao.dataCartao.localeCompare(a.cartao.dataCartao));
   } else if (sortFilter.value === 'popularity') {
-    arr.sort((a, b) => b.cartao.likes - a.cartao.likes);
+    arr.sort((a, b) => b.cartao.likes - a.cartao.likes));
   }
   return arr;
 }
