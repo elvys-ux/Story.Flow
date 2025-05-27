@@ -163,13 +163,12 @@
   const quoteEl     = document.getElementById('quote');
   let versos        = ['Carregando conteúdo…'], fila = [], intervalo;
 
-  // 1) Tenta carregar JSON de versos
+  // Carrega JSON de versos (se existir)
   fetch('versos.json')
     .then(r => r.ok ? r.json() : Promise.reject())
     .then(json => versos = json)
-    .catch(() => { /* mantém o default */ });
+    .catch(() => { /* mantém padrão */ });
 
-  // 2) Embaralha a fila
   function embaralhar() {
     fila = versos
       .map(v => ({ v, r: Math.random() }))
@@ -177,18 +176,17 @@
       .map(o => o.v);
   }
 
-  // 3) Atualiza o verso
   function atualizarVerso() {
     if (!fila.length) embaralhar();
     quoteEl.textContent = fila.shift();
   }
 
-  // 4) Inicia ciclo de frases
+  // Inicia ciclo imediatamente
   embaralhar();
   atualizarVerso();
   intervalo = setInterval(atualizarVerso, 2500);
 
-  // 5) Exponha finalizeLoader para ser chamado depois
+  // Exponha para ser chamado depois pelo seu VerHistorias.js
   window.finalizeLoader = () => {
     clearInterval(intervalo);
     loader.style.transition = 'opacity 0.5s';
