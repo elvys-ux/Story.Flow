@@ -156,44 +156,47 @@
 
   <!-- SCRIPTS -->
   <script>
-  (function(){
-    /* -- Loader de versos -- */
-    const loader  = document.getElementById('loader');
-    const page    = document.getElementById('page-wrapper');
-    const quoteEl = document.getElementById('quote');
-    let versos = ['Carregando conteúdo…'], fila = [], intervalo;
+(function(){
+  const loader      = document.getElementById('loader');
+  const pageWrapper = document.getElementById('page-wrapper');
+  const quoteEl     = document.getElementById('quote');
+  let versos = ['Carregando conteúdo…'], fila = [], intervalo;
 
-    fetch('versos.json')
-      .then(r => r.ok ? r.json() : Promise.reject())
-      .then(json => versos = json)
-      .catch(() => {});
+  // Tenta carregar frases
+  fetch('versos.json')
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(json => versos = json)
+    .catch(() => { /* mantém o default */ });
 
-    function embaralhar() {
-      fila = versos.map(v=>({v,r:Math.random()}))
-                  .sort((a,b)=>a.r-b.r)
-                  .map(o=>o.v);
-    }
-    function atualizarVerso(){
-      if(!fila.length) embaralhar();
-      quoteEl.textContent = fila.shift();
-    }
-    function iniciarCiclo() {
-      atualizarVerso();
-      intervalo = setInterval(atualizarVerso,2500);
-    }
-    function finalizarLoader() {
-      clearInterval(intervalo);
-      loader.style.transition = 'opacity .5s';
-      loader.style.opacity = '0';
-      loader.addEventListener('transitionend',()=>{
-        loader.remove();
-        page.style.visibility='visible';
-        document.body.classList.remove('loading');
-      });
-    }
-    window.finalizeLoader = finalizarLoader;
-    document.addEventListener('DOMContentLoaded', iniciarCiclo);
+  function embaralhar() {
+    fila = versos
+      .map(v => ({ v, r: Math.random() }))
+      .sort((a,b) => a.r - b.r)
+      .map(o => o.v);
+  }
 
+  function atualizarVerso() {
+    if (!fila.length) embaralhar();
+    quoteEl.textContent = fila.shift();
+  }
+
+  // Inicia ciclo imediatamente
+  embaralhar();
+  atualizarVerso();
+  intervalo = setInterval(atualizarVerso, 2500);
+
+  // Expõe finalizeLoader globalmente
+  window.finalizeLoader = () => {
+    clearInterval(intervalo);
+    loader.style.transition = 'opacity 0.5s';
+    loader.style.opacity = '0';
+    loader.addEventListener('transitionend', () => {
+      loader.remove();
+      pageWrapper.style.visibility = 'visible';
+      document.body.classList.remove('loading');
+    });
+  };
+})();
     /* -- Hamburger & dropdown mobile -- */
     const btn = document.getElementById('btnHamburger');
     const nav = document.querySelector('.navbar');
