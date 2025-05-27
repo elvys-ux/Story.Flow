@@ -28,7 +28,10 @@ const warningNo      = document.getElementById('warningNo');
 
 let categoryMap = {}; // id → nome
 
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', () => {
+  init();
+  setupMenuToggles();
+});
 
 async function init() {
   // Impede reload no form de busca
@@ -54,8 +57,7 @@ async function init() {
   // Renderiza primeiros cartões
   initialLoad();
 
-  
-  // Agora que o container já está populado, tira o loader
+  // Tira o loader assim que tudo estiver populado
   if (window.finalizeLoader) {
     window.finalizeLoader();
   }
@@ -79,6 +81,38 @@ async function init() {
     modalOverlay.style.display = 'none';
   });
   warningNo.addEventListener('click', () => warningOverlay.style.display = 'none');
+}
+
+function setupMenuToggles() {
+  const btnHamburger = document.getElementById('btnHamburger');
+  const navbar       = document.querySelector('.navbar');
+
+  // Toggle da navbar inteira
+  btnHamburger.addEventListener('click', () => {
+    if (window.innerWidth <= 768) {
+      navbar.classList.toggle('open');
+    }
+  });
+
+  // Toggle dos submenus
+  document.querySelectorAll('.navbar .dropdown > .toggle')
+    .forEach(toggle => {
+      toggle.addEventListener('click', e => {
+        if (window.innerWidth <= 768) {
+          e.preventDefault();
+          toggle.parentElement.classList.toggle('open');
+        }
+      });
+    });
+
+  // Ao redimensionar para desktop, fecha tudo
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 768) {
+      navbar.classList.remove('open');
+      document.querySelectorAll('.navbar .dropdown.open')
+        .forEach(dd => dd.classList.remove('open'));
+    }
+  });
 }
 
 async function renderUserArea() {
@@ -119,7 +153,6 @@ async function fetchCategories() {
 }
 
 async function fetchStories() {
-  // Busca histórias principais
   const { data: historias, error: errH } = await supabase
     .from('historias')
     .select('id, titulo, descricao, data_criacao')
@@ -129,13 +162,11 @@ async function fetchStories() {
     return;
   }
 
-  // Busca cartões
   const { data: cartoes } = await supabase
     .from('cartoes')
     .select('historia_id, titulo_cartao, sinopse_cartao, autor_cartao, data_criacao, likes');
   const cardMap = Object.fromEntries(cartoes.map(c => [c.historia_id, c]));
 
-  // Busca categorias vinculadas
   const { data: hcData } = await supabase
     .from('historia_categorias')
     .select('historia_id, categoria_id');
@@ -145,7 +176,6 @@ async function fetchStories() {
     hcMap[historia_id].push(categoryMap[categoria_id]);
   });
 
-  // Combina tudo
   allStories = historias.map(h => {
     const c = cardMap[h.id] || {};
     return {
@@ -165,7 +195,6 @@ async function fetchStories() {
 }
 
 function formatSinopse(text = '') {
-  // Converte cada \n em <br>
   return text.split('\n').join('<br>');
 }
 
@@ -173,26 +202,22 @@ function createStoryCard(story) {
   const div = document.createElement('div');
   div.className = 'sheet';
 
-  // Título
   const h3 = document.createElement('h3');
   h3.textContent = story.cartao.tituloCartao;
   div.appendChild(h3);
 
-  // Sinopse com quebras de linha via CSS
   const sin = document.createElement('div');
   sin.className = 'sheet-sinopse';
-  sin.style.whiteSpace = 'pre-wrap';               // preserva quebras de linha
+  sin.style.whiteSpace = 'pre-wrap';
   sin.innerHTML = formatSinopse(story.cartao.sinopseCartao);
   div.appendChild(sin);
 
-  // “mais...”
   const more = document.createElement('span');
   more.className = 'ver-mais';
   more.textContent = 'mais...';
   more.onclick = () => openModal(story);
   div.appendChild(more);
 
-  // Likes
   if (story.hasCartao) {
     const likeDiv = document.createElement('div');
     likeDiv.style.marginTop = '10px';
@@ -227,7 +252,6 @@ function createStoryCard(story) {
     div.appendChild(likeDiv);
   }
 
-  // Categorias
   const catDiv = document.createElement('div');
   catDiv.className = 'sheet-categories';
   (story.cartao.categorias.length ? story.cartao.categorias : ['Sem Categoria'])
@@ -245,18 +269,14 @@ function createStoryCard(story) {
 function openModal(story) {
   currentStoryId = story.id;
   modalTitle.textContent = story.cartao.tituloCartao;
-
-  // preserva quebras de linha também no modal
   modalFullText.style.whiteSpace = 'pre-wrap';
   modalFullText.innerHTML = formatSinopse(story.cartao.sinopseCartao);
 
   const readBtn = document.createElement('button');
   readBtn.textContent = 'Ler';
   readBtn.onclick = () => {
-    modalFullText.style.whiteSpace = 'pre-wrap';
     modalFullText.innerHTML = formatSinopse(story.cartao.historiaCompleta);
   };
-  // insere o botão antes das informações
   modalFullText.parentNode.insertBefore(readBtn, modalInfo);
 
   modalInfo.innerHTML = `
