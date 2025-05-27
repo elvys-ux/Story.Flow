@@ -2,58 +2,213 @@
 <html lang="pt">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>StoryFlow – Ler Histórias</title>
+  <meta name="description" content="Leia as histórias da comunidade em StoryFlow, filtre por categoria, pesquise por título ou autor e navegue entre cartões.">
   <!-- Font Awesome -->
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
-  />
-  <!-- Seu CSS principal -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <!-- Seu CSS -->
   <link rel="stylesheet" href="css/VerHistorias.css">
-
-
 </head>
-<body class="loading">
+  <title>Loader Interativo Avançado</title>
+   <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
 
-  <!-- LOADER -->
-  <div id="loader" aria-live="polite" aria-busy="true">
+    /* Tela de loading full-screen */
+    #loader {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: linear-gradient(135deg, #e0f7fa, #ffffff);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      z-index: 9999;
+    }
+
+    /* Spinner circular */
+    .spinner {
+      position: absolute;
+      width: 60px; height: 60px;
+      border: 8px solid rgba(0,0,0,0.1);
+      border-top-color: #4caf50;
+      border-radius: 50%;
+      cursor: grab;
+    }
+
+    #main-content { visibility: hidden; }
+  </style>
+  
+<body>
+  
+   <div id="loader">
     <div class="spinner"></div>
-    <p id="quote">Carregando conteúdo…</p>
   </div>
 
-  <div id="page-wrapper">
- 
-    <!-- NAVBAR -->
-    <nav class="navbar">
-      <a href="index.html"><i class="fas fa-home"></i> Início</a>
-      <div class="dropdown">
-        <a href="#" class="toggle"><i class="fas fa-pencil-alt"></i> Criar História ▾</a>
-        <div class="dropdown-content">
-          <a href="diario.html">Escrever Diário</a>
-          <a href="historia.html">Escrever História</a>
-        </div>
-      </div>
-      <div class="dropdown">
-        <a href="#" class="toggle"><i class="fas fa-book"></i> Histórias ▾</a>
-        <div class="dropdown-content">
-          <a href="hisotirasqueescrevi.html">Minhas Histórias</a>
-          <a href="VerHistorias.html">Ler Histórias</a>
-        </div>
-      </div>
-      <div id="userMenuArea" class="user-area"></div>
-      <form id="searchForm" class="search-box">
-        <input type="text" id="searchBar" placeholder="Pesquisar por título ou autor…" autocomplete="off">
-        <button type="submit"><i class="fas fa-search"></i></button>
-      </form>
-    </nav>
-
-    <!-- SEU CONTEÚDO (filtros, cards, modal, footer etc.) -->
-    <!-- … -->
-
+  <div id="main-content">
+    <!-- Conteúdo principal -->
   </div>
 
- 
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <a href="index.html"><i class="fas fa-home"></i> Início</a>
+    <div class="dropdown">
+      <a href="#"><i class="fas fa-pencil-alt"></i> Criar História</a>
+      <div class="dropdown-content">
+        <a href="diario.html">Escrever Diário</a>
+        <a href="historia.html">Escrever História</a>
+      </div>
+    </div>
+    <div class="dropdown">
+      <a href="#"><i class="fas fa-book"></i> Histórias</a>
+      <div class="dropdown-content">
+        <a href="hisotirasqueescrevi.html">Minhas Histórias</a>
+        <a href="VerHistorias.html">Ler Histórias</a>
+      </div>
+    </div>
+    <div id="userMenuArea" class="user-area"></div>
+    <form id="searchForm" class="search-box">
+      <input type="text" id="searchBar" placeholder="Pesquisar por título ou autor…" autocomplete="off">
+      <button type="submit" id="searchBtn"><i class="fas fa-search"></i></button>
+    </form>
+  </nav>
+
+  <!-- FILTROS -->
+  <div class="filter-bar">
+    <label for="category-filter">Categoria:</label>
+    <select id="category-filter" aria-label="Filtrar por categoria">
+      <option value="">Todas as categorias</option>
+      <option value="Fantasia">Fantasia</option>
+      <option value="Terror">Terror</option>
+      <option value="Comédia">Comédia</option>
+      <option value="Ficção Científica">Ficção Científica</option>
+      <option value="Drama">Drama</option>
+    </select>
+    <label for="sort-filter">Ordenar por:</label>
+    <select id="sort-filter" aria-label="Ordenar histórias">
+      <option value="date">Data</option>
+      <option value="popularity">Popularidade</option>
+    </select>
+  </div>
+
+  <!-- SEÇÃO DE HISTÓRIAS -->
+  <main>
+    <section class="stories-section">
+      <h2>Histórias da Comunidade</h2>
+      <div id="storiesContainer" class="stories-container" aria-live="polite"></div>
+      <div class="pagination">
+        <button id="loadMoreBtn" aria-label="Carregar mais histórias">Carregar Mais</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- MODAL DE LEITURA -->
+  <div id="modalOverlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle" style="display:none;">
+    <div class="modal-content">
+      <button id="modalClose" class="modal-close" aria-label="Fechar modal">&times;</button>
+      <h2 id="modalTitle">Título da História</h2>
+      <div id="modalFullText" class="modal-text"></div>
+      <!-- botão Continuar, controlado pelo JS -->
+      <button id="continuarBtn" class="continuar-btn" style="display:none;">Continuar</button>
+      <div id="modalInfo" class="modal-info"></div>
+    </div>
+  </div>
+
+  <!-- AVISO AO CLICAR FORA -->
+  <div id="warningOverlay" class="warning-overlay" style="display:none;" role="alertdialog" aria-modal="true" aria-labelledby="warningText">
+    <div class="warning-box">
+      <p id="warningText">Deseja fechar a leitura?</p>
+      <button id="warningYes">Sim</button>
+      <button id="warningNo">Não</button>
+    </div>
+  </div>
+
+  <footer>
+    <small>© 2025 StoryFlow – Turma Tis7 | <a href="Sobre.html">Termos de uso</a></small>
+  </footer>
+
+<script>
+    (function(){
+      const spinner = document.querySelector('.spinner');
+      const loader  = document.getElementById('loader');
+      const main    = document.getElementById('main-content');
+
+      // Estado de física
+      let vx = (Math.random()*2+1) * (Math.random()<0.5?-1:1);
+      let vy = (Math.random()*2+1) * (Math.random()<0.5?-1:1);
+      let x = (window.innerWidth - spinner.clientWidth) / 2;
+      let y = (window.innerHeight - spinner.clientHeight) / 2;
+      const size = spinner.clientWidth;
+
+      // Estado de arraste
+      let dragging = false;
+      let dragStart = {}, timeStart;
+
+      function animate() {
+        if (!dragging) {
+          x += vx;
+          y += vy;
+          // colisão com bordas da viewport
+          if (x < 0)      { x = 0;      vx = -vx; }
+          if (x > window.innerWidth - size) {
+                          x = window.innerWidth - size; vx = -vx;
+          }
+          if (y < 0)      { y = 0;      vy = -vy; }
+          if (y > window.innerHeight - size) {
+                          y = window.innerHeight - size; vy = -vy;
+          }
+          spinner.style.transform = `translate(${x}px, ${y}px)`;
+        }
+        requestAnimationFrame(animate);
+      }
+      animate();
+
+      // Iniciar arraste
+      spinner.addEventListener('mousedown', e => {
+        dragging = true;
+        spinner.style.cursor = 'grabbing';
+        dragStart = { mx: e.clientX, my: e.clientY, bx: x, by: y };
+        timeStart = performance.now();
+        e.preventDefault();
+      });
+
+      // Durante arraste
+      document.addEventListener('mousemove', e => {
+        if (!dragging) return;
+        const dx = e.clientX - dragStart.mx;
+        const dy = e.clientY - dragStart.my;
+        x = Math.min(window.innerWidth - size, Math.max(0, dragStart.bx + dx));
+        y = Math.min(window.innerHeight - size, Math.max(0, dragStart.by + dy));
+        spinner.style.transform = `translate(${x}px, ${y}px)`;
+      });
+
+      // Final do arraste
+      document.addEventListener('mouseup', e => {
+        if (!dragging) return;
+        dragging = false;
+        spinner.style.cursor = 'grab';
+        const dt = (performance.now() - timeStart) / 1000;
+        const dx = x - dragStart.bx, dy = y - dragStart.by;
+        vx = Math.max(-10, Math.min(10, dx / dt));
+        vy = Math.max(-10, Math.min(10, dy / dt));
+      });
+
+      // Remover loader após carregamento (simulação 3s)
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          loader.style.transition = 'opacity 0.5s';
+          loader.style.opacity = 0;
+          loader.addEventListener('transitionend', () => {
+            loader.remove();
+            main.style.visibility = 'visible';
+          });
+        }, 3000);
+      });
+    })();
+  </script>
+  <!-- Scripts -->
   <script type="module" src="js/supabase.js"></script>
   <script type="module" src="js/VerHistorias.js"></script>
 </body>
