@@ -155,19 +155,21 @@
   </div>
 
   <!-- SCRIPTS -->
-  <script>
+<script>
 (function(){
+  // ===== LOADER =====
   const loader      = document.getElementById('loader');
   const pageWrapper = document.getElementById('page-wrapper');
   const quoteEl     = document.getElementById('quote');
-  let versos = ['Carregando conteúdo…'], fila = [], intervalo;
+  let versos        = ['Carregando conteúdo…'], fila = [], intervalo;
 
-  // Tenta carregar frases
+  // 1) Tenta carregar JSON de versos
   fetch('versos.json')
     .then(r => r.ok ? r.json() : Promise.reject())
     .then(json => versos = json)
     .catch(() => { /* mantém o default */ });
 
+  // 2) Embaralha a fila
   function embaralhar() {
     fila = versos
       .map(v => ({ v, r: Math.random() }))
@@ -175,17 +177,18 @@
       .map(o => o.v);
   }
 
+  // 3) Atualiza o verso
   function atualizarVerso() {
     if (!fila.length) embaralhar();
     quoteEl.textContent = fila.shift();
   }
 
-  // Inicia ciclo imediatamente
+  // 4) Inicia ciclo de frases
   embaralhar();
   atualizarVerso();
   intervalo = setInterval(atualizarVerso, 2500);
 
-  // Expõe finalizeLoader globalmente
+  // 5) Exponha finalizeLoader para ser chamado depois
   window.finalizeLoader = () => {
     clearInterval(intervalo);
     loader.style.transition = 'opacity 0.5s';
@@ -196,34 +199,37 @@
       document.body.classList.remove('loading');
     });
   };
-})();
-    /* -- Hamburger & dropdown mobile -- */
-    const btn = document.getElementById('btnHamburger');
-    const nav = document.querySelector('.navbar');
 
-    btn.addEventListener('click', ()=>{
-      if (window.innerWidth<=768) nav.classList.toggle('open');
-    });
+  // ===== HAMBURGER & DROPDOWNS MOBILE =====
+  const btnHamburger = document.getElementById('btnHamburger');
+  const navbar       = document.querySelector('.navbar');
 
-    document.querySelectorAll('.navbar .dropdown > .toggle')
-      .forEach(t=>{
-        t.addEventListener('click', e=>{
-          if(window.innerWidth<=768){
-            e.preventDefault();
-            t.parentElement.classList.toggle('open');
-          }
-        });
+  btnHamburger.addEventListener('click', () => {
+    if (window.innerWidth <= 768) {
+      navbar.classList.toggle('open');
+    }
+  });
+
+  document.querySelectorAll('.navbar .dropdown > .toggle')
+    .forEach(toggle => {
+      toggle.addEventListener('click', e => {
+        if (window.innerWidth <= 768) {
+          e.preventDefault();
+          toggle.parentElement.classList.toggle('open');
+        }
       });
-
-    window.addEventListener('resize', ()=>{
-      if(window.innerWidth>768){
-        nav.classList.remove('open');
-        document.querySelectorAll('.navbar .dropdown.open')
-          .forEach(dd=>dd.classList.remove('open'));
-      }
     });
-  })();
-  </script>
+
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 768) {
+      navbar.classList.remove('open');
+      document.querySelectorAll('.navbar .dropdown.open')
+        .forEach(dd => dd.classList.remove('open'));
+    }
+  });
+})();
+</script>
+
   <script type="module" src="js/supabase.js"></script>
   <script type="module" src="js/VerHistorias.js"></script>
 </body>
