@@ -159,18 +159,14 @@
     </div>
 
     <footer>
-      <small>© 2025 StoryFlow – Turma Tis7 | 
+      <small>© 2025 StoryFlow – Turma Tis7 |
         <a href="Sobre.html">Termos de uso</a>
       </small>
     </footer>
 
   </div> <!-- /#page-wrapper -->
 
-  <!-- Scripts externos -->
-  <script type="module" src="js/supabase.js"></script>
-  <script type="module" src="js/VerHistorias.js"></script>
-
-  <!-- Loader & Hamburguer Logic -->
+  <!-- ========= LOGIC: loader & hamburger ========= -->
   <script>
   (function(){
     // Loader
@@ -186,17 +182,18 @@
 
     function embaralhar() {
       fila = versos
-        .map(v=>({v,r:Math.random()}))
+        .map(v => ({v,r:Math.random()}))
         .sort((a,b)=>a.r-b.r)
         .map(o=>o.v);
     }
     function atualizarVerso() {
-      if(!fila.length) embaralhar();
+      if (!fila.length) embaralhar();
       quoteEl.textContent = fila.shift();
     }
 
-    embaralhar(); atualizarVerso();
-    intervalo = setInterval(atualizarVerso,2500);
+    embaralhar();
+    atualizarVerso();
+    intervalo = setInterval(atualizarVerso, 2500);
 
     window.finalizeLoader = () => {
       clearInterval(intervalo);
@@ -208,16 +205,21 @@
       });
     };
 
-    // Hamburger mobile
+    // Hamburger (mobile)
     const btn = document.getElementById('btnHamburger');
     const nav = document.querySelector('.navbar');
     btn.addEventListener('click', ()=>{
-      if(window.innerWidth<=768) nav.classList.toggle('open');
+      if (window.innerWidth <= 768) nav.classList.toggle('open');
     });
     window.addEventListener('resize', ()=>{
-      if(window.innerWidth>768) nav.classList.remove('open');
+      if (window.innerWidth > 768) nav.classList.remove('open');
     });
   })();
   </script>
+
+  <!-- ========= IMPORTS ========= -->
+  <script type="module" src="js/supabase.js"></script>
+  <script type="module" src="js/VerHistorias.js"></script>
+
 </body>
 </html>
