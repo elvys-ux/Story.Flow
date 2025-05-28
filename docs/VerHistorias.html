@@ -5,80 +5,60 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>StoryFlow – Ler Histórias</title>
   <meta name="description" content="Leia as histórias da comunidade em StoryFlow, filtre por categoria, pesquise por título ou autor e navegue entre cartões.">
+
   <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <!-- Seu CSS -->
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+  <!-- CSS principal -->
   <link rel="stylesheet" href="css/VerHistorias.css">
-</head>
-  <title>Loader Interativo Avançado</title>
 
+  <!-- Loader & Hamburger -->
   <style>
-  /* ===== LOADER ===== */
-  body.loading { overflow: hidden; }
-  #loader {
-    position: fixed;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg,#e0f7fa,#ffffff);
-    z-index: 10000;
-    text-align: center;
-    padding: 1rem;
-    transition: opacity .5s;
-  }
-  .spinner {
-    width: 50px; height: 50px;
-    border: 5px solid rgba(0,0,0,0.1);
-    border-top-color: #333;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: .5rem;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  #quote {
-    max-width: 80%;
-    font-style: italic;
-    color: #333;
-    line-height: 1.4;
-    opacity: 0;
-    animation: fadeIn 0.8s forwards;
-  }
-  @keyframes fadeIn  { from { opacity: 0 } to { opacity: 1 } }
-  @keyframes fadeOut { from { opacity: 1 } to { opacity: 0 } }
+    body.loading { overflow: hidden; }
+    #loader {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: linear-gradient(135deg,#e0f7fa,#ffffff);
+      z-index: 10000; padding: 1rem;
+      transition: opacity .5s;
+    }
+    .spinner {
+      width: 50px; height: 50px;
+      border: 5px solid rgba(0,0,0,0.1);
+      border-top-color: #333;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: .5rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #quote {
+      max-width: 80%; font-style: italic; color: #333;
+      line-height: 1.4; opacity: 0;
+      animation: fadeIn 0.8s forwards;
+    }
+    @keyframes fadeIn  { from{opacity:0} to{opacity:1} }
+    @keyframes fadeOut { from{opacity:1} to{opacity:0} }
 
-  /* ===== HAMBURGER ===== */
-  .hamburger {
-    display: none;
-    position: fixed;
-    top: 1rem;
-    left: 1rem;
-    width: 2rem;
-    height: 2rem;
-    padding: .3rem;
-    background: rgba(0,0,0,0.7);
-    border: none;
-    border-radius: 4px;
-    flex-direction: column;
-    justify-content: space-around;
-    z-index: 10001;
-    cursor: pointer;
-  }
-  .hamburger span {
-    display: block;
-    height: 3px;
-    background: #fff;
-  }
-
-  /* ===== MOBILE ===== */
-  @media (max-width: 768px) {
-    .hamburger { display: flex; }
-  }
-</style>
-
-  
-<body>
+    .hamburger {
+      display: none;
+      position: fixed; top:1rem; left:1rem;
+      width:2rem; height:2rem; padding:.3rem;
+      background:rgba(0,0,0,0.7); border:none;
+      border-radius:4px; flex-direction:column;
+      justify-content:space-around; z-index:10001;
+      cursor:pointer;
+    }
+    .hamburger span {
+      display:block; height:3px; background:#fff;
+    }
+    @media (max-width:768px) {
+      .hamburger { display:flex; }
+    }
+  </style>
+</head>
+<body class="loading">
 
   <!-- LOADER full-screen -->
   <div id="loader" aria-live="polite" aria-busy="true">
@@ -86,12 +66,12 @@
     <p id="quote">Carregando conteúdo…</p>
   </div>
 
-  <!-- BOTÃO HAMBURGER (só aparece em mobile) -->
+  <!-- BOTÃO HAMBURGER (mobile) -->
   <button id="btnHamburger" class="hamburger" aria-label="Menu">
     <span></span><span></span><span></span>
   </button>
 
-  <!-- TODO O CONTEÚDO DA PÁGINA DENTRO DESTE WRAPPER -->
+  <!-- TODO O CONTEÚDO DA PÁGINA -->
   <div id="page-wrapper">
 
     <!-- NAVBAR -->
@@ -113,114 +93,131 @@
       </div>
       <div id="userMenuArea" class="user-area"></div>
       <form id="searchForm" class="search-box">
-        <input type="text" id="searchBar" placeholder="Pesquisar por título ou autor…" autocomplete="off">
+        <input type="text" id="searchBar"
+               placeholder="Pesquisar por título ou autor…" autocomplete="off">
         <button type="submit"><i class="fas fa-search"></i></button>
       </form>
+    </nav>
 
+    <!-- FILTROS -->
+    <div class="filter-bar">
+      <label for="category-filter">Categoria:</label>
+      <select id="category-filter" aria-label="Filtrar por categoria">
+        <option value="">Todas as categorias</option>
+        <option value="Fantasia">Fantasia</option>
+        <option value="Terror">Terror</option>
+        <option value="Comédia">Comédia</option>
+        <option value="Ficção Científica">Ficção Científica</option>
+        <option value="Drama">Drama</option>
+      </select>
+      <label for="sort-filter">Ordenar por:</label>
+      <select id="sort-filter" aria-label="Ordenar histórias">
+        <option value="date">Data</option>
+        <option value="popularity">Popularidade</option>
+      </select>
+    </div>
 
+    <!-- SEÇÃO DE HISTÓRIAS -->
+    <main>
+      <section class="stories-section">
+        <h2>Histórias da Comunidade</h2>
+        <div id="storiesContainer" class="stories-container" aria-live="polite"></div>
+        <div class="pagination">
+          <button id="loadMoreBtn" aria-label="Carregar mais histórias">
+            Carregar Mais
+          </button>
+        </div>
+      </section>
+    </main>
 
-
-      
-
-  <!-- SEÇÃO DE HISTÓRIAS -->
-  <main>
-    <section class="stories-section">
-      <h2>Histórias da Comunidade</h2>
-      <div id="storiesContainer" class="stories-container" aria-live="polite"></div>
-      <div class="pagination">
-        <button id="loadMoreBtn" aria-label="Carregar mais histórias">Carregar Mais</button>
+    <!-- MODAL DE LEITURA -->
+    <div id="modalOverlay" class="modal-overlay"
+         role="dialog" aria-modal="true" aria-labelledby="modalTitle"
+         style="display:none;">
+      <div class="modal-content">
+        <button id="modalClose" class="modal-close" aria-label="Fechar modal">
+          &times;
+        </button>
+        <h2 id="modalTitle">Título da História</h2>
+        <div id="modalFullText" class="modal-text"></div>
+        <button id="continuarBtn" class="continuar-btn" style="display:none;">
+          Continuar
+        </button>
+        <div id="modalInfo" class="modal-info"></div>
       </div>
-    </section>
-  </main>
-
-  <!-- MODAL DE LEITURA -->
-  <div id="modalOverlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle" style="display:none;">
-    <div class="modal-content">
-      <button id="modalClose" class="modal-close" aria-label="Fechar modal">&times;</button>
-      <h2 id="modalTitle">Título da História</h2>
-      <div id="modalFullText" class="modal-text"></div>
-      <!-- botão Continuar, controlado pelo JS -->
-      <button id="continuarBtn" class="continuar-btn" style="display:none;">Continuar</button>
-      <div id="modalInfo" class="modal-info"></div>
     </div>
-  </div>
 
-  <!-- AVISO AO CLICAR FORA -->
-  <div id="warningOverlay" class="warning-overlay" style="display:none;" role="alertdialog" aria-modal="true" aria-labelledby="warningText">
-    <div class="warning-box">
-      <p id="warningText">Deseja fechar a leitura?</p>
-      <button id="warningYes">Sim</button>
-      <button id="warningNo">Não</button>
+    <!-- AVISO AO CLICAR FORA -->
+    <div id="warningOverlay" class="warning-overlay"
+         style="display:none;" role="alertdialog" aria-modal="true"
+         aria-labelledby="warningText">
+      <div class="warning-box">
+        <p id="warningText">Deseja fechar a leitura?</p>
+        <button id="warningYes">Sim</button>
+        <button id="warningNo">Não</button>
+      </div>
     </div>
-  </div>
 
-  <footer>
-    <small>© 2025 StoryFlow – Turma Tis7 | <a href="Sobre.html">Termos de uso</a></small>
-  </footer>
+    <footer>
+      <small>© 2025 StoryFlow – Turma Tis7 | 
+        <a href="Sobre.html">Termos de uso</a>
+      </small>
+    </footer>
 
-  
-  <!-- Scripts -->
+  </div> <!-- /#page-wrapper -->
+
+  <!-- Scripts externos -->
   <script type="module" src="js/supabase.js"></script>
   <script type="module" src="js/VerHistorias.js"></script>
 
-<script>
-(function(){
-  // ===== LOADER =====
-  const loader      = document.getElementById('loader');
-  const quoteEl     = document.getElementById('quote');
-  const pageWrapper = document.getElementById('page-wrapper');
-  let versos = ['Carregando conteúdo…'], fila = [], intervalo;
+  <!-- Loader & Hamburguer Logic -->
+  <script>
+  (function(){
+    // Loader
+    const loader      = document.getElementById('loader');
+    const pageWrapper = document.getElementById('page-wrapper');
+    const quoteEl     = document.getElementById('quote');
+    let versos = ['Carregando conteúdo…'], fila = [], intervalo;
 
-  // Tenta carregar JSON de frases
-  fetch('versos.json')
-    .then(res => res.ok ? res.json() : Promise.reject())
-    .then(json => versos = json)
-    .catch(()=>{});
+    fetch('versos.json')
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(json => versos = json)
+      .catch(() => {});
 
-  function embaralhar() {
-    fila = versos
-      .map(v => ({ v, r: Math.random() }))
-      .sort((a,b) => a.r - b.r)
-      .map(o => o.v);
-  }
-  function atualizarVerso() {
-    if (!fila.length) embaralhar();
-    quoteEl.textContent = fila.shift();
-  }
+    function embaralhar() {
+      fila = versos
+        .map(v=>({v,r:Math.random()}))
+        .sort((a,b)=>a.r-b.r)
+        .map(o=>o.v);
+    }
+    function atualizarVerso() {
+      if(!fila.length) embaralhar();
+      quoteEl.textContent = fila.shift();
+    }
 
-  // inicia ciclo
-  embaralhar();
-  atualizarVerso();
-  intervalo = setInterval(atualizarVerso, 2500);
+    embaralhar(); atualizarVerso();
+    intervalo = setInterval(atualizarVerso,2500);
 
-  // expõe finalizeLoader para chamar após initialLoad()
-  window.finalizeLoader = () => {
-    clearInterval(intervalo);
-    loader.style.opacity = '0';
-    loader.addEventListener('transitionend', ()=>{
-      loader.remove();
-      pageWrapper.style.visibility = 'visible';
-      document.body.classList.remove('loading');
+    window.finalizeLoader = () => {
+      clearInterval(intervalo);
+      loader.style.opacity = '0';
+      loader.addEventListener('transitionend', ()=>{
+        loader.remove();
+        pageWrapper.style.visibility = 'visible';
+        document.body.classList.remove('loading');
+      });
+    };
+
+    // Hamburger mobile
+    const btn = document.getElementById('btnHamburger');
+    const nav = document.querySelector('.navbar');
+    btn.addEventListener('click', ()=>{
+      if(window.innerWidth<=768) nav.classList.toggle('open');
     });
-  };
-
-  // ===== HAMBURGER =====
-  const btn = document.getElementById('btnHamburger');
-  const nav = document.querySelector('.navbar');
-
-  btn.addEventListener('click', ()=>{
-    if (window.innerWidth <= 768) {
-      nav.classList.toggle('open');
-    }
-  });
-
-  window.addEventListener('resize', ()=>{
-    if (window.innerWidth > 768) {
-      nav.classList.remove('open');
-    }
-  });
-})();
-</script>
-
+    window.addEventListener('resize', ()=>{
+      if(window.innerWidth>768) nav.classList.remove('open');
+    });
+  })();
+  </script>
 </body>
 </html>
