@@ -80,48 +80,42 @@
   
 <body>
 
-  <!-- Loader full-screen -->
-<div id="loader">
-  <div class="spinner"></div>
-  <p id="quote"></p>
-</div>
-<button id="btnHamburger" class="hamburger" aria-label="Menu">
-  <span></span><span></span><span></span>
-</button>
-
-
-  
-   <div id="loader">
+  <!-- LOADER full-screen -->
+  <div id="loader" aria-live="polite" aria-busy="true">
     <div class="spinner"></div>
+    <p id="quote">Carregando conteúdo…</p>
   </div>
 
-  <div id="main-content">
-    <!-- Conteúdo principal -->
-  </div>
+  <!-- BOTÃO HAMBURGER (só aparece em mobile) -->
+  <button id="btnHamburger" class="hamburger" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
 
-  <!-- NAVBAR -->
-  <nav class="navbar">
-    <a href="index.html"><i class="fas fa-home"></i> Início</a>
-    <div class="dropdown">
-      <a href="#"><i class="fas fa-pencil-alt"></i> Criar História</a>
-      <div class="dropdown-content">
-        <a href="diario.html">Escrever Diário</a>
-        <a href="historia.html">Escrever História</a>
+  <!-- TODO O CONTEÚDO DA PÁGINA DENTRO DESTE WRAPPER -->
+  <div id="page-wrapper">
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+      <a href="index.html"><i class="fas fa-home"></i> Início</a>
+      <div class="dropdown">
+        <a href="#" class="toggle"><i class="fas fa-pencil-alt"></i> Criar História ▾</a>
+        <div class="dropdown-content">
+          <a href="diario.html">Escrever Diário</a>
+          <a href="historia.html">Escrever História</a>
+        </div>
       </div>
-    </div>
-    <div class="dropdown">
-      <a href="#"><i class="fas fa-book"></i> Histórias</a>
-      <div class="dropdown-content">
-        <a href="hisotirasqueescrevi.html">Minhas Histórias</a>
-        <a href="VerHistorias.html">Ler Histórias</a>
+      <div class="dropdown">
+        <a href="#" class="toggle"><i class="fas fa-book"></i> Histórias ▾</a>
+        <div class="dropdown-content">
+          <a href="hisotirasqueescrevi.html">Minhas Histórias</a>
+          <a href="VerHistorias.html">Ler Histórias</a>
+        </div>
       </div>
-    </div>
-    <div id="userMenuArea" class="user-area"></div>
-    <form id="searchForm" class="search-box">
-      <input type="text" id="searchBar" placeholder="Pesquisar por título ou autor…" autocomplete="off">
-      <button type="submit" id="searchBtn"><i class="fas fa-search"></i></button>
-    </form>
-  </nav>
+      <div id="userMenuArea" class="user-area"></div>
+      <form id="searchForm" class="search-box">
+        <input type="text" id="searchBar" placeholder="Pesquisar por título ou autor…" autocomplete="off">
+        <button type="submit"><i class="fas fa-search"></i></button>
+      </form>
 
   <!-- FILTROS -->
   <div class="filter-bar">
