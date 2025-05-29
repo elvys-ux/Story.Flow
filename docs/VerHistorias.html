@@ -15,7 +15,9 @@
 
   <!-- Loader & Hamburger -->
   <style>
+    /* Bloqueia scroll enquanto carrega */
     body.loading { overflow: hidden; }
+    /* Loader full‐screen */
     #loader {
       position: fixed; inset: 0;
       display: flex; flex-direction: column;
@@ -41,6 +43,7 @@
     @keyframes fadeIn  { from{opacity:0} to{opacity:1} }
     @keyframes fadeOut { from{opacity:1} to{opacity:0} }
 
+    /* Botão hamburguer (apenas mobile) */
     .hamburger {
       display: none;
       position: fixed; top:1rem; left:1rem;
@@ -66,12 +69,12 @@
     <p id="quote">Carregando conteúdo…</p>
   </div>
 
-  <!-- BOTÃO HAMBURGER (mobile) -->
+  <!-- BOTÃO HAMBURGER (só aparece em mobile) -->
   <button id="btnHamburger" class="hamburger" aria-label="Menu">
     <span></span><span></span><span></span>
   </button>
 
-  <!-- TODO O CONTEÚDO DA PÁGINA -->
+  <!-- Todo o conteúdo dentro deste wrapper -->
   <div id="page-wrapper">
 
     <!-- NAVBAR -->
@@ -158,6 +161,7 @@
       </div>
     </div>
 
+    <!-- RODAPÉ -->
     <footer>
       <small>© 2025 StoryFlow – Turma Tis7 |
         <a href="Sobre.html">Termos de uso</a>
@@ -166,23 +170,24 @@
 
   </div> <!-- /#page-wrapper -->
 
-  <!-- ========= LOGIC: loader & hamburger ========= -->
+  <!-- Loader & Hamburger Logic -->
   <script>
   (function(){
-    // Loader
+    // Elementos
     const loader      = document.getElementById('loader');
     const pageWrapper = document.getElementById('page-wrapper');
     const quoteEl     = document.getElementById('quote');
     let versos = ['Carregando conteúdo…'], fila = [], intervalo;
 
+    // Carrega JSON de frases (se existir)
     fetch('versos.json')
       .then(r => r.ok ? r.json() : Promise.reject())
       .then(json => versos = json)
-      .catch(() => {});
+      .catch(()=>{});
 
     function embaralhar() {
       fila = versos
-        .map(v => ({v,r:Math.random()}))
+        .map(v => ({v, r: Math.random()}))
         .sort((a,b)=>a.r-b.r)
         .map(o=>o.v);
     }
@@ -191,10 +196,12 @@
       quoteEl.textContent = fila.shift();
     }
 
+    // Inicia ciclo de frases
     embaralhar();
     atualizarVerso();
     intervalo = setInterval(atualizarVerso, 2500);
 
+    // Exponha finalizeLoader para ser chamado em VerHistorias.js
     window.finalizeLoader = () => {
       clearInterval(intervalo);
       loader.style.opacity = '0';
@@ -205,7 +212,7 @@
       });
     };
 
-    // Hamburger (mobile)
+    // Hambúrguer mobile
     const btn = document.getElementById('btnHamburger');
     const nav = document.querySelector('.navbar');
     btn.addEventListener('click', ()=>{
@@ -217,9 +224,8 @@
   })();
   </script>
 
-  <!-- ========= IMPORTS ========= -->
+  <!-- Supabase e lógica principal -->
   <script type="module" src="js/supabase.js"></script>
   <script type="module" src="js/VerHistorias.js"></script>
-
 </body>
 </html>
