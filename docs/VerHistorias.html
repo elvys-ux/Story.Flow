@@ -15,9 +15,7 @@
 
   <!-- Loader & Hamburger -->
   <style>
-    /* Bloqueia scroll enquanto carrega */
     body.loading { overflow: hidden; }
-    /* Loader full‐screen */
     #loader {
       position: fixed; inset: 0;
       display: flex; flex-direction: column;
@@ -43,7 +41,6 @@
     @keyframes fadeIn  { from{opacity:0} to{opacity:1} }
     @keyframes fadeOut { from{opacity:1} to{opacity:0} }
 
-    /* Botão hamburguer (apenas mobile) */
     .hamburger {
       display: none;
       position: fixed; top:1rem; left:1rem;
@@ -63,20 +60,19 @@
 </head>
 <body class="loading">
 
-  <!-- LOADER full-screen -->
+  <!-- LOADER full‐screen -->
   <div id="loader" aria-live="polite" aria-busy="true">
     <div class="spinner"></div>
     <p id="quote">Carregando conteúdo…</p>
   </div>
 
-  <!-- BOTÃO HAMBURGER (só aparece em mobile) -->
+  <!-- BOTÃO HAMBURGER (mobile) -->
   <button id="btnHamburger" class="hamburger" aria-label="Menu">
     <span></span><span></span><span></span>
   </button>
 
-  <!-- Todo o conteúdo dentro deste wrapper -->
+  <!-- TODO: Conteúdo dentro deste wrapper -->
   <div id="page-wrapper">
-
     <!-- NAVBAR -->
     <nav class="navbar">
       <a href="index.html"><i class="fas fa-home"></i> Início</a>
@@ -105,7 +101,7 @@
     <!-- FILTROS -->
     <div class="filter-bar">
       <label for="category-filter">Categoria:</label>
-      <select id="category-filter" aria-label="Filtrar por categoria">
+      <select id="category-filter">
         <option value="">Todas as categorias</option>
         <option value="Fantasia">Fantasia</option>
         <option value="Terror">Terror</option>
@@ -114,7 +110,7 @@
         <option value="Drama">Drama</option>
       </select>
       <label for="sort-filter">Ordenar por:</label>
-      <select id="sort-filter" aria-label="Ordenar histórias">
+      <select id="sort-filter">
         <option value="date">Data</option>
         <option value="popularity">Popularidade</option>
       </select>
@@ -126,36 +122,26 @@
         <h2>Histórias da Comunidade</h2>
         <div id="storiesContainer" class="stories-container" aria-live="polite"></div>
         <div class="pagination">
-          <button id="loadMoreBtn" aria-label="Carregar mais histórias">
-            Carregar Mais
-          </button>
+          <button id="loadMoreBtn">Carregar Mais</button>
         </div>
       </section>
     </main>
 
-    <!-- MODAL DE LEITURA -->
-    <div id="modalOverlay" class="modal-overlay"
-         role="dialog" aria-modal="true" aria-labelledby="modalTitle"
-         style="display:none;">
+    <!-- MODAL -->
+    <div id="modalOverlay" class="modal-overlay" style="display:none;">
       <div class="modal-content">
-        <button id="modalClose" class="modal-close" aria-label="Fechar modal">
-          &times;
-        </button>
-        <h2 id="modalTitle">Título da História</h2>
-        <div id="modalFullText" class="modal-text"></div>
-        <button id="continuarBtn" class="continuar-btn" style="display:none;">
-          Continuar
-        </button>
-        <div id="modalInfo" class="modal-info"></div>
+        <button id="modalClose" class="modal-close">&times;</button>
+        <h2 id="modalTitle">Título</h2>
+        <div id="modalFullText"></div>
+        <button id="continuarBtn" style="display:none;">Continuar</button>
+        <div id="modalInfo"></div>
       </div>
     </div>
 
-    <!-- AVISO AO CLICAR FORA -->
-    <div id="warningOverlay" class="warning-overlay"
-         style="display:none;" role="alertdialog" aria-modal="true"
-         aria-labelledby="warningText">
+    <!-- WARNING -->
+    <div id="warningOverlay" class="warning-overlay" style="display:none;">
       <div class="warning-box">
-        <p id="warningText">Deseja fechar a leitura?</p>
+        <p>Deseja fechar a leitura?</p>
         <button id="warningYes">Sim</button>
         <button id="warningNo">Não</button>
       </div>
@@ -163,68 +149,60 @@
 
     <!-- RODAPÉ -->
     <footer>
-      <small>© 2025 StoryFlow – Turma Tis7 |
-        <a href="Sobre.html">Termos de uso</a>
-      </small>
+      <small>© 2025 StoryFlow – Turma Tis7 | <a href="Sobre.html">Termos de uso</a></small>
     </footer>
-
-  </div> <!-- /#page-wrapper -->
+  </div>
 
   <!-- Loader & Hamburger Logic -->
   <script>
   (function(){
-    // Elementos
     const loader      = document.getElementById('loader');
-    const pageWrapper = document.getElementById('page-wrapper');
+    const wrapper     = document.getElementById('page-wrapper');
     const quoteEl     = document.getElementById('quote');
     let versos = ['Carregando conteúdo…'], fila = [], intervalo;
 
-    // Carrega JSON de frases (se existir)
     fetch('versos.json')
       .then(r => r.ok ? r.json() : Promise.reject())
       .then(json => versos = json)
       .catch(()=>{});
 
-    function embaralhar() {
-      fila = versos
-        .map(v => ({v, r: Math.random()}))
-        .sort((a,b)=>a.r-b.r)
-        .map(o=>o.v);
+    function embaralhar(){
+      fila = versos.map(v=>({v,r:Math.random()}))
+                   .sort((a,b)=>a.r-b.r)
+                   .map(o=>o.v);
     }
-    function atualizarVerso() {
-      if (!fila.length) embaralhar();
+    function atualizarVerso(){
+      if(!fila.length) embaralhar();
       quoteEl.textContent = fila.shift();
     }
 
-    // Inicia ciclo de frases
     embaralhar();
     atualizarVerso();
     intervalo = setInterval(atualizarVerso, 2500);
 
-    // Exponha finalizeLoader para ser chamado em VerHistorias.js
-    window.finalizeLoader = () => {
+    window.finalizeLoader = ()=>{
       clearInterval(intervalo);
       loader.style.opacity = '0';
       loader.addEventListener('transitionend', ()=>{
         loader.remove();
-        pageWrapper.style.visibility = 'visible';
+        wrapper.style.visibility = 'visible';
         document.body.classList.remove('loading');
       });
     };
 
-    // Hambúrguer mobile
+    // hamburguer mobile
     const btn = document.getElementById('btnHamburger');
     const nav = document.querySelector('.navbar');
     btn.addEventListener('click', ()=>{
-      if (window.innerWidth <= 768) nav.classList.toggle('open');
+      if(window.innerWidth<=768) nav.classList.toggle('open');
     });
     window.addEventListener('resize', ()=>{
-      if (window.innerWidth > 768) nav.classList.remove('open');
+      if(window.innerWidth>768) nav.classList.remove('open');
     });
   })();
   </script>
 
-  <!-- Supabase e lógica principal -->
+  <!-- Supabase e principal -->
   <script type="module" src="js/supabase.js"></script>
   <script type="module" src="js/VerHistorias.js"></script>
 </body>
