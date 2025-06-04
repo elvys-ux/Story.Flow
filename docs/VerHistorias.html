@@ -1,46 +1,146 @@
 <!DOCTYPE html>
 <html lang="pt">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>StoryFlow – Ler Histórias</title>
-  <meta name="description" content="Leia as histórias da comunidade em StoryFlow, filtre por categoria, pesquise por título ou autor e navegue entre cartões.">
+  <meta
+    name="description"
+    content="Leia as histórias da comunidade em StoryFlow, filtre por categoria, pesquise por título ou autor e navegue entre cartões."
+  />
 
   <!-- Font Awesome -->
-  <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+  />
 
   <!-- CSS principal -->
-  <link rel="stylesheet" href="css/VerHistorias.css">
+  <link rel="stylesheet" href="css/VerHistorias.css" />
 
-  
+  <!-- Loader & Hamburger (estilos inline) -->
+  <style>
+    /* Bloqueia o scroll enquanto carrega */
+    body.loading {
+      overflow: hidden;
+    }
+
+    /* Overlay de carregamento */
+    #loader {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #e0f7fa, #ffffff);
+      z-index: 10000;
+      padding: 1rem;
+      transition: opacity 0.5s;
+    }
+
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 5px solid rgba(0, 0, 0, 0.1);
+      border-top-color: #333;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 0.5rem;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    #quote {
+      max-width: 80%;
+      font-style: italic;
+      color: #333;
+      line-height: 1.4;
+      opacity: 0;
+      animation: fadeIn 0.8s forwards;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+    @keyframes fadeOut {
+      from {
+        opacity: 1;
+      }
+      to {
+        opacity: 0;
+      }
+    }
+
+    /* Botão hambúrguer (mobile) */
+    .hamburger {
+      display: none;
+      position: fixed;
+      top: 1rem;
+      left: 1rem;
+      width: 2rem;
+      height: 2rem;
+      padding: 0.3rem;
+      background: rgba(0, 0, 0, 0.7);
+      border: none;
+      border-radius: 4px;
+      flex-direction: column;
+      justify-content: space-around;
+      z-index: 10001;
+      cursor: pointer;
+    }
+    .hamburger span {
+      display: block;
+      height: 3px;
+      background: #fff;
+    }
+    @media (max-width: 768px) {
+      .hamburger {
+        display: flex;
+      }
+    }
+  </style>
 </head>
-<body class="loading">
 
+<body class="loading">
   <!-- LOADER full‐screen -->
   <div id="loader" aria-live="polite" aria-busy="true">
     <div class="spinner"></div>
     <p id="quote">Carregando conteúdo…</p>
   </div>
 
-  <!-- BOTÃO HAMBURGER (mobile) -->
+  <!-- BOTÃO HAMBURGER (aparece apenas no mobile) -->
   <button id="btnHamburger" class="hamburger" aria-label="Menu">
     <span></span><span></span><span></span>
   </button>
 
+  <!-- Todo o conteúdo real fica dentro deste wrapper -->
   <div id="page-wrapper">
     <!-- NAVBAR DESKTOP -->
     <nav class="navbar-desktop">
       <a href="index.html"><i class="fas fa-home"></i> Início</a>
       <div class="dropdown">
-        <a href="#" class="toggle"><i class="fas fa-pencil-alt"></i> Criar História ▾</a>
+        <a href="#" class="toggle"
+          ><i class="fas fa-pencil-alt"></i> Criar História ▾</a
+        >
         <div class="dropdown-content">
           <a href="diario.html">Escrever Diário</a>
           <a href="historia.html">Escrever História</a>
         </div>
       </div>
       <div class="dropdown">
-        <a href="#" class="toggle"><i class="fas fa-book"></i> Histórias ▾</a>
+        <a href="#" class="toggle"
+          ><i class="fas fa-book"></i> Histórias ▾</a
+        >
         <div class="dropdown-content">
           <a href="hisotirasqueescrevi.html">Minhas Histórias</a>
           <a href="VerHistorias.html">Ler Histórias</a>
@@ -48,25 +148,33 @@
       </div>
       <div id="userMenuArea" class="user-area"></div>
       <form id="searchFormDesktop" class="search-box">
-        <input type="text" id="searchBarDesktop"
-               placeholder="Pesquisar por título ou autor…" autocomplete="off">
+        <input
+          type="text"
+          id="searchBarDesktop"
+          placeholder="Pesquisar por título ou autor…"
+          autocomplete="off"
+        />
         <button type="submit"><i class="fas fa-search"></i></button>
       </form>
     </nav>
 
-    <!-- NAVBAR MOBILE -->
+    <!-- NAVBAR MOBILE (inicialmente oculta) -->
     <nav class="navbar-mobile">
       <div class="mobile-items">
         <a href="index.html"><i class="fas fa-home"></i> Início</a>
         <div class="dropdown">
-          <a href="#" class="toggle"><i class="fas fa-pencil-alt"></i> Criar História ▾</a>
+          <a href="#" class="toggle"
+            ><i class="fas fa-pencil-alt"></i> Criar História ▾</a
+          >
           <div class="dropdown-content">
             <a href="diario.html">Escrever Diário</a>
             <a href="historia.html">Escrever História</a>
           </div>
         </div>
         <div class="dropdown">
-          <a href="#" class="toggle"><i class="fas fa-book"></i> Histórias ▾</a>
+          <a href="#" class="toggle"
+            ><i class="fas fa-book"></i> Histórias ▾</a
+          >
           <div class="dropdown-content">
             <a href="hisotirasqueescrevi.html">Minhas Histórias</a>
             <a href="VerHistorias.html">Ler Histórias</a>
@@ -74,8 +182,12 @@
         </div>
         <div id="userMenuAreaMobile" class="user-area"></div>
         <form id="searchFormMobile" class="search-box">
-          <input type="text" id="searchBarMobile"
-                 placeholder="Pesquisar por título ou autor…" autocomplete="off">
+          <input
+            type="text"
+            id="searchBarMobile"
+            placeholder="Pesquisar por título ou autor…"
+            autocomplete="off"
+          />
           <button type="submit"><i class="fas fa-search"></i></button>
         </form>
       </div>
@@ -103,26 +215,41 @@
     <main>
       <section class="stories-section">
         <h2>Histórias da Comunidade</h2>
-        <div id="storiesContainer" class="stories-container" aria-live="polite"></div>
+        <div id="storiesContainer" class="stories-container" aria-live="polite">
+        </div>
         <div class="pagination">
           <button id="loadMoreBtn">Carregar Mais</button>
         </div>
       </section>
     </main>
 
-    <!-- MODAL -->
-    <div id="modalOverlay" class="modal-overlay" style="display:none;">
+    <!-- MODAL DE LEITURA -->
+    <div
+      id="modalOverlay"
+      class="modal-overlay"
+      style="display: none;"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modalTitle"
+    >
       <div class="modal-content">
         <button id="modalClose" class="modal-close">&times;</button>
         <h2 id="modalTitle">Título</h2>
         <div id="modalFullText"></div>
-        <button id="continuarBtn" style="display:none;">Continuar</button>
+        <button id="continuarBtn" style="display: none;">Continuar</button>
         <div id="modalInfo"></div>
       </div>
     </div>
 
-    <!-- WARNING -->
-    <div id="warningOverlay" class="warning-overlay" style="display:none;">
+    <!-- AVISO AO CLICAR FORA DO MODAL -->
+    <div
+      id="warningOverlay"
+      class="warning-overlay"
+      style="display: none;"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="warningText"
+    >
       <div class="warning-box">
         <p>Deseja fechar a leitura?</p>
         <button id="warningYes">Sim</button>
@@ -132,14 +259,76 @@
 
     <!-- RODAPÉ -->
     <footer>
-      <small>© 2025 StoryFlow – Turma Tis7 | <a href="Sobre.html">Termos de uso</a></small>
+      <small>
+        © 2025 StoryFlow – Turma Tis7 | <a href="Sobre.html">Termos de uso</a>
+      </small>
     </footer>
   </div>
+  <!-- /#page-wrapper -->
 
   <!-- Loader & Hamburger Logic -->
- 
+  <script>
+    (function () {
+      // Elementos do loader
+      const loader = document.getElementById("loader");
+      const pageWrapper = document.getElementById("page-wrapper");
+      const quoteEl = document.getElementById("quote");
+      let versos = ["Carregando conteúdo…"],
+        fila = [],
+        intervalo;
 
-  <!-- Supabase e principal -->
+      // Tenta carregar JSON de frases
+      fetch("versos.json")
+        .then((r) => (r.ok ? r.json() : Promise.reject()))
+        .then((json) => (versos = json))
+        .catch(() => {});
+
+      function embaralhar() {
+        fila = versos
+          .map((v) => ({ v, r: Math.random() }))
+          .sort((a, b) => a.r - b.r)
+          .map((o) => o.v);
+      }
+      function atualizarVerso() {
+        if (!fila.length) embaralhar();
+        quoteEl.textContent = fila.shift();
+      }
+
+      embaralhar();
+      atualizarVerso();
+      intervalo = setInterval(atualizarVerso, 2500);
+
+      // Exponha finalizeLoader para VerHistorias.js chamar quando tudo estiver pronto
+      window.finalizeLoader = () => {
+        clearInterval(intervalo);
+        loader.style.opacity = "0";
+        loader.addEventListener("transitionend", () => {
+          loader.remove();
+          pageWrapper.style.visibility = "visible";
+          document.body.classList.remove("loading");
+        });
+      };
+
+      // Lógica do botão Hambúrguer (mobile)
+      const btn = document.getElementById("btnHamburger");
+      const navDesktop = document.querySelector(".navbar-desktop");
+      const navMobile = document.querySelector(".navbar-mobile");
+
+      btn.addEventListener("click", () => {
+        if (window.innerWidth <= 768) {
+          // alterna exibição apenas da navbar-mobile
+          navMobile.classList.toggle("open");
+        }
+      });
+      window.addEventListener("resize", () => {
+        if (window.innerWidth > 768) {
+          navMobile.classList.remove("open");
+        }
+      });
+    })();
+  </script>
+
+  <!-- Supabase e lógica principal -->
   <script type="module" src="js/supabase.js"></script>
   <script type="module" src="js/VerHistorias.js"></script>
 </body>
